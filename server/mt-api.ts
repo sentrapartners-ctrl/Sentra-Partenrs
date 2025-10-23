@@ -195,6 +195,7 @@ router.post("/history", async (req: Request, res: Response) => {
     }
 
     const history = req.body;
+    console.log("[MT API] /history received:", history.length, "items");
     if (!Array.isArray(history)) {
       console.log("[MT API] Body is not an array:", typeof req.body);
       return res.status(400).json({ error: "Expected array of trades" });
@@ -272,6 +273,7 @@ router.post("/history", async (req: Request, res: Response) => {
       }
     }
 
+    console.log(`[MT API] /history processed: ${processedCount} trades, ${errorCount} errors`);
     res.json({ 
       success: true, 
       message: `Processed ${processedCount} trades successfully, ${errorCount} errors`,

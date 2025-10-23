@@ -189,26 +189,38 @@ export async function updateAccountStatus(terminalId: string, status: "connected
 
 export async function createOrUpdateTrade(trade: InsertTrade) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  if (!db) {
+    console.error("[DB] Database not available for createOrUpdateTrade");
+    throw new Error("Database not available");
+  }
 
-  const existing = await db.select().from(trades)
-    .where(and(
-      eq(trades.accountId, trade.accountId),
-      eq(trades.ticket, trade.ticket)
-    ))
-    .limit(1);
+  try {
+    const existing = await db.select().from(trades)
+      .where(and(
+        eq(trades.accountId, trade.accountId),
+        eq(trades.ticket, trade.ticket)
+      ))
+      .limit(1);
 
-  if (existing.length > 0) {
-    await db.update(trades)
-      .set({
-        ...trade,
-        updatedAt: new Date(),
-      })
-      .where(eq(trades.id, existing[0].id));
-    return existing[0].id;
-  } else {
-    const result = await db.insert(trades).values(trade);
-    return Number(result[0].insertId);
+    if (existing.length > 0) {
+      console.log(`[DB] Updating trade ticket=${trade.ticket}`);
+      await db.update(trades)
+        .set({
+          ...trade,
+          updatedAt: new Date(),
+        })
+        .where(eq(trades.id, existing[0].id));
+      return existing[0].id;
+    } else {
+      console.log(`[DB] Inserting new trade ticket=${trade.ticket}, symbol=${trade.symbol}`);
+      const result = await db.insert(trades).values(trade);
+      console.log(`[DB] Trade inserted with ID=${result[0].insertId}`);
+      return Number(result[0].insertId);
+    }
+  } catch (error) {
+    console.error("[DB] Error in createOrUpdateTrade:", error);
+    console.error("[DB] Trade data:", JSON.stringify(trade, null, 2));
+    throw error;
   }
 }
 
