@@ -5,12 +5,79 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { getForexFactoryEvents } from "./forex-calendar";
+import { registerUser, loginUser } from "./auth";
 
 export const appRouter = router({
   system: systemRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    
+    register: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const result = await registerUser(input.email, input.password, input.name);
+        
+        if (!result.success || !result.user) {
+          throw new Error(result.error || 'Registration failed');
+        }
+
+        // Create session token
+        const { createToken } = await import('./auth');
+        const token = await createToken(result.user);
+
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        return {
+          success: true,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role,
+          },
+        };
+      }),
+
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const result = await loginUser(input.email, input.password);
+        
+        if (!result.success || !result.user || !result.token) {
+          throw new Error(result.error || 'Login failed');
+        }
+
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, result.token, {
+          ...cookieOptions,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        return {
+          success: true,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role,
+          },
+        };
+      }),
+    
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

@@ -36,6 +36,13 @@
       "when": 1761234986288,
       "tag": "0004_lively_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1761257031418,
+      "tag": "0005_panoramic_bloodaxe",
+      "breakpoints": true
     }
   ]
 }

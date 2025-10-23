@@ -58,7 +58,8 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       equity,
       margin_free,
       open_positions,
-      timestamp
+      timestamp,
+      user_email // Novo campo para associar conta ao usuário
     } = req.body;
 
     if (!terminal_id || !account) {
@@ -66,21 +67,40 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing required fields", received: req.body });
     }
 
+    // Busca usuário pelo email se fornecido
+    let userId: number | null = null;
+    if (user_email) {
+      const { getUserByEmail } = await import('./auth');
+      const user = await getUserByEmail(user_email);
+      if (user) {
+        userId = user.id;
+        console.log("[MT API] Account associated with user:", user.email);
+      } else {
+        console.log("[MT API] User not found for email:", user_email);
+        return res.status(404).json({ 
+          error: "User not found. Please register first.",
+          email: user_email 
+        });
+      }
+    } else {
+      console.log("[MT API] No user_email provided. Account will not be associated.");
+      return res.status(400).json({ 
+        error: "user_email is required to associate account",
+        hint: "Add UserEmail parameter to your EA" 
+      });
+    }
+
     // Busca ou cria a conta
     let existingAccount = await db.getAccountByTerminalId(terminal_id);
     
     // Detecta plataforma automaticamente
-    // MT5 geralmente tem contas com 8+ dígitos, MT4 tem menos
-    // Também podemos verificar pelo header User-Agent se disponível
     const accountStr = account.toString();
     const detectedPlatform = accountStr.length >= 8 ? "MT5" : "MT4";
     
     if (!existingAccount) {
-      // Primeira vez que vemos este terminal - precisa ser associado a um usuário
-      // Por enquanto, vamos criar com userId = 1 (admin)
-      // TODO: Implementar sistema de registro de terminais
+      // Primeira vez que vemos este terminal - cria associado ao usuário
       const accountId = await db.createOrUpdateAccount({
-        userId: 1, // Temporário - deve ser configurado pelo usuário
+        userId: userId!,
         terminalId: terminal_id,
         accountNumber: account.toString(),
         broker: broker || "Unknown",
@@ -95,6 +115,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       });
       
       existingAccount = await db.getAccountByTerminalId(terminal_id);
+      console.log("[MT API] New account created for user", userId);
     } else {
       // Atualiza a conta existente
       await db.createOrUpdateAccount({

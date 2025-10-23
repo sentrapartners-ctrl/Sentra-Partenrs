@@ -36,6 +36,10 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],
