@@ -25,33 +25,67 @@ export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
   }
 
   try {
-    console.log('[Forex Calendar] Fetching from https://nfs.faireconomy.media/ff_calendar_thisweek.xml');
-    const response = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.xml', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
+    // Buscar de múltiplos XMLs para ter mais eventos
+    const urls = [
+      'https://nfs.faireconomy.media/ff_calendar_thisweek.xml',
+      'https://nfs.faireconomy.media/ff_calendar_nextweek.xml',
+    ];
+    
+    console.log('[Forex Calendar] Fetching from multiple sources...');
+    const allEvents: ForexEvent[] = [];
+    const eventKeys = new Set<string>(); // Para evitar duplicatas
+    
+    for (const url of urls) {
+      try {
+        console.log(`[Forex Calendar] Fetching ${url}`);
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+          },
+        });
+        
+        if (!response.ok) {
+          console.error(`[Forex Calendar] HTTP error from ${url}: ${response.status}`);
+          continue;
+        }
+        
+        const xmlData = await response.text();
+        
+        if (xmlData.length < 100) {
+          console.error(`[Forex Calendar] Insufficient data from ${url}`);
+          continue;
+        }
+
+        console.log(`[Forex Calendar] Data received from ${url}: ${xmlData.length} characters`);
+        const events = processNewsXML(xmlData);
+        
+        // Adicionar eventos evitando duplicatas
+        for (const event of events) {
+          const key = `${event.date}_${event.time}_${event.title}`;
+          if (!eventKeys.has(key)) {
+            eventKeys.add(key);
+            allEvents.push(event);
+          }
+        }
+        
+        console.log(`[Forex Calendar] Parsed ${events.length} events from ${url}`);
+      } catch (error) {
+        console.error(`[Forex Calendar] Error fetching ${url}:`, error);
       }
+    }
+    
+    // Ordenar todos os eventos por data
+    allEvents.sort((a, b) => {
+      const dateA = new Date(a.date + ' ' + a.time);
+      const dateB = new Date(b.date + ' ' + b.time);
+      return dateA.getTime() - dateB.getTime();
     });
     
-    if (!response.ok) {
-      console.error('[Forex Calendar] Failed to fetch:', response.statusText);
-      return cachedEvents; // Retorna cache antigo se falhar
-    }
-
-    const xmlData = await response.text();
-    
-    if (xmlData.length < 100) {
-      console.error('[Forex Calendar] Insufficient data received');
-      return cachedEvents;
-    }
-
-    console.log(`[Forex Calendar] Data received: ${xmlData.length} characters`);
-    const events = processNewsXML(xmlData);
-    
     // Armazenar TODOS os eventos (passados e futuros, sem limite)
-    cachedEvents = events;
+    cachedEvents = allEvents;
     lastFetch = Date.now();
     
-    console.log(`[Forex Calendar] Successfully parsed and cached ${cachedEvents.length} events (all events, no filter)`);
+    console.log(`[Forex Calendar] Successfully parsed and cached ${cachedEvents.length} events from all sources`);
     return cachedEvents;
   } catch (error) {
     console.error('[Forex Calendar] Error fetching events:', error);
