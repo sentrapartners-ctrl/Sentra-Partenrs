@@ -12,7 +12,7 @@
 // PARÂMETROS DE ENTRADA
 //====================================================
 input string UserEmail = "seu@email.com";           // ⚠️ SEU EMAIL CADASTRADO NO SISTEMA
-input string MasterServer = "https://3005-ifwc82p1opsn7k50rvu6f-137bd2b3.manusvm.computer/api/mt";
+input string MasterServer = "https://3007-ifwc82p1opsn7k50rvu6f-137bd2b3.manusvm.computer/api/mt";
 input int HeartbeatInterval = 60;                   // Segundos entre heartbeats
 input int HistoryDays = 90;                         // Dias de histórico (0 = todo histórico)
 input bool EnableLogs = true;                       // Habilitar logs detalhados
