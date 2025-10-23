@@ -4,6 +4,7 @@
 
 interface ForexEvent {
   date: string;
+  time: string;
   country: string;
   impact: string;
   title: string;
@@ -18,10 +19,12 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
   // Retorna cache se ainda válido
   if (cachedEvents.length > 0 && Date.now() - lastFetch < CACHE_DURATION) {
+    console.log(`[Forex Calendar] Returning ${cachedEvents.length} cached events`);
     return cachedEvents;
   }
 
   try {
+    console.log('[Forex Calendar] Fetching from https://nfs.faireconomy.media/ff_calendar_thisweek.xml');
     const response = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.xml');
     
     if (!response.ok) {
@@ -35,7 +38,7 @@ export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
     cachedEvents = events.slice(0, 200); // Limita a 200 eventos
     lastFetch = Date.now();
     
-    console.log(`[Forex Calendar] Fetched ${events.length} events`);
+    console.log(`[Forex Calendar] Successfully fetched ${events.length} events, cached ${cachedEvents.length}`);
     return cachedEvents;
   } catch (error) {
     console.error('[Forex Calendar] Error fetching events:', error);
@@ -43,83 +46,60 @@ export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
   }
 }
 
+function extractCDATA(text: string): string {
+  const cdataMatch = text.match(/<!\[CDATA\[(.*?)\]\]>/);
+  return cdataMatch ? cdataMatch[1].trim() : text.trim();
+}
+
 function parseForexFactoryXML(xml: string): ForexEvent[] {
   const events: ForexEvent[] = [];
   
   try {
-    // Parser simples de XML usando regex
-    const eventRegex = /<event>([\s\S]*?)<\/event>/g;
-    const eventMatches = Array.from(xml.matchAll(eventRegex));
+    // Extrai todos os eventos usando regex
+    const eventMatches = Array.from(xml.matchAll(/<event>([\s\S]*?)<\/event>/g));
     
     for (const match of eventMatches) {
       const eventXml = match[1];
       
-      const title = extractTag(eventXml, 'title');
-      const country = extractTag(eventXml, 'country');
-      const date = extractTag(eventXml, 'date');
-      const time = extractTag(eventXml, 'time');
-      const impact = extractTag(eventXml, 'impact');
-      const forecast = extractTag(eventXml, 'forecast');
-      const previous = extractTag(eventXml, 'previous');
+      // Extrai cada campo
+      const titleMatch = eventXml.match(/<title>([\s\S]*?)<\/title>/);
+      const countryMatch = eventXml.match(/<country>([\s\S]*?)<\/country>/);
+      const dateMatch = eventXml.match(/<date>([\s\S]*?)<\/date>/);
+      const timeMatch = eventXml.match(/<time>([\s\S]*?)<\/time>/);
+      const impactMatch = eventXml.match(/<impact>([\s\S]*?)<\/impact>/);
+      const forecastMatch = eventXml.match(/<forecast>([\s\S]*?)<\/forecast>/);
+      const previousMatch = eventXml.match(/<previous>([\s\S]*?)<\/previous>/);
       
-      if (title && country && date) {
-        // Converte data de MM-DD-YYYY para formato ISO
-        const dateParts = date.split('-');
-        if (dateParts.length === 3) {
-          const month = dateParts[0];
-          const day = dateParts[1];
-          const year = dateParts[2];
-          
-          // Converte hora de 12h para 24h
-          let hour = '00';
-          let minute = '00';
-          if (time) {
-            const timeMatch = time.match(/(\d{1,2}):(\d{2})(am|pm)/i);
-            if (timeMatch) {
-              let h = parseInt(timeMatch[1]);
-              const m = timeMatch[2];
-              const period = timeMatch[3].toLowerCase();
-              
-              if (period === 'pm' && h !== 12) h += 12;
-              if (period === 'am' && h === 12) h = 0;
-              
-              hour = h.toString().padStart(2, '0');
-              minute = m;
-            }
-          }
-          
-          const isoDate = `${year}-${month}-${day}T${hour}:${minute}:00`;
-          
-          events.push({
-            date: isoDate,
-            country: country,
-            impact: impact || 'Low',
-            title: title,
-            forecast: forecast || undefined,
-            previous: previous || undefined,
-          });
-        }
+      if (titleMatch && countryMatch && dateMatch && impactMatch) {
+        const title = extractCDATA(titleMatch[1]);
+        const country = extractCDATA(countryMatch[1]);
+        const date = extractCDATA(dateMatch[1]);
+        const time = timeMatch ? extractCDATA(timeMatch[1]) : '';
+        const impact = extractCDATA(impactMatch[1]);
+        const forecast = forecastMatch ? extractCDATA(forecastMatch[1]) : undefined;
+        const previous = previousMatch ? extractCDATA(previousMatch[1]) : undefined;
+        
+        // Converte data de MM-DD-YYYY para ISO
+        const [month, day, year] = date.split('-');
+        const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        
+        events.push({
+          title,
+          country,
+          date: isoDate,
+          time,
+          impact,
+          forecast: forecast || undefined,
+          previous: previous || undefined,
+        });
       }
     }
+    
+    console.log(`[Forex Calendar] Parsed ${events.length} events from XML`);
+    return events;
   } catch (error) {
     console.error('[Forex Calendar] Error parsing XML:', error);
+    return [];
   }
-  
-  return events;
-}
-
-function extractTag(xml: string, tagName: string): string {
-  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`);
-  const match = xml.match(regex);
-  if (!match) return '';
-  
-  let value = match[1].trim();
-  
-  // Remove CDATA se presente
-  if (value.startsWith('<![CDATA[') && value.endsWith(']]>')) {
-    value = value.substring(9, value.length - 3);
-  }
-  
-  return value.trim();
 }
 

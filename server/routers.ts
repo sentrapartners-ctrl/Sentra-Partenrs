@@ -79,8 +79,13 @@ export const appRouter = router({
       .input(z.object({
         limit: z.number().optional().default(100),
         accountId: z.number().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
       }))
       .query(async ({ ctx, input }) => {
+        if (input.startDate && input.endDate) {
+          return await db.getTradesByDateRange(ctx.user.id, input.startDate, input.endDate);
+        }
         if (input.accountId) {
           return await db.getAccountTrades(input.accountId, input.limit);
         }
@@ -301,9 +306,9 @@ export const appRouter = router({
   // ===== ALERTS =====
   alerts: router({
     list: protectedProcedure
-      .input(z.object({ limit: z.number().optional().default(50) }))
-      .query(async ({ ctx, input }) => {
-        return await db.getUserAlerts(ctx.user.id, input.limit);
+      .input(z.object({}))
+      .query(async ({ ctx }) => {
+        return await db.getUserAlerts(ctx.user.id);
       }),
 
     unread: protectedProcedure.query(async ({ ctx }) => {

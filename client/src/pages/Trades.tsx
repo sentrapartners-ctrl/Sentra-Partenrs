@@ -5,16 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { ArrowDownIcon, ArrowUpIcon, Filter } from "lucide-react";
-import { useEffect, useState } from "react";
-import { PeriodFilter, Period } from "@/components/PeriodFilter";
+import { useEffect, useState, useMemo } from "react";
+import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
 
 export default function Trades() {
   const { isAuthenticated, loading } = useAuth();
   const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
   const [period, setPeriod] = useState<Period>("30d");
 
+  const periodDates = useMemo(() => getPeriodDates(period), [period]);
+  
   const { data: allTrades, refetch } = trpc.trades.list.useQuery(
-    { limit: 100 },
+    { 
+      limit: 1000,
+      startDate: periodDates.start,
+      endDate: periodDates.end,
+    },
     { enabled: isAuthenticated }
   );
 
