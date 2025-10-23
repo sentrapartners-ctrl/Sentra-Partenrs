@@ -322,7 +322,11 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
 export async function getUserTrades(userId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select().from(trades)
+  const result = await db.select({
+    trade: trades,
+    account: tradingAccounts
+  }).from(trades)
+    .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
     .where(
       and(
         eq(trades.userId, userId),
@@ -331,7 +335,15 @@ export async function getUserTrades(userId: number, limit: number = 100) {
     )
     .orderBy(desc(trades.openTime))
     .limit(limit);
-  return await applyTradeConversion(result);
+  
+  const tradesWithAccount = result.map(r => ({
+    ...r.trade,
+    accountNumber: r.account?.accountNumber,
+    broker: r.account?.broker,
+    accountType: r.account?.accountType
+  }));
+  
+  return await applyTradeConversion(tradesWithAccount);
 }
 
 export async function getAccountTrades(accountId: number, limit: number = 100) {
@@ -359,14 +371,26 @@ export async function getOpenTrades(userId: number) {
 export async function getTradesByDateRange(userId: number, startDate: Date, endDate: Date) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select().from(trades)
+  const result = await db.select({
+    trade: trades,
+    account: tradingAccounts
+  }).from(trades)
+    .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
     .where(and(
       eq(trades.userId, userId),
       gte(trades.openTime, startDate),
       lte(trades.openTime, endDate)
     ))
     .orderBy(desc(trades.openTime));
-  return await applyTradeConversion(result);
+  
+  const tradesWithAccount = result.map(r => ({
+    ...r.trade,
+    accountNumber: r.account?.accountNumber,
+    broker: r.account?.broker,
+    accountType: r.account?.accountType
+  }));
+  
+  return await applyTradeConversion(tradesWithAccount);
 }
 
 export async function closeTrade(tradeId: number, closePrice: number, closeTime: Date, profit: number) {
