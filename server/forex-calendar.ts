@@ -47,18 +47,11 @@ export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
     console.log(`[Forex Calendar] Data received: ${xmlData.length} characters`);
     const events = processNewsXML(xmlData);
     
-    // Filtrar apenas eventos dos próximos 2 meses
-    const now = new Date();
-    const twoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, now.getDate());
-    const filteredEvents = events.filter(e => {
-      const eventDate = new Date(e.date);
-      return eventDate >= now && eventDate <= twoMonthsLater;
-    });
-    
-    cachedEvents = filteredEvents; // Sem limite de quantidade, apenas 2 meses
+    // Armazenar TODOS os eventos (passados e futuros, sem limite)
+    cachedEvents = events;
     lastFetch = Date.now();
     
-    console.log(`[Forex Calendar] Successfully parsed ${events.length} events, cached ${cachedEvents.length} (filtered to 2 months)`);
+    console.log(`[Forex Calendar] Successfully parsed and cached ${cachedEvents.length} events (all events, no filter)`);
     return cachedEvents;
   } catch (error) {
     console.error('[Forex Calendar] Error fetching events:', error);
@@ -149,23 +142,19 @@ function processNewsXML(xmlData: string): ForexEvent[] {
     
     if (totalEventsFound <= 3) {
       console.log(`  DateTime converted: ${eventTime}`);
-      console.log(`  Current time: ${now}`);
-      console.log(`  Is future? ${eventTime >= now ? 'YES' : 'NO'}`);
     }
     
-    // Incluir apenas notícias em tempo real e futuras (mesma lógica do EA)
-    if (eventTime >= now) {
-      events.push({
-        title,
-        country,
-        impact,
-        date: eventTime.toISOString().split('T')[0],
-        time: time,
-        forecast: forecast || undefined,
-        previous: previous || undefined,
-      });
-      eventsProcessed++;
-    }
+    // Incluir TODOS os eventos (passados e futuros)
+    events.push({
+      title,
+      country,
+      impact,
+      date: eventTime.toISOString().split('T')[0],
+      time: time,
+      forecast: forecast || undefined,
+      previous: previous || undefined,
+    });
+    eventsProcessed++;
     
     eventStartPos = eventEnd + 8;
   }
