@@ -19,10 +19,20 @@ export default function Analytics() {
   const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
-  const { data: trades, refetch } = trpc.trades.list.useQuery(
+  const { data: allTrades, refetch } = trpc.trades.list.useQuery(
     { limit: 1000 },
     { enabled: isAuthenticated }
   );
+
+  // Filtrar trades por período
+  const trades = allTrades?.filter((trade) => {
+    if (!trade.closeTime) return false;
+    const tradeDate = new Date(trade.closeTime);
+    const now = new Date();
+    const daysAgo = parseInt(period.replace('d', ''));
+    const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    return tradeDate >= cutoffDate;
+  });
 
   // Calcula estatísticas localmente
   const analytics = trades

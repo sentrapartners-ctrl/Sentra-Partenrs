@@ -228,7 +228,12 @@ export async function getUserTrades(userId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(trades)
-    .where(eq(trades.userId, userId))
+    .where(
+      and(
+        eq(trades.userId, userId),
+        sql`${trades.profit} != 0` // Filtrar trades com profit diferente de 0
+      )
+    )
     .orderBy(desc(trades.openTime))
     .limit(limit);
 }
