@@ -670,12 +670,18 @@ export async function getTradeStatistics(userId: number, startDate?: Date, endDa
     };
   }
 
-  const winningTrades = allTrades.filter(t => (t.profit || 0) > 0);
-  const losingTrades = allTrades.filter(t => (t.profit || 0) < 0);
+  // Converter profits para dólares antes de calcular estatísticas
+  const tradesWithConvertedProfit = allTrades.map(t => ({
+    ...t,
+    profitDollars: (t.profit || 0) / ((t as any).isCentAccount ? 10000 : 100)
+  }));
   
-  const totalProfit = winningTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
-  const totalLoss = Math.abs(losingTrades.reduce((sum, t) => sum + (t.profit || 0), 0));
-  const netProfit = allTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+  const winningTrades = tradesWithConvertedProfit.filter(t => t.profitDollars > 0);
+  const losingTrades = tradesWithConvertedProfit.filter(t => t.profitDollars < 0);
+  
+  const totalProfit = winningTrades.reduce((sum, t) => sum + t.profitDollars, 0);
+  const totalLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.profitDollars, 0));
+  const netProfit = tradesWithConvertedProfit.reduce((sum, t) => sum + t.profitDollars, 0);
 
   return {
     totalTrades: allTrades.length,
@@ -688,8 +694,8 @@ export async function getTradeStatistics(userId: number, startDate?: Date, endDa
     profitFactor: totalLoss > 0 ? totalProfit / totalLoss : 0,
     averageWin: winningTrades.length > 0 ? totalProfit / winningTrades.length : 0,
     averageLoss: losingTrades.length > 0 ? totalLoss / losingTrades.length : 0,
-    largestWin: winningTrades.length > 0 ? Math.max(...winningTrades.map(t => t.profit || 0)) : 0,
-    largestLoss: losingTrades.length > 0 ? Math.min(...losingTrades.map(t => t.profit || 0)) : 0,
+    largestWin: winningTrades.length > 0 ? Math.max(...winningTrades.map(t => t.profitDollars)) : 0,
+    largestLoss: losingTrades.length > 0 ? Math.min(...losingTrades.map(t => t.profitDollars)) : 0,
   };
 }
 

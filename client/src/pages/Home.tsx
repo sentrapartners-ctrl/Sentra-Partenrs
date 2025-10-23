@@ -41,7 +41,7 @@ export default function Home() {
       openPositions: summary?.totalOpenPositions || 0,
       winRate: tradeStats?.winRate || 0,
       totalTrades: tradeStats?.totalTrades || 0,
-      netProfit: (tradeStats?.netProfit || 0) / 100,
+      netProfit: tradeStats?.netProfit || 0,
       drawdown,
     };
   }, [dashboardData]);
@@ -86,10 +86,10 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${(Math.floor((stats?.totalBalance || 0) / 100 * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${(stats?.totalBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats?.totalAccounts || 0} contas ativas • {Math.round(stats?.totalBalance || 0).toLocaleString('pt-BR')} cents
+                {stats?.totalAccounts || 0} contas ativas
               </p>
             </CardContent>
           </Card>
@@ -101,7 +101,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${((stats?.totalEquity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${(stats?.totalEquity || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="flex items-center text-xs">
                 {stats && stats.profitLoss >= 0 ? (
@@ -116,7 +116,7 @@ export default function Home() {
                       : "text-red-500"
                   }
                 >
-                  ${(Math.abs(stats?.profitLoss || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (
+                  {stats && stats.profitLoss >= 0 ? '+' : '-'}${(Math.abs(stats?.profitLoss || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (
                   {stats?.profitLossPercent.toFixed(2)}%)
                 </span>
               </div>
