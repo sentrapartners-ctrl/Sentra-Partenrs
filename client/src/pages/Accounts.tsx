@@ -168,25 +168,40 @@ export default function Accounts() {
                   {/* Balance */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Balanço:</span>
-                    <span className="text-sm font-bold">
-                      ${((account.balance || 0) / 100).toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-sm font-bold">
+                        ${((account.balance || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {(account.balance || 0).toLocaleString('pt-BR')} cents
+                      </div>
+                    </div>
                   </div>
 
                   {/* Equity */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Equity:</span>
-                    <span className="text-sm font-bold">
-                      ${((account.equity || 0) / 100).toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-sm font-bold">
+                        ${((account.equity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {(account.equity || 0).toLocaleString('pt-BR')} cents
+                      </div>
+                    </div>
                   </div>
 
                   {/* Margin */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Margem Livre:</span>
-                    <span className="text-sm">
-                      ${((account.marginFree || 0) / 100).toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-sm">
+                        ${((account.marginFree || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {(account.marginFree || 0).toLocaleString('pt-BR')} cents
+                      </div>
+                    </div>
                   </div>
 
                   {/* Leverage */}

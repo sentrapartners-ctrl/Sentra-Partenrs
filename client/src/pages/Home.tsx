@@ -82,10 +82,10 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats?.totalBalance.toFixed(2) || "0.00"}
+                ${(Math.floor((stats?.totalBalance || 0) / 100 * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats?.totalAccounts || 0} contas ativas
+                {stats?.totalAccounts || 0} contas ativas • {Math.round(stats?.totalBalance || 0).toLocaleString('pt-BR')} cents
               </p>
             </CardContent>
           </Card>
@@ -97,7 +97,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats?.totalEquity.toFixed(2) || "0.00"}
+                ${((stats?.totalEquity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="flex items-center text-xs">
                 {stats && stats.profitLoss >= 0 ? (
@@ -112,7 +112,7 @@ export default function Home() {
                       : "text-red-500"
                   }
                 >
-                  ${Math.abs(stats?.profitLoss || 0).toFixed(2)} (
+                  ${(Math.abs(stats?.profitLoss || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (
                   {stats?.profitLossPercent.toFixed(2)}%)
                 </span>
               </div>
@@ -265,15 +265,25 @@ export default function Home() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Balanço:</span>
-                        <span className="font-medium">
-                          ${((account.balance || 0) / 100).toFixed(2)}
-                        </span>
+                        <div className="text-right">
+                          <div className="font-medium">
+                            ${((account.balance || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {(account.balance || 0).toLocaleString('pt-BR')} cents
+                          </div>
+                        </div>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Equity:</span>
-                        <span className="font-medium">
-                          ${((account.equity || 0) / 100).toFixed(2)}
-                        </span>
+                        <div className="text-right">
+                          <div className="font-medium">
+                            ${((account.equity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {(account.equity || 0).toLocaleString('pt-BR')} cents
+                          </div>
+                        </div>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Posições:</span>
