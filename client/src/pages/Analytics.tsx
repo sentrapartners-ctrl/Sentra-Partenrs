@@ -9,10 +9,12 @@ import {
   Target,
   Percent,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { PeriodFilter, Period } from "@/components/PeriodFilter";
 
 export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
+  const [period, setPeriod] = useState<Period>("30d");
 
   const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
     enabled: isAuthenticated,

@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { ArrowDownIcon, ArrowUpIcon, Filter } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PeriodFilter, Period } from "@/components/PeriodFilter";
 
 export default function Trades() {
   const { isAuthenticated, loading } = useAuth();
   const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
+  const [period, setPeriod] = useState<Period>("30d");
 
   const { data: allTrades, refetch } = trpc.trades.list.useQuery(
     { limit: 100 },
@@ -50,14 +52,18 @@ export default function Trades() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Trades</h1>
-            <p className="text-muted-foreground">
-              Histórico completo de todas as operações
-            </p>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold">Trades</h1>
+              <p className="text-muted-foreground">
+                Histórico completo de todas as operações
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center justify-between">
+            <PeriodFilter value={period} onChange={setPeriod} />
+            <div className="flex gap-2">
             <Button
               variant={filter === "all" ? "default" : "outline"}
               onClick={() => setFilter("all")}
@@ -79,6 +85,7 @@ export default function Trades() {
             >
               Fechados
             </Button>
+          </div>
           </div>
         </div>
 

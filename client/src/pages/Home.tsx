@@ -1,20 +1,14 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import {
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  DollarSign,
-  BarChart3,
-} from "lucide-react";
-import { useMemo } from "react";
-
+import { Activity, DollarSign, TrendingUp, TrendingDown, Wallet, BarChart3 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
-  const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
+  const { isAuthenticated, loading } = useAuth();
+  const [period, setPeriod] = useState<Period>("30d"); const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
     undefined,
     { enabled: isAuthenticated, refetchInterval: 5000 }
   );
@@ -64,12 +58,13 @@ export default function Home() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
             Visão geral das suas contas de trading
           </p>
         </div>
+        <PeriodFilter value={period} onChange={setPeriod} />
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -168,7 +163,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="space-y-4">
-                {recentTrades.map((trade) => (
+                {recentTrades.map((trade: any) => (
                   <div
                     key={trade.id}
                     className="flex items-center justify-between p-4 border rounded-lg"
