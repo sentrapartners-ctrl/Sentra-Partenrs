@@ -15,6 +15,13 @@
       "when": 1761219810934,
       "tag": "0001_shallow_spacker_dave",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1761224486862,
+      "tag": "0002_curious_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

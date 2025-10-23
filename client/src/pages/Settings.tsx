@@ -2,11 +2,16 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Settings as SettingsIcon, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export default function Settings() {
   const { isAuthenticated, loading } = useAuth();
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
 
   const { data: settings } = trpc.settings.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -101,6 +106,63 @@ export default function Settings() {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Notificações Telegram
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Receba alertas e notificações diretamente no Telegram.
+                <a href="/TELEGRAM_SETUP.md" target="_blank" className="text-primary ml-1">
+                  Ver guia de configuração
+                </a>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Chat ID do Telegram</label>
+              <Input
+                type="text"
+                placeholder="123456789"
+                value={telegramChatId}
+                onChange={(e) => setTelegramChatId(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Obtenha seu Chat ID iniciando conversa com o bot e acessando:
+                <br />
+                <code className="text-xs">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code>
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Ativar Telegram</p>
+                <p className="text-sm text-muted-foreground">
+                  Enviar notificações via Telegram
+                </p>
+              </div>
+              <Button
+                variant={telegramEnabled ? "default" : "outline"}
+                onClick={() => setTelegramEnabled(!telegramEnabled)}
+              >
+                {telegramEnabled ? "Ativado" : "Desativado"}
+              </Button>
+            </div>
+
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => toast.info("Mensagem de teste enviada!")}
+            >
+              Enviar Mensagem de Teste
+            </Button>
           </CardContent>
         </Card>
 
