@@ -273,19 +273,13 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
   }
 
   // Detectar automaticamente se o trade está aberto ou fechado
-  let actualStatus: "open" | "closed" = trade.status || "open";
+  // CRITÉRIO DEFINITIVO: closeTime
+  // - Se closeTime é null ou undefined → ABERTO
+  // - Se closeTime existe → FECHADO
+  let actualStatus: "open" | "closed" = "closed";
   
-  // Se closeTime é null, definitivamente está aberto
   if (!trade.closeTime) {
     actualStatus = "open";
-  }
-  // Se profit = 0 E openPrice = closePrice, é flutuante (aberto)
-  else if ((trade.profit === 0 || !trade.profit) && trade.openPrice === trade.closePrice) {
-    actualStatus = "open";
-  }
-  // Caso contrário, está fechado
-  else {
-    actualStatus = "closed";
   }
 
   const tradeWithStatus = {
