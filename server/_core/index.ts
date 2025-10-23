@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import mtApiRouter from "../mt-api";
+import newsApiRouter from "../news-api";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // MT4/MT5 API endpoints
   app.use("/api/mt", mtApiRouter);
+  // News API endpoints (public)
+  app.use("/api", newsApiRouter);
   // tRPC API
   app.use(
     "/api/trpc",
