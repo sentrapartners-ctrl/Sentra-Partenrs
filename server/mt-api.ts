@@ -23,37 +23,6 @@ router.use((req, res, next) => {
 
 // Helper para converter valores de cents para formato decimal
 const fromCents = (value: number) => value / 100;
-
-/**
- * Converte valor para dólares, detectando automaticamente se já está em cents ou dólares
- * Lógica: Se o valor tem mais de 2 casas decimais OU é muito grande (>10000), é cents
- */
-const normalizeToDollars = (value: number): number => {
-  if (value === 0) return 0;
-  
-  // Se o valor é muito grande (>10000), provavelmente é cents
-  // Ex: 295515 cents = $2955.15
-  if (Math.abs(value) > 10000) {
-    return value / 100;
-  }
-  
-  // Se tem mais de 2 casas decimais, é dólares
-  // Ex: 294.29 dólares
-  const decimals = (value.toString().split('.')[1] || '').length;
-  if (decimals > 2) {
-    return value;
-  }
-  
-  // Se é um número inteiro pequeno (<10000), pode ser dólares ou cents
-  // Vamos assumir que é dólares se for menor que 1000
-  if (Math.abs(value) < 1000 && Number.isInteger(value)) {
-    return value;
-  }
-  
-  // Caso padrão: se é um número entre 1000-10000, provavelmente é cents
-  return value / 100;
-};
-
 const toCents = (value: number) => Math.round(value * 100);
 
 // Helper para converter preços (5 casas decimais)
@@ -134,8 +103,8 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       await db.recordBalanceSnapshot({
         accountId: existingAccount.id,
         userId: existingAccount.userId,
-        balance: normalizeToDollars(balance || 0),
-        equity: normalizeToDollars(equity || 0),
+        balance: toCents(balance || 0),
+        equity: toCents(equity || 0),
         timestamp: new Date(timestamp * 1000),
       });
     }
@@ -191,7 +160,7 @@ router.post("/positions", async (req: Request, res: Response) => {
         volume: toLotsInt(volume || 0),
         openPrice: toPriceInt(open_price || 0),
         currentPrice: toPriceInt(current_price || 0),
-        profit: normalizeToDollars(profit || 0),
+        profit: toCents(profit || 0),
         openTime: new Date(open_time * 1000),
         status: "open",
       });
@@ -270,7 +239,7 @@ router.post("/history", async (req: Request, res: Response) => {
           volume: toLotsInt(volume || 0),
           openPrice: toPriceInt(price || 0),
           closePrice: toPriceInt(price || 0),
-          profit: normalizeToDollars(profit || 0),
+          profit: toCents(profit || 0),
           openTime: new Date(dealTime),
           closeTime: new Date(dealTime),
           status: "closed",
@@ -291,7 +260,7 @@ router.post("/history", async (req: Request, res: Response) => {
           volume: toLotsInt(volume || 0),
           openPrice: toPriceInt(open_price || price || 0),
           closePrice: isClosed ? toPriceInt(close_price || price || 0) : 0,
-          profit: normalizeToDollars(profit || 0),
+          profit: toCents(profit || 0),
           openTime: new Date(openTimeValue),
           closeTime: closeTimeValue ? new Date(closeTimeValue) : undefined,
           status: isClosed ? "closed" : "open",

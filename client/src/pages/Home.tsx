@@ -19,8 +19,8 @@ export default function Home() {
     const { summary, stats: tradeStats } = dashboardData;
     
     // Converte de cents para decimal
-    const totalBalance = (summary?.totalBalance || 0) ;
-    const totalEquity = (summary?.totalEquity || 0) ;
+    const totalBalance = (summary?.totalBalance || 0) / 100;
+    const totalEquity = (summary?.totalEquity || 0) / 100;
     const profitLoss = totalEquity - totalBalance;
     const profitLossPercent = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
 
@@ -34,7 +34,7 @@ export default function Home() {
       openPositions: summary?.totalOpenPositions || 0,
       winRate: tradeStats?.winRate || 0,
       totalTrades: tradeStats?.totalTrades || 0,
-      netProfit: (tradeStats?.netProfit || 0) ,
+      netProfit: (tradeStats?.netProfit || 0) / 100,
     };
   }, [dashboardData]);
 
@@ -43,8 +43,8 @@ export default function Home() {
     
     return dashboardData.recentTrades.map(trade => ({
       ...trade,
-      profit: (trade.profit || 0) ,
-      volume: (trade.volume || 0) ,
+      profit: (trade.profit || 0) / 100,
+      volume: (trade.volume || 0) / 100,
       openPrice: (trade.openPrice || 0) / 100000,
       closePrice: (trade.closePrice || 0) / 100000,
     }));
@@ -77,7 +77,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${(Math.floor((stats?.totalBalance || 0)  * 100) ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${(Math.floor((stats?.totalBalance || 0) / 100 * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground">
                 {stats?.totalAccounts || 0} contas ativas • {Math.round(stats?.totalBalance || 0).toLocaleString('pt-BR')} cents
@@ -92,7 +92,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${((stats?.totalEquity || 0) ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${((stats?.totalEquity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="flex items-center text-xs">
                 {stats && stats.profitLoss >= 0 ? (
@@ -107,7 +107,7 @@ export default function Home() {
                       : "text-red-500"
                   }
                 >
-                  ${(Math.abs(stats?.profitLoss || 0) ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (
+                  ${(Math.abs(stats?.profitLoss || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (
                   {stats?.profitLossPercent.toFixed(2)}%)
                 </span>
               </div>
@@ -262,7 +262,7 @@ export default function Home() {
                         <span className="text-muted-foreground">Balanço:</span>
                         <div className="text-right">
                           <div className="font-medium">
-                            ${((account.balance || 0) ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${((account.balance || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
                             {(account.balance || 0).toLocaleString('pt-BR')} cents
@@ -273,7 +273,7 @@ export default function Home() {
                         <span className="text-muted-foreground">Equity:</span>
                         <div className="text-right">
                           <div className="font-medium">
-                            ${((account.equity || 0) ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${((account.equity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
                             {(account.equity || 0).toLocaleString('pt-BR')} cents
