@@ -1,7 +1,25 @@
 import { Router, Request, Response } from "express";
 import * as db from "./db";
+import express from "express";
 
 const router = Router();
+
+// Middleware para debug do body raw
+router.use(express.text({ type: 'application/json' }));
+router.use((req, res, next) => {
+  if (typeof req.body === 'string') {
+    try {
+      // Remove qualquer caractere nulo ou inválido
+      const cleanBody = req.body.replace(/\0/g, '').trim();
+      console.log('[MT API] Raw body:', cleanBody);
+      req.body = JSON.parse(cleanBody);
+    } catch (e) {
+      console.error('[MT API] JSON parse error:', e);
+      console.error('[MT API] Body that failed:', req.body);
+    }
+  }
+  next();
+});
 
 // Helper para converter valores de cents para formato decimal
 const fromCents = (value: number) => value / 100;
@@ -21,6 +39,8 @@ const toLotsInt = (value: number) => Math.round(value * 100);
  */
 router.post("/heartbeat", async (req: Request, res: Response) => {
   try {
+    console.log("[MT API] Heartbeat received:", JSON.stringify(req.body, null, 2));
+    
     const {
       terminal_id,
       account,
@@ -33,11 +53,18 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     } = req.body;
 
     if (!terminal_id || !account) {
-      return res.status(400).json({ error: "Missing required fields" });
+      console.log("[MT API] Missing required fields. terminal_id:", terminal_id, "account:", account);
+      return res.status(400).json({ error: "Missing required fields", received: req.body });
     }
 
     // Busca ou cria a conta
     let existingAccount = await db.getAccountByTerminalId(terminal_id);
+    
+    // Detecta plataforma automaticamente
+    // MT5 geralmente tem contas com 8+ dígitos, MT4 tem menos
+    // Também podemos verificar pelo header User-Agent se disponível
+    const accountStr = account.toString();
+    const detectedPlatform = accountStr.length >= 8 ? "MT5" : "MT4";
     
     if (!existingAccount) {
       // Primeira vez que vemos este terminal - precisa ser associado a um usuário
@@ -48,7 +75,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
         terminalId: terminal_id,
         accountNumber: account.toString(),
         broker: broker || "Unknown",
-        platform: terminal_id.startsWith("MT5") ? "MT5" : "MT4",
+        platform: detectedPlatform,
         accountType: "STANDARD",
         balance: toCents(balance || 0),
         equity: toCents(equity || 0),
@@ -63,6 +90,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       // Atualiza a conta existente
       await db.createOrUpdateAccount({
         ...existingAccount,
+        platform: detectedPlatform, // Atualiza plataforma detectada
         balance: toCents(balance || 0),
         equity: toCents(equity || 0),
         marginFree: toCents(margin_free || 0),
@@ -151,6 +179,9 @@ router.post("/positions", async (req: Request, res: Response) => {
  */
 router.post("/history", async (req: Request, res: Response) => {
   try {
+    console.log("[MT API] History received from:", req.headers["x-terminal-id"]);
+    console.log("[MT API] History data:", JSON.stringify(req.body, null, 2));
+    
     const terminalId = req.headers["x-terminal-id"] as string;
     
     if (!terminalId) {
@@ -159,16 +190,22 @@ router.post("/history", async (req: Request, res: Response) => {
 
     const account = await db.getAccountByTerminalId(terminalId);
     if (!account) {
+      console.log("[MT API] Account not found for terminalId:", terminalId);
       return res.status(404).json({ error: "Account not found" });
     }
 
     const history = req.body;
     if (!Array.isArray(history)) {
+      console.log("[MT API] Body is not an array:", typeof req.body);
       return res.status(400).json({ error: "Expected array of trades" });
     }
 
     // Processa cada trade histórico
+    let processedCount = 0;
+    let errorCount = 0;
+    
     for (const trade of history) {
+      try {
       const {
         ticket,
         type,
@@ -183,27 +220,64 @@ router.post("/history", async (req: Request, res: Response) => {
         time
       } = trade;
 
-      // MT4 usa close_time, MT5 pode usar time
-      const tradeCloseTime = close_time || time;
-      const isClosed = tradeCloseTime && tradeCloseTime > 0;
+      // MT5 envia deals com apenas 'time' e 'price'
+      // MT4 envia trades com 'open_time', 'close_time', 'open_price', 'close_price'
+      const isDeals = !open_time && time; // MT5 deals
+      const isTrade = open_time || open_price; // MT4 trades
 
-      await db.createOrUpdateTrade({
-        accountId: account.id,
-        userId: account.userId,
-        ticket: ticket.toString(),
-        symbol: symbol || "UNKNOWN",
-        type: type === "BUY" ? "BUY" : type === "SELL" ? "SELL" : "OTHER",
-        volume: toLotsInt(volume || 0),
-        openPrice: toPriceInt(open_price || price || 0),
-        closePrice: isClosed ? toPriceInt(close_price || price || 0) : 0,
-        profit: toCents(profit || 0),
-        openTime: new Date(open_time * 1000),
-        closeTime: isClosed ? new Date(tradeCloseTime * 1000) : undefined,
-        status: isClosed ? "closed" : "open",
-      });
+      if (isDeals) {
+        // MT5 Deal - trata como trade fechado individual
+        const dealTime = time && time > 0 ? time * 1000 : Date.now();
+        
+        await db.createOrUpdateTrade({
+          accountId: account.id,
+          userId: account.userId,
+          ticket: ticket.toString(),
+          symbol: symbol || "UNKNOWN",
+          type: type === "BUY" ? "BUY" : type === "SELL" ? "SELL" : "OTHER",
+          volume: toLotsInt(volume || 0),
+          openPrice: toPriceInt(price || 0),
+          closePrice: toPriceInt(price || 0),
+          profit: toCents(profit || 0),
+          openTime: new Date(dealTime),
+          closeTime: new Date(dealTime),
+          status: "closed",
+        });
+      } else if (isTrade) {
+        // MT4 Trade - formato completo
+        const tradeCloseTime = close_time || time;
+        const isClosed = tradeCloseTime && tradeCloseTime > 0;
+        const openTimeValue = open_time && open_time > 0 ? open_time * 1000 : Date.now();
+        const closeTimeValue = isClosed && tradeCloseTime > 0 ? tradeCloseTime * 1000 : undefined;
+
+        await db.createOrUpdateTrade({
+          accountId: account.id,
+          userId: account.userId,
+          ticket: ticket.toString(),
+          symbol: symbol || "UNKNOWN",
+          type: type === "BUY" ? "BUY" : type === "SELL" ? "SELL" : "OTHER",
+          volume: toLotsInt(volume || 0),
+          openPrice: toPriceInt(open_price || price || 0),
+          closePrice: isClosed ? toPriceInt(close_price || price || 0) : 0,
+          profit: toCents(profit || 0),
+          openTime: new Date(openTimeValue),
+          closeTime: closeTimeValue ? new Date(closeTimeValue) : undefined,
+          status: isClosed ? "closed" : "open",
+        });
+      }
+      processedCount++;
+      } catch (tradeError) {
+        console.error("[MT API] Error processing trade:", trade, tradeError);
+        errorCount++;
+      }
     }
 
-    res.json({ success: true, message: `Processed ${history.length} trades` });
+    res.json({ 
+      success: true, 
+      message: `Processed ${processedCount} trades successfully, ${errorCount} errors`,
+      processed: processedCount,
+      errors: errorCount
+    });
   } catch (error) {
     console.error("[MT API] History error:", error);
     res.status(500).json({ error: "Internal server error" });
