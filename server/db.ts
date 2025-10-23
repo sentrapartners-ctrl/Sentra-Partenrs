@@ -127,9 +127,47 @@ export async function getUserById(id: number) {
 
 // ===== TRADING ACCOUNT OPERATIONS =====
 
+/**
+ * Detecta se uma conta é do tipo cent baseada no broker
+ * Brokers conhecidos com contas cent:
+ * - Exness Technologies Ltd
+ * - Brokers com "cent" no nome do servidor
+ */
+function isCentAccountByBroker(broker?: string | null, server?: string | null): boolean {
+  if (!broker && !server) return false;
+  
+  const brokerLower = (broker || '').toLowerCase();
+  const serverLower = (server || '').toLowerCase();
+  
+  // Lista de brokers conhecidos com contas cent
+  const centBrokers = [
+    'exness technologies ltd',
+    'exness',
+  ];
+  
+  // Verifica se o broker está na lista de cent brokers
+  if (centBrokers.some(cb => brokerLower.includes(cb))) {
+    return true;
+  }
+  
+  // Verifica se o servidor contém "cent" no nome
+  if (serverLower.includes('cent')) {
+    return true;
+  }
+  
+  return false;
+}
+
 export async function createOrUpdateAccount(account: InsertTradingAccount) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // Detecta automaticamente se é conta cent baseada no broker/servidor
+  const isCent = isCentAccountByBroker(account.broker, account.server);
+  const accountWithCentFlag = {
+    ...account,
+    isCentAccount: isCent,
+  };
 
   const existing = await db.select().from(tradingAccounts)
     .where(eq(tradingAccounts.terminalId, account.terminalId))
@@ -138,13 +176,13 @@ export async function createOrUpdateAccount(account: InsertTradingAccount) {
   if (existing.length > 0) {
     await db.update(tradingAccounts)
       .set({
-        ...account,
+        ...accountWithCentFlag,
         updatedAt: new Date(),
       })
       .where(eq(tradingAccounts.terminalId, account.terminalId));
     return existing[0].id;
   } else {
-    const result = await db.insert(tradingAccounts).values(account);
+    const result = await db.insert(tradingAccounts).values(accountWithCentFlag);
     return Number(result[0].insertId);
   }
 }
@@ -161,20 +199,44 @@ export async function getAccountByTerminalId(terminalId: string) {
 export async function getUserAccounts(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(tradingAccounts)
+  const accounts = await db.select().from(tradingAccounts)
     .where(eq(tradingAccounts.userId, userId))
     .orderBy(desc(tradingAccounts.updatedAt));
+  
+  // Aplicar conversão para cent accounts
+  return accounts.map(acc => {
+    const divisor = acc.isCentAccount ? 100 : 1;
+    return {
+      ...acc,
+      balance: Math.floor((acc.balance || 0) / divisor),
+      equity: Math.floor((acc.equity || 0) / divisor),
+      marginFree: Math.floor((acc.marginFree || 0) / divisor),
+      marginUsed: Math.floor((acc.marginUsed || 0) / divisor),
+    };
+  });
 }
 
 export async function getActiveAccounts(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(tradingAccounts)
+  const accounts = await db.select().from(tradingAccounts)
     .where(and(
       eq(tradingAccounts.userId, userId),
       eq(tradingAccounts.isActive, true)
     ))
     .orderBy(desc(tradingAccounts.updatedAt));
+  
+  // Aplicar conversão para cent accounts
+  return accounts.map(acc => {
+    const divisor = acc.isCentAccount ? 100 : 1;
+    return {
+      ...acc,
+      balance: Math.floor((acc.balance || 0) / divisor),
+      equity: Math.floor((acc.equity || 0) / divisor),
+      marginFree: Math.floor((acc.marginFree || 0) / divisor),
+      marginUsed: Math.floor((acc.marginUsed || 0) / divisor),
+    };
+  });
 }
 
 export async function updateAccountStatus(terminalId: string, status: "connected" | "disconnected" | "error") {
@@ -186,6 +248,34 @@ export async function updateAccountStatus(terminalId: string, status: "connected
 }
 
 // ===== TRADE OPERATIONS =====
+
+/**
+ * Aplica conversão de valores para trades de contas cent
+ */
+async function applyTradeConversion(trades: Trade[]): Promise<Trade[]> {
+  const db = await getDb();
+  if (!db || trades.length === 0) return trades;
+  
+  // Buscar informações das contas para saber quais são cent
+  const accountIds = Array.from(new Set(trades.map(t => t.accountId)));
+  const accounts = await db.select().from(tradingAccounts)
+    .where(inArray(tradingAccounts.id, accountIds));
+  
+  const accountMap = new Map(accounts.map(acc => [acc.id, acc]));
+  
+  return trades.map(trade => {
+    const account = accountMap.get(trade.accountId);
+    if (!account || !account.isCentAccount) return trade;
+    
+    // Aplicar conversão para cent account
+    return {
+      ...trade,
+      profit: Math.floor((trade.profit || 0) / 100),
+      commission: Math.floor((trade.commission || 0) / 100),
+      swap: Math.floor((trade.swap || 0) / 100),
+    };
+  });
+}
 
 export async function createOrUpdateTrade(trade: InsertTrade) {
   const db = await getDb();
@@ -227,7 +317,7 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
 export async function getUserTrades(userId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(trades)
+  const result = await db.select().from(trades)
     .where(
       and(
         eq(trades.userId, userId),
@@ -236,38 +326,42 @@ export async function getUserTrades(userId: number, limit: number = 100) {
     )
     .orderBy(desc(trades.openTime))
     .limit(limit);
+  return await applyTradeConversion(result);
 }
 
 export async function getAccountTrades(accountId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(trades)
+  const result = await db.select().from(trades)
     .where(eq(trades.accountId, accountId))
     .orderBy(desc(trades.openTime))
     .limit(limit);
+  return await applyTradeConversion(result);
 }
 
 export async function getOpenTrades(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(trades)
+  const result = await db.select().from(trades)
     .where(and(
       eq(trades.userId, userId),
       eq(trades.status, "open")
     ))
     .orderBy(desc(trades.openTime));
+  return await applyTradeConversion(result);
 }
 
 export async function getTradesByDateRange(userId: number, startDate: Date, endDate: Date) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(trades)
+  const result = await db.select().from(trades)
     .where(and(
       eq(trades.userId, userId),
       gte(trades.openTime, startDate),
       lte(trades.openTime, endDate)
     ))
     .orderBy(desc(trades.openTime));
+  return await applyTradeConversion(result);
 }
 
 export async function closeTrade(tradeId: number, closePrice: number, closeTime: Date, profit: number) {
@@ -527,8 +621,10 @@ export async function getTradeStatistics(userId: number, startDate?: Date, endDa
   if (startDate) conditions.push(gte(trades.openTime, startDate));
   if (endDate) conditions.push(lte(trades.openTime, endDate));
 
-  const allTrades = await db.select().from(trades)
+  const rawTrades = await db.select().from(trades)
     .where(and(...conditions));
+  
+  const allTrades = await applyTradeConversion(rawTrades);
 
   if (allTrades.length === 0) {
     return {
@@ -576,18 +672,30 @@ export async function getAccountSummary(userId: number) {
 
   const accounts = await getActiveAccounts(userId);
   
-  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-  const totalEquity = accounts.reduce((sum, acc) => sum + (acc.equity || 0), 0);
-  const totalOpenPositions = accounts.reduce((sum, acc) => sum + (acc.openPositions || 0), 0);
-  const connectedAccounts = accounts.filter(acc => acc.status === "connected").length;
+  // Aplicar conversão para cent accounts
+  const accountsWithConversion = accounts.map(acc => {
+    const divisor = acc.isCentAccount ? 100 : 1;
+    return {
+      ...acc,
+      balance: Math.floor((acc.balance || 0) / divisor),
+      equity: Math.floor((acc.equity || 0) / divisor),
+      marginFree: Math.floor((acc.marginFree || 0) / divisor),
+      marginUsed: Math.floor((acc.marginUsed || 0) / divisor),
+    };
+  });
+  
+  const totalBalance = accountsWithConversion.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+  const totalEquity = accountsWithConversion.reduce((sum, acc) => sum + (acc.equity || 0), 0);
+  const totalOpenPositions = accountsWithConversion.reduce((sum, acc) => sum + (acc.openPositions || 0), 0);
+  const connectedAccounts = accountsWithConversion.filter(acc => acc.status === "connected").length;
 
   return {
-    totalAccounts: accounts.length,
+    totalAccounts: accountsWithConversion.length,
     connectedAccounts,
     totalBalance,
     totalEquity,
     totalOpenPositions,
-    accounts,
+    accounts: accountsWithConversion,
   };
 }
 

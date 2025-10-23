@@ -177,7 +177,7 @@ export default function Trades() {
                           }`}
                         >
                           ${(
-                            (trade.profit || 0) / 100 / (trade.symbol?.toLowerCase().endsWith('c') ? 100 : 1)
+                            (trade.profit || 0) / 100
                           ).toLocaleString("pt-BR", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,

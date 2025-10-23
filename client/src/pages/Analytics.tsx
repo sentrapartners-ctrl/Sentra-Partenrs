@@ -16,10 +16,9 @@ export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d");
 
-  // Helper para calcular profit considerando contas cent
+  // Backend já aplica conversão de cent accounts automaticamente
   const getActualProfit = (trade: any) => {
-    const isCent = trade.symbol?.toLowerCase().endsWith('c');
-    return (trade.profit || 0) / 100 / (isCent ? 100 : 1);
+    return (trade.profit || 0) / 100;
   };
 
   const { data: accounts } = trpc.accounts.list.useQuery(undefined, {

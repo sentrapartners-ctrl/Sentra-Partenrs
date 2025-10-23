@@ -41,6 +41,7 @@ export const tradingAccounts = mysqlTable("trading_accounts", {
   status: mysqlEnum("status", ["connected", "disconnected", "error"]).default("disconnected").notNull(),
   lastHeartbeat: timestamp("lastHeartbeat"),
   classification: varchar("classification", { length: 128 }),
+  isCentAccount: boolean("isCentAccount").default(false).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

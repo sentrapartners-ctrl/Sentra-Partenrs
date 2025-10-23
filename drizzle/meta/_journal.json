@@ -22,6 +22,13 @@
       "when": 1761224486862,
       "tag": "0002_curious_fat_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1761230078441,
+      "tag": "0003_fancy_thor",
+      "breakpoints": true
     }
   ]
 }

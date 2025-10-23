@@ -41,16 +41,14 @@ export default function Home() {
   const recentTrades = useMemo(() => {
     if (!dashboardData?.recentTrades) return [];
     
-    return dashboardData.recentTrades.map(trade => {
-      const isCent = trade.symbol?.toLowerCase().endsWith('c');
-      return {
-        ...trade,
-        profit: (trade.profit || 0) / 100 / (isCent ? 100 : 1),
-        volume: (trade.volume || 0) / 100,
-        openPrice: (trade.openPrice || 0) / 100000,
-        closePrice: (trade.closePrice || 0) / 100000,
-      };
-    });
+    // Backend já aplica conversão de cent accounts automaticamente
+    return dashboardData.recentTrades.map(trade => ({
+      ...trade,
+      profit: (trade.profit || 0) / 100,
+      volume: (trade.volume || 0) / 100,
+      openPrice: (trade.openPrice || 0) / 100000,
+      closePrice: (trade.closePrice || 0) / 100000,
+    }));
   }, [dashboardData?.recentTrades]);
 
   if (!isAuthenticated) {

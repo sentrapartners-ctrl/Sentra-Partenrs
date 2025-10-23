@@ -1,0 +1,1 @@
+ALTER TABLE `trading_accounts` ADD `isCentAccount` boolean DEFAULT false NOT NULL;
