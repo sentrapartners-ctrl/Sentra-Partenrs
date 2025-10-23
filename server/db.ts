@@ -273,14 +273,18 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
   }
 
   // Detectar automaticamente se o trade está aberto ou fechado
-  // CRITÉRIO DEFINITIVO: closeTime
-  // - Se closeTime é null ou undefined → ABERTO (posição flutuante)
-  // - Se closeTime existe → FECHADO (histórico)
-  let actualStatus: "open" | "closed" = "closed";
+  let actualStatus: "open" | "closed" = trade.status || "open";
   
-  if (!trade.closeTime || trade.closeTime === null || trade.closeTime === undefined) {
+  // Se closeTime é null, definitivamente está aberto
+  if (!trade.closeTime) {
     actualStatus = "open";
-  } else {
+  }
+  // Se profit = 0 E openPrice = closePrice, é flutuante (aberto)
+  else if ((trade.profit === 0 || !trade.profit) && trade.openPrice === trade.closePrice) {
+    actualStatus = "open";
+  }
+  // Caso contrário, está fechado
+  else {
     actualStatus = "closed";
   }
 
@@ -322,11 +326,7 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
 export async function getUserTrades(userId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select({
-    trade: trades,
-    account: tradingAccounts
-  }).from(trades)
-    .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
+  const result = await db.select().from(trades)
     .where(
       and(
         eq(trades.userId, userId),
@@ -335,15 +335,7 @@ export async function getUserTrades(userId: number, limit: number = 100) {
     )
     .orderBy(desc(trades.openTime))
     .limit(limit);
-  
-  const tradesWithAccount = result.map(r => ({
-    ...r.trade,
-    accountNumber: r.account?.accountNumber,
-    broker: r.account?.broker,
-    accountType: r.account?.accountType
-  }));
-  
-  return await applyTradeConversion(tradesWithAccount);
+  return await applyTradeConversion(result);
 }
 
 export async function getAccountTrades(accountId: number, limit: number = 100) {
@@ -371,26 +363,14 @@ export async function getOpenTrades(userId: number) {
 export async function getTradesByDateRange(userId: number, startDate: Date, endDate: Date) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select({
-    trade: trades,
-    account: tradingAccounts
-  }).from(trades)
-    .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
+  const result = await db.select().from(trades)
     .where(and(
       eq(trades.userId, userId),
       gte(trades.openTime, startDate),
       lte(trades.openTime, endDate)
     ))
     .orderBy(desc(trades.openTime));
-  
-  const tradesWithAccount = result.map(r => ({
-    ...r.trade,
-    accountNumber: r.account?.accountNumber,
-    broker: r.account?.broker,
-    accountType: r.account?.accountType
-  }));
-  
-  return await applyTradeConversion(tradesWithAccount);
+  return await applyTradeConversion(result);
 }
 
 export async function closeTrade(tradeId: number, closePrice: number, closeTime: Date, profit: number) {
