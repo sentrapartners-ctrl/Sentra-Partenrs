@@ -63,19 +63,42 @@ function parseForexFactoryXML(xml: string): ForexEvent[] {
       const previous = extractTag(eventXml, 'previous');
       
       if (title && country && date) {
-        // Combina data e hora
-        const dateTime = time 
-          ? `${date} ${time}`
-          : date;
-        
-        events.push({
-          date: dateTime,
-          country: country,
-          impact: impact || 'Low',
-          title: title,
-          forecast: forecast || undefined,
-          previous: previous || undefined,
-        });
+        // Converte data de MM-DD-YYYY para formato ISO
+        const dateParts = date.split('-');
+        if (dateParts.length === 3) {
+          const month = dateParts[0];
+          const day = dateParts[1];
+          const year = dateParts[2];
+          
+          // Converte hora de 12h para 24h
+          let hour = '00';
+          let minute = '00';
+          if (time) {
+            const timeMatch = time.match(/(\d{1,2}):(\d{2})(am|pm)/i);
+            if (timeMatch) {
+              let h = parseInt(timeMatch[1]);
+              const m = timeMatch[2];
+              const period = timeMatch[3].toLowerCase();
+              
+              if (period === 'pm' && h !== 12) h += 12;
+              if (period === 'am' && h === 12) h = 0;
+              
+              hour = h.toString().padStart(2, '0');
+              minute = m;
+            }
+          }
+          
+          const isoDate = `${year}-${month}-${day}T${hour}:${minute}:00`;
+          
+          events.push({
+            date: isoDate,
+            country: country,
+            impact: impact || 'Low',
+            title: title,
+            forecast: forecast || undefined,
+            previous: previous || undefined,
+          });
+        }
       }
     }
   } catch (error) {
@@ -86,8 +109,17 @@ function parseForexFactoryXML(xml: string): ForexEvent[] {
 }
 
 function extractTag(xml: string, tagName: string): string {
-  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`, 'g');
+  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`);
   const match = xml.match(regex);
-  return match ? match[1].trim() : '';
+  if (!match) return '';
+  
+  let value = match[1].trim();
+  
+  // Remove CDATA se presente
+  if (value.startsWith('<![CDATA[') && value.endsWith(']]>')) {
+    value = value.substring(9, value.length - 3);
+  }
+  
+  return value.trim();
 }
 
