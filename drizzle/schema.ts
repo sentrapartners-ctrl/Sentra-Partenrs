@@ -106,6 +106,30 @@ export type BalanceHistory = typeof balanceHistory.$inferSelect;
 export type InsertBalanceHistory = typeof balanceHistory.$inferInsert;
 
 /**
+ * Account transactions - tracks deposits and withdrawals
+ */
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  accountId: int("accountId").notNull(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["deposit", "withdrawal"]).notNull(),
+  amount: int("amount").notNull(), // stored in cents
+  balanceBefore: int("balanceBefore").notNull(), // stored in cents
+  balanceAfter: int("balanceAfter").notNull(), // stored in cents
+  comment: text("comment"),
+  timestamp: timestamp("timestamp").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  accountIdIdx: index("accountId_idx").on(table.accountId),
+  userIdIdx: index("userId_idx").on(table.userId),
+  typeIdx: index("type_idx").on(table.type),
+  timestampIdx: index("timestamp_idx").on(table.timestamp),
+}));
+
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = typeof transactions.$inferInsert;
+
+/**
  * User settings and preferences
  */
 export const userSettings = mysqlTable("user_settings", {

@@ -29,6 +29,13 @@
       "when": 1761230078441,
       "tag": "0003_fancy_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1761234986288,
+      "tag": "0004_lively_vivisector",
+      "breakpoints": true
     }
   ]
 }

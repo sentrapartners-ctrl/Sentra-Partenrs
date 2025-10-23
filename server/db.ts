@@ -11,6 +11,9 @@ import {
   Trade,
   balanceHistory,
   InsertBalanceHistory,
+  transactions,
+  InsertTransaction,
+  Transaction,
   userSettings,
   InsertUserSettings,
   UserSettings,
@@ -269,6 +272,27 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
     throw new Error("Database not available");
   }
 
+  // Detectar automaticamente se o trade está aberto ou fechado
+  let actualStatus: "open" | "closed" = trade.status || "open";
+  
+  // Se closeTime é null, definitivamente está aberto
+  if (!trade.closeTime) {
+    actualStatus = "open";
+  }
+  // Se profit = 0 E openPrice = closePrice, é flutuante (aberto)
+  else if ((trade.profit === 0 || !trade.profit) && trade.openPrice === trade.closePrice) {
+    actualStatus = "open";
+  }
+  // Caso contrário, está fechado
+  else {
+    actualStatus = "closed";
+  }
+
+  const tradeWithStatus = {
+    ...trade,
+    status: actualStatus
+  };
+
   try {
     const existing = await db.select().from(trades)
       .where(and(
@@ -278,17 +302,17 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
       .limit(1);
 
     if (existing.length > 0) {
-      console.log(`[DB] Updating trade ticket=${trade.ticket}`);
+      console.log(`[DB] Updating trade ticket=${trade.ticket}, status=${actualStatus}`);
       await db.update(trades)
         .set({
-          ...trade,
+          ...tradeWithStatus,
           updatedAt: new Date(),
         })
         .where(eq(trades.id, existing[0].id));
       return existing[0].id;
     } else {
-      console.log(`[DB] Inserting new trade ticket=${trade.ticket}, symbol=${trade.symbol}`);
-      const result = await db.insert(trades).values(trade);
+      console.log(`[DB] Inserting new trade ticket=${trade.ticket}, symbol=${trade.symbol}, status=${actualStatus}`);
+      const result = await db.insert(trades).values(tradeWithStatus);
       console.log(`[DB] Trade inserted with ID=${result[0].insertId}`);
       return Number(result[0].insertId);
     }
@@ -718,6 +742,86 @@ export async function getAccountSummary(userId: number) {
     totalEquity,
     totalOpenPositions,
     accounts,
+  };
+}
+
+
+
+// ============================================================================
+// TRANSACTIONS
+// ============================================================================
+
+export async function createTransaction(transaction: InsertTransaction) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(transactions).values(transaction);
+  return Number(result[0].insertId);
+}
+
+export async function getAccountTransactions(accountId: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(transactions)
+    .where(eq(transactions.accountId, accountId))
+    .orderBy(desc(transactions.timestamp))
+    .limit(limit);
+  
+  return result;
+}
+
+export async function getUserTransactions(userId: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(transactions)
+    .where(eq(transactions.userId, userId))
+    .orderBy(desc(transactions.timestamp))
+    .limit(limit);
+  
+  return result;
+}
+
+export async function getTransactionsByDateRange(userId: number, startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(transactions)
+    .where(and(
+      eq(transactions.userId, userId),
+      gte(transactions.timestamp, startDate),
+      lte(transactions.timestamp, endDate)
+    ))
+    .orderBy(desc(transactions.timestamp));
+  
+  return result;
+}
+
+export async function getTransactionStatistics(userId: number, startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  let conditions = [eq(transactions.userId, userId)];
+  if (startDate) conditions.push(gte(transactions.timestamp, startDate));
+  if (endDate) conditions.push(lte(transactions.timestamp, endDate));
+  
+  const allTransactions = await db.select().from(transactions)
+    .where(and(...conditions));
+  
+  const deposits = allTransactions.filter(t => t.type === "deposit");
+  const withdrawals = allTransactions.filter(t => t.type === "withdrawal");
+  
+  const totalDeposits = deposits.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalWithdrawals = withdrawals.reduce((sum, t) => sum + (t.amount || 0), 0);
+  
+  return {
+    totalDeposits,
+    totalWithdrawals,
+    netFlow: totalDeposits - totalWithdrawals,
+    depositCount: deposits.length,
+    withdrawalCount: withdrawals.length,
+    totalTransactions: allTransactions.length,
   };
 }
 

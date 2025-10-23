@@ -27,11 +27,13 @@ export const appRouter = router({
       const stats = await db.getTradeStatistics(ctx.user.id);
       const openTrades = await db.getOpenTrades(ctx.user.id);
       const recentTrades = await db.getUserTrades(ctx.user.id, 10);
+      const transactionStats = await db.getTransactionStatistics(ctx.user.id);
       
       return {
         summary,
         stats,
         openTrades,
+        transactionStats,
         recentTrades,
       };
     }),
@@ -70,6 +72,18 @@ export const appRouter = router({
         });
         
         return { success: true };
+      }),
+
+    transactions: protectedProcedure
+      .input(z.object({ accountId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        // Buscar conta pelo accountId diretamente
+        const accounts = await db.getUserAccounts(ctx.user.id);
+        const account = accounts.find(a => a.id === input.accountId);
+        if (!account || account.userId !== ctx.user.id) {
+          throw new Error("Account not found or unauthorized");
+        }
+        return await db.getAccountTransactions(input.accountId);
       }),
   }),
 
