@@ -362,6 +362,7 @@ export const appRouter = router({
   calendar: router({
     getEvents: publicProcedure.query(async (): Promise<Array<{
       date: string;
+      time: string;
       country: string;
       impact: string;
       title: string;
