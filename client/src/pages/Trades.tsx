@@ -17,7 +17,6 @@ export default function Trades() {
   
   const { data: allTrades, refetch } = trpc.trades.list.useQuery(
     { 
-      limit: 1000,
       startDate: periodDates.start,
       endDate: periodDates.end,
     },
