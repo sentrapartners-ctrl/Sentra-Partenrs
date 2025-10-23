@@ -273,13 +273,18 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
   }
 
   // Detectar automaticamente se o trade está aberto ou fechado
-  // CRITÉRIO DEFINITIVO: closeTime
-  // - Se closeTime é null ou undefined → ABERTO
-  // - Se closeTime existe → FECHADO
+  // Trades flutuantes (abertos) têm:
+  // - profit = 0 (ou null)
+  // - openPrice = closePrice (EA envia preço de abertura como fechamento)
+  // - closeTime = openTime (EA envia mesmo timestamp)
   let actualStatus: "open" | "closed" = "closed";
   
-  if (!trade.closeTime) {
+  // Se profit = 0 E openPrice = closePrice, é flutuante (aberto)
+  if ((trade.profit === 0 || trade.profit === null || trade.profit === undefined) && 
+      trade.openPrice === trade.closePrice) {
     actualStatus = "open";
+  } else {
+    actualStatus = "closed";
   }
 
   const tradeWithStatus = {
