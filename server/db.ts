@@ -397,13 +397,55 @@ export async function getUserBalanceHistory(userId: number, startDate: Date, end
 
 // ===== USER SETTINGS OPERATIONS =====
 
-export async function getUserSettings(userId: number): Promise<UserSettings | undefined> {
+export async function getUserSettings(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) {
+    // Retorna configurações padrão se banco não disponível
+    return {
+      userId,
+      theme: "light" as const,
+      displayCurrency: "USD",
+      dateFormat: "DD/MM/YYYY",
+      timezone: "America/Sao_Paulo",
+      decimalPrecision: 2,
+      heartbeatInterval: 60,
+      alertsEnabled: true,
+      alertBalance: true,
+      alertDrawdown: true,
+      alertTrades: true,
+      alertConnection: true,
+      drawdownThreshold: 10,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+  
   const result = await db.select().from(userSettings)
     .where(eq(userSettings.userId, userId))
     .limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  
+  // Se não existir, retorna configurações padrão
+  if (result.length === 0) {
+    return {
+      userId,
+      theme: "light" as const,
+      displayCurrency: "USD",
+      dateFormat: "DD/MM/YYYY",
+      timezone: "America/Sao_Paulo",
+      decimalPrecision: 2,
+      heartbeatInterval: 60,
+      alertsEnabled: true,
+      alertBalance: true,
+      alertDrawdown: true,
+      alertTrades: true,
+      alertConnection: true,
+      drawdownThreshold: 10,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+  
+  return result[0];
 }
 
 export async function createOrUpdateUserSettings(settings: InsertUserSettings) {
