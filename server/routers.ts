@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import { getForexFactoryEvents } from "./forex-calendar";
 
 export const appRouter = router({
   system: systemRouter,
@@ -350,6 +351,20 @@ export const appRouter = router({
         });
         return { success: true };
       }),
+  }),
+
+  // ===== CALENDAR =====
+  calendar: router({
+    getEvents: publicProcedure.query(async (): Promise<Array<{
+      date: string;
+      country: string;
+      impact: string;
+      title: string;
+      forecast?: string;
+      previous?: string;
+    }>> => {
+      return await getForexFactoryEvents();
+    }),
   }),
 });
 

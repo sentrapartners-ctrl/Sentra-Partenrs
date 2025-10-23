@@ -1,0 +1,93 @@
+/**
+ * Serviço para buscar eventos do calendário econômico do Forex Factory
+ */
+
+interface ForexEvent {
+  date: string;
+  country: string;
+  impact: string;
+  title: string;
+  forecast?: string;
+  previous?: string;
+}
+
+let cachedEvents: ForexEvent[] = [];
+let lastFetch = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
+  // Retorna cache se ainda válido
+  if (cachedEvents.length > 0 && Date.now() - lastFetch < CACHE_DURATION) {
+    return cachedEvents;
+  }
+
+  try {
+    const response = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.xml');
+    
+    if (!response.ok) {
+      console.error('[Forex Calendar] Failed to fetch:', response.statusText);
+      return cachedEvents; // Retorna cache antigo se falhar
+    }
+
+    const xmlText = await response.text();
+    const events = parseForexFactoryXML(xmlText);
+    
+    cachedEvents = events.slice(0, 200); // Limita a 200 eventos
+    lastFetch = Date.now();
+    
+    console.log(`[Forex Calendar] Fetched ${events.length} events`);
+    return cachedEvents;
+  } catch (error) {
+    console.error('[Forex Calendar] Error fetching events:', error);
+    return cachedEvents; // Retorna cache antigo se houver erro
+  }
+}
+
+function parseForexFactoryXML(xml: string): ForexEvent[] {
+  const events: ForexEvent[] = [];
+  
+  try {
+    // Parser simples de XML usando regex
+    const eventRegex = /<event>([\s\S]*?)<\/event>/g;
+    const eventMatches = Array.from(xml.matchAll(eventRegex));
+    
+    for (const match of eventMatches) {
+      const eventXml = match[1];
+      
+      const title = extractTag(eventXml, 'title');
+      const country = extractTag(eventXml, 'country');
+      const date = extractTag(eventXml, 'date');
+      const time = extractTag(eventXml, 'time');
+      const impact = extractTag(eventXml, 'impact');
+      const forecast = extractTag(eventXml, 'forecast');
+      const previous = extractTag(eventXml, 'previous');
+      
+      if (title && country && date) {
+        // Combina data e hora
+        const dateTime = time 
+          ? `${date} ${time}`
+          : date;
+        
+        events.push({
+          date: dateTime,
+          country: country,
+          impact: impact || 'Low',
+          title: title,
+          forecast: forecast || undefined,
+          previous: previous || undefined,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[Forex Calendar] Error parsing XML:', error);
+  }
+  
+  return events;
+}
+
+function extractTag(xml: string, tagName: string): string {
+  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`, 'g');
+  const match = xml.match(regex);
+  return match ? match[1].trim() : '';
+}
+
