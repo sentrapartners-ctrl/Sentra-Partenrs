@@ -170,7 +170,7 @@ export default function Accounts() {
                     <span className="text-sm text-muted-foreground">Balanço:</span>
                     <div className="text-right">
                       <div className="text-sm font-bold">
-                        ${((account.balance || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         {(account.balance || 0).toLocaleString('pt-BR')} cents
@@ -183,7 +183,7 @@ export default function Accounts() {
                     <span className="text-sm text-muted-foreground">Equity:</span>
                     <div className="text-right">
                       <div className="text-sm font-bold">
-                        ${((account.equity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         {(account.equity || 0).toLocaleString('pt-BR')} cents
@@ -196,7 +196,7 @@ export default function Accounts() {
                     <span className="text-sm text-muted-foreground">Margem Livre:</span>
                     <div className="text-right">
                       <div className="text-sm">
-                        ${((account.marginFree || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${((account.marginFree || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         {(account.marginFree || 0).toLocaleString('pt-BR')} cents

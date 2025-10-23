@@ -252,16 +252,12 @@ async function applyTradeConversion(trades: Trade[]): Promise<Trade[]> {
   
   const accountMap = new Map(accounts.map(acc => [acc.id, acc]));
   
+  // Retorna trades com flag isCentAccount da conta associada
   return trades.map(trade => {
     const account = accountMap.get(trade.accountId);
-    if (!account || !account.isCentAccount) return trade;
-    
-    // Aplicar conversão para cent account
     return {
       ...trade,
-      profit: Math.floor((trade.profit || 0) / 100),
-      commission: Math.floor((trade.commission || 0) / 100),
-      swap: Math.floor((trade.swap || 0) / 100),
+      isCentAccount: account?.isCentAccount || false,
     };
   });
 }

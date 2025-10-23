@@ -16,9 +16,10 @@ export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d");
 
-  // Backend já aplica conversão de cent accounts automaticamente
+  // Aplica conversão baseada em isCentAccount
   const getActualProfit = (trade: any) => {
-    return (trade.profit || 0) / 100;
+    const divisor = trade.isCentAccount ? 10000 : 100;
+    return (trade.profit || 0) / divisor;
   };
 
   const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
@@ -192,7 +193,7 @@ export default function Analytics() {
                   stats.netProfit >= 0 ? "text-green-500" : "text-red-500"
                 }`}
               >
-                ${(stats.netProfit / 100).toLocaleString("pt-BR", {
+                ${stats.netProfit.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -232,7 +233,7 @@ export default function Analytics() {
                   Total de Ganhos
                 </span>
                 <span className="text-lg font-bold text-green-500">
-                  ${(stats.totalProfit / 100).toLocaleString("pt-BR", {
+                  ${stats.totalProfit.toLocaleString("pt-BR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -243,7 +244,7 @@ export default function Analytics() {
                   Média por Trade
                 </span>
                 <span className="text-lg font-bold text-green-500">
-                  ${(stats.averageWin / 100).toLocaleString("pt-BR", {
+                  ${stats.averageWin.toLocaleString("pt-BR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -268,7 +269,7 @@ export default function Analytics() {
                   Total de Perdas
                 </span>
                 <span className="text-lg font-bold text-red-500">
-                  ${(Math.abs(stats.totalLoss) / 100).toLocaleString("pt-BR", {
+                  ${Math.abs(stats.totalLoss).toLocaleString("pt-BR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -279,7 +280,7 @@ export default function Analytics() {
                   Média por Trade
                 </span>
                 <span className="text-lg font-bold text-red-500">
-                  ${(Math.abs(stats.averageLoss) / 100).toLocaleString("pt-BR", {
+                  ${Math.abs(stats.averageLoss).toLocaleString("pt-BR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}

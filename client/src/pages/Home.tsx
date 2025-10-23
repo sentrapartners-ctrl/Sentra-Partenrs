@@ -45,10 +45,10 @@ export default function Home() {
   const recentTrades = useMemo(() => {
     if (!dashboardData?.recentTrades) return [];
     
-    // Backend já aplica conversão de cent accounts automaticamente
-    return dashboardData.recentTrades.map(trade => ({
+    // Aplica conversão baseada em isCentAccount
+    return dashboardData.recentTrades.map((trade: any) => ({
       ...trade,
-      profit: (trade.profit || 0) / 100,
+      profit: (trade.profit || 0) / (trade.isCentAccount ? 10000 : 100),
       volume: (trade.volume || 0) / 100,
       openPrice: (trade.openPrice || 0) / 100000,
       closePrice: (trade.closePrice || 0) / 100000,
