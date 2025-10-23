@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { InlineCurrencyValue } from "@/components/CurrencyValue";
 
 export default function Accounts() {
   const { data: accounts, isLoading, refetch } = trpc.accounts.list.useQuery(
@@ -168,10 +169,10 @@ export default function Accounts() {
                   {/* Balance */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Balanço:</span>
-                    <div className="text-right">
-                      <div className="text-sm font-bold">
-                        ${((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
+                    <div className="text-right text-sm font-bold">
+                      <InlineCurrencyValue 
+                        value={(account.balance || 0) / (account.isCentAccount ? 10000 : 100)}
+                      />
                       <div className="text-[10px] text-muted-foreground">
                         {(account.balance || 0).toLocaleString('pt-BR')} cents
                       </div>
@@ -181,10 +182,10 @@ export default function Accounts() {
                   {/* Equity */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Equity:</span>
-                    <div className="text-right">
-                      <div className="text-sm font-bold">
-                        ${((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
+                    <div className="text-right text-sm font-bold">
+                      <InlineCurrencyValue 
+                        value={(account.equity || 0) / (account.isCentAccount ? 10000 : 100)}
+                      />
                       <div className="text-[10px] text-muted-foreground">
                         {(account.equity || 0).toLocaleString('pt-BR')} cents
                       </div>
@@ -217,10 +218,10 @@ export default function Accounts() {
                   {/* Margin */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Margem Livre:</span>
-                    <div className="text-right">
-                      <div className="text-sm">
-                        ${((account.marginFree || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
+                    <div className="text-right text-sm">
+                      <InlineCurrencyValue 
+                        value={(account.marginFree || 0) / (account.isCentAccount ? 10000 : 100)}
+                      />
                       <div className="text-[10px] text-muted-foreground">
                         {(account.marginFree || 0).toLocaleString('pt-BR')} cents
                       </div>

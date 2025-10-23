@@ -10,7 +10,8 @@ import {
   Percent,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { PeriodFilter, Period } from "@/components/PeriodFilter";
+import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
+import { CurrencyValue, InlineCurrencyValue } from "@/components/CurrencyValue";
 
 export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
@@ -197,15 +198,8 @@ export default function Analytics() {
               )}
             </CardHeader>
             <CardContent>
-              <div
-                className={`text-2xl font-bold ${
-                  stats.netProfit >= 0 ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                ${stats.netProfit.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+              <div className={stats.netProfit >= 0 ? "text-green-500" : "text-red-500"}>
+                <CurrencyValue value={stats.netProfit} />
               </div>
               <p className="text-xs text-muted-foreground">
                 {(stats.netProfit || 0).toLocaleString("pt-BR")} cents
@@ -244,10 +238,7 @@ export default function Analytics() {
                   Total de Ganhos
                 </span>
                 <span className="text-lg font-bold text-green-500">
-                  ${stats.totalProfit.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  <InlineCurrencyValue value={stats.totalProfit} />
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -255,10 +246,7 @@ export default function Analytics() {
                   Média por Trade
                 </span>
                 <span className="text-lg font-bold text-green-500">
-                  ${stats.averageWin.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  <InlineCurrencyValue value={stats.averageWin} />
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -280,10 +268,7 @@ export default function Analytics() {
                   Total de Perdas
                 </span>
                 <span className="text-lg font-bold text-red-500">
-                  ${Math.abs(stats.totalLoss).toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  <InlineCurrencyValue value={Math.abs(stats.totalLoss)} />
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -291,10 +276,7 @@ export default function Analytics() {
                   Média por Trade
                 </span>
                 <span className="text-lg font-bold text-red-500">
-                  ${Math.abs(stats.averageLoss).toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  <InlineCurrencyValue value={Math.abs(stats.averageLoss)} />
                 </span>
               </div>
               <div className="flex justify-between items-center">

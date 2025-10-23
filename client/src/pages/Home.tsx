@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { Activity, DollarSign, TrendingUp, TrendingDown, Wallet, BarChart3 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
+import { CurrencyValue, InlineCurrencyValue } from "@/components/CurrencyValue";
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d"); const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
@@ -85,9 +86,7 @@ export default function Home() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${(stats?.totalBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
+              <CurrencyValue value={stats?.totalBalance || 0} />
               <p className="text-xs text-muted-foreground">
                 {stats?.totalAccounts || 0} contas ativas
               </p>
@@ -100,9 +99,7 @@ export default function Home() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${(stats?.totalEquity || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
+              <CurrencyValue value={stats?.totalEquity || 0} />
               <div className="flex items-center text-xs">
                 {stats && stats.profitLoss >= 0 ? (
                   <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
@@ -212,13 +209,11 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div
-                        className={`text-lg font-bold ${
-                          trade.profit >= 0 ? "text-green-500" : "text-red-500"
-                        }`}
-                      >
-                        {trade.profit >= 0 ? "+" : ""}$
-                        {trade.profit.toFixed(2)}
+                      <div className="text-lg font-bold">
+                        <InlineCurrencyValue 
+                          value={trade.profit} 
+                          colored={true}
+                        />
                       </div>
                     </div>
                   </div>
@@ -271,24 +266,18 @@ export default function Home() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Balanço:</span>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            ${((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {(account.balance || 0).toLocaleString('pt-BR')} cents
-                          </div>
+                        <div className="text-right font-medium text-sm">
+                          <InlineCurrencyValue 
+                            value={(account.balance || 0) / (account.isCentAccount ? 10000 : 100)}
+                          />
                         </div>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Equity:</span>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            ${((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {(account.equity || 0).toLocaleString('pt-BR')} cents
-                          </div>
+                        <div className="text-right font-medium text-sm">
+                          <InlineCurrencyValue 
+                            value={(account.equity || 0) / (account.isCentAccount ? 10000 : 100)}
+                          />
                         </div>
                       </div>
                       <div className="flex justify-between text-sm">

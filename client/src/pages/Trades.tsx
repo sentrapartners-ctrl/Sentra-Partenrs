@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { ArrowDownIcon, ArrowUpIcon, Filter } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
+import { InlineCurrencyValue } from "@/components/CurrencyValue";
 
 export default function Trades() {
   const { isAuthenticated, loading } = useAuth();
@@ -168,19 +169,11 @@ export default function Trades() {
                         <span className="text-sm text-muted-foreground">
                           Lucro/Prejuízo
                         </span>
-                        <span
-                          className={`font-bold ${
-                            (trade.profit || 0) >= 0
-                              ? "text-green-500"
-                              : "text-red-500"
-                          }`}
-                        >
-                          ${(
-                            (trade.profit || 0) / ((trade as any).isCentAccount ? 10000 : 100)
-                          ).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                        <span className="font-bold">
+                          <InlineCurrencyValue 
+                            value={(trade.profit || 0) / ((trade as any).isCentAccount ? 10000 : 100)}
+                            colored={true}
+                          />
                         </span>
                       </div>
 
