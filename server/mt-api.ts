@@ -37,6 +37,15 @@ const toLotsInt = (value: number) => Math.round(value * 100);
  * POST /api/mt/heartbeat
  * Recebe heartbeat do terminal MT4/MT5
  */
+/**
+ * Detecta se é uma conta cent baseada no símbolo
+ * Contas cent têm símbolos terminando com 'c' (ex: USDJPYc, BTCUSDc)
+ */
+const isCentAccount = (symbol?: string): boolean => {
+  if (!symbol) return false;
+  return symbol.toLowerCase().endsWith('c');
+};
+
 router.post("/heartbeat", async (req: Request, res: Response) => {
   try {
     console.log("[MT API] Heartbeat received:", JSON.stringify(req.body, null, 2));

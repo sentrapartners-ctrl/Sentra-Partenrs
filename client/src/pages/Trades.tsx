@@ -176,7 +176,9 @@ export default function Trades() {
                               : "text-red-500"
                           }`}
                         >
-                          ${((trade.profit || 0) / 100).toLocaleString("pt-BR", {
+                          ${(
+                            (trade.profit || 0) / 100 / (trade.symbol?.toLowerCase().endsWith('c') ? 100 : 1)
+                          ).toLocaleString("pt-BR", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}

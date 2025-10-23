@@ -16,6 +16,12 @@ export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d");
 
+  // Helper para calcular profit considerando contas cent
+  const getActualProfit = (trade: any) => {
+    const isCent = trade.symbol?.toLowerCase().endsWith('c');
+    return (trade.profit || 0) / 100 / (isCent ? 100 : 1);
+  };
+
   const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -38,48 +44,48 @@ export default function Analytics() {
   const analytics = trades
     ? {
         totalTrades: trades.length,
-        winningTrades: trades.filter((t) => (t.profit || 0) > 0).length,
-        losingTrades: trades.filter((t) => (t.profit || 0) < 0).length,
+        winningTrades: trades.filter((t) => getActualProfit(t) > 0).length,
+        losingTrades: trades.filter((t) => getActualProfit(t) < 0).length,
         winRate:
           trades.length > 0
-            ? (trades.filter((t) => (t.profit || 0) > 0).length /
+            ? (trades.filter((t) => getActualProfit(t) > 0).length /
                 trades.length) *
               100
             : 0,
         totalProfit: trades
-          .filter((t) => (t.profit || 0) > 0)
-          .reduce((sum, t) => sum + (t.profit || 0), 0),
+          .filter((t) => getActualProfit(t) > 0)
+          .reduce((sum, t) => sum + getActualProfit(t), 0),
         totalLoss: trades
-          .filter((t) => (t.profit || 0) < 0)
-          .reduce((sum, t) => sum + (t.profit || 0), 0),
-        netProfit: trades.reduce((sum, t) => sum + (t.profit || 0), 0),
+          .filter((t) => getActualProfit(t) < 0)
+          .reduce((sum, t) => sum + getActualProfit(t), 0),
+        netProfit: trades.reduce((sum, t) => sum + getActualProfit(t), 0),
         averageWin:
-          trades.filter((t) => (t.profit || 0) > 0).length > 0
+          trades.filter((t) => getActualProfit(t) > 0).length > 0
             ? trades
-                .filter((t) => (t.profit || 0) > 0)
-                .reduce((sum, t) => sum + (t.profit || 0), 0) /
-              trades.filter((t) => (t.profit || 0) > 0).length
+                .filter((t) => getActualProfit(t) > 0)
+                .reduce((sum, t) => sum + getActualProfit(t), 0) /
+              trades.filter((t) => getActualProfit(t) > 0).length
             : 0,
         averageLoss:
-          trades.filter((t) => (t.profit || 0) < 0).length > 0
+          trades.filter((t) => getActualProfit(t) < 0).length > 0
             ? trades
-                .filter((t) => (t.profit || 0) < 0)
-                .reduce((sum, t) => sum + (t.profit || 0), 0) /
-              trades.filter((t) => (t.profit || 0) < 0).length
+                .filter((t) => getActualProfit(t) < 0)
+                .reduce((sum, t) => sum + getActualProfit(t), 0) /
+              trades.filter((t) => getActualProfit(t) < 0).length
             : 0,
         profitFactor:
           Math.abs(
             trades
-              .filter((t) => (t.profit || 0) < 0)
-              .reduce((sum, t) => sum + (t.profit || 0), 0)
+              .filter((t) => getActualProfit(t) < 0)
+              .reduce((sum, t) => sum + getActualProfit(t), 0)
           ) > 0
             ? trades
-                .filter((t) => (t.profit || 0) > 0)
-                .reduce((sum, t) => sum + (t.profit || 0), 0) /
+                .filter((t) => getActualProfit(t) > 0)
+                .reduce((sum, t) => sum + getActualProfit(t), 0) /
               Math.abs(
                 trades
-                  .filter((t) => (t.profit || 0) < 0)
-                  .reduce((sum, t) => sum + (t.profit || 0), 0)
+                  .filter((t) => getActualProfit(t) < 0)
+                  .reduce((sum, t) => sum + getActualProfit(t), 0)
               )
             : 0,
       }
