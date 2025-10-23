@@ -47,10 +47,18 @@ export async function getForexFactoryEvents(): Promise<ForexEvent[]> {
     console.log(`[Forex Calendar] Data received: ${xmlData.length} characters`);
     const events = processNewsXML(xmlData);
     
-    cachedEvents = events.slice(0, 200); // Limita a 200 eventos
+    // Filtrar apenas eventos dos próximos 2 meses
+    const now = new Date();
+    const twoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, now.getDate());
+    const filteredEvents = events.filter(e => {
+      const eventDate = new Date(e.date);
+      return eventDate >= now && eventDate <= twoMonthsLater;
+    });
+    
+    cachedEvents = filteredEvents; // Sem limite de quantidade, apenas 2 meses
     lastFetch = Date.now();
     
-    console.log(`[Forex Calendar] Successfully parsed ${events.length} events, cached ${cachedEvents.length}`);
+    console.log(`[Forex Calendar] Successfully parsed ${events.length} events, cached ${cachedEvents.length} (filtered to 2 months)`);
     return cachedEvents;
   } catch (error) {
     console.error('[Forex Calendar] Error fetching events:', error);

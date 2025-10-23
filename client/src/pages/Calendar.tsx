@@ -79,26 +79,27 @@ export default function Calendar() {
 
   // Converter horário para BR e US
   const convertToBRTime = (date: string, time: string): string => {
-    try {
-      const eventDate = new Date(date + ' ' + time);
-      return eventDate.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
-      });
-    } catch {
-      return time;
-    }
+    if (!time) return '--:--';
+    return time; // Já vem no formato correto do XML (GMT)
   };
 
   const convertToUSTime = (date: string, time: string): string => {
+    if (!time) return '--:--';
+    // Converter de GMT para US Eastern Time (GMT-5 ou GMT-4 dependendo do horário de verão)
     try {
-      const eventDate = new Date(date + ' ' + time);
-      return eventDate.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/New_York'
-      });
+      const [hours, minutes] = time.replace(/[ap]m/i, '').split(':').map(Number);
+      const isPM = time.toLowerCase().includes('pm');
+      let hour24 = hours;
+      if (isPM && hours !== 12) hour24 += 12;
+      if (!isPM && hours === 12) hour24 = 0;
+      
+      // GMT para US Eastern (aproximadamente -5 horas)
+      let usHour = hour24 - 5;
+      if (usHour < 0) usHour += 24;
+      
+      const period = usHour >= 12 ? 'PM' : 'AM';
+      const displayHour = usHour > 12 ? usHour - 12 : (usHour === 0 ? 12 : usHour);
+      return `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`;
     } catch {
       return time;
     }
