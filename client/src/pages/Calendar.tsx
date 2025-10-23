@@ -144,17 +144,11 @@ export default function Calendar() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Calendário Econômico</h1>
-            <p className="text-muted-foreground">
-              Eventos econômicos importantes do Forex Factory
-            </p>
-          </div>
-          <Button onClick={goToToday} variant="outline">
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Hoje
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Calendário Econômico</h1>
+          <p className="text-muted-foreground">
+            Eventos econômicos importantes do Forex Factory
+          </p>
         </div>
 
         <Card>
