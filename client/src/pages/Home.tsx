@@ -18,9 +18,13 @@ export default function Home() {
 
     const { summary, stats: tradeStats } = dashboardData;
     
-    // Converte de cents para decimal
-    const totalBalance = (summary?.totalBalance || 0) / 100;
-    const totalEquity = (summary?.totalEquity || 0) / 100;
+    // Calcula balanço total aplicando conversão por conta
+    const totalBalance = (summary?.accounts || []).reduce((sum, acc: any) => {
+      return sum + ((acc.balance || 0) / (acc.isCentAccount ? 10000 : 100));
+    }, 0);
+    const totalEquity = (summary?.accounts || []).reduce((sum, acc: any) => {
+      return sum + ((acc.equity || 0) / (acc.isCentAccount ? 10000 : 100));
+    }, 0);
     const profitLoss = totalEquity - totalBalance;
     const profitLossPercent = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
 
@@ -263,7 +267,7 @@ export default function Home() {
                         <span className="text-muted-foreground">Balanço:</span>
                         <div className="text-right">
                           <div className="font-medium">
-                            ${((account.balance || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
                             {(account.balance || 0).toLocaleString('pt-BR')} cents
@@ -274,7 +278,7 @@ export default function Home() {
                         <span className="text-muted-foreground">Equity:</span>
                         <div className="text-right">
                           <div className="font-medium">
-                            ${((account.equity || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
                             {(account.equity || 0).toLocaleString('pt-BR')} cents

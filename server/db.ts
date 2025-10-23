@@ -128,30 +128,37 @@ export async function getUserById(id: number) {
 // ===== TRADING ACCOUNT OPERATIONS =====
 
 /**
- * Detecta se uma conta é do tipo cent baseada no broker
- * Brokers conhecidos com contas cent:
- * - Exness Technologies Ltd
- * - Brokers com "cent" no nome do servidor
+ * Detecta se uma conta é do tipo cent usando padrões universais.
+ * Funciona para qualquer broker, não depende de lista fixa.
+ * 
+ * Critérios de detecção:
+ * 1. Servidor contém "cent" no nome
+ * 2. Tipo de conta é "CENT" (se informado)
+ * 3. Análise de magnitude: balance > 1.000.000 cents sugere conta cent
  */
-function isCentAccountByBroker(broker?: string | null, server?: string | null): boolean {
-  if (!broker && !server) return false;
-  
-  const brokerLower = (broker || '').toLowerCase();
-  const serverLower = (server || '').toLowerCase();
-  
-  // Lista de brokers conhecidos com contas cent
-  const centBrokers = [
-    'exness technologies ltd',
-    'exness',
-  ];
-  
-  // Verifica se o broker está na lista de cent brokers
-  if (centBrokers.some(cb => brokerLower.includes(cb))) {
+function isCentAccountByBroker(
+  broker?: string | null, 
+  server?: string | null,
+  accountType?: string | null,
+  balance?: number | null
+): boolean {
+  // 1. Verifica tipo de conta explícito
+  if (accountType?.toUpperCase() === 'CENT') {
     return true;
   }
   
-  // Verifica se o servidor contém "cent" no nome
+  // 2. Verifica se o servidor contém "cent" no nome
+  const serverLower = (server || '').toLowerCase();
   if (serverLower.includes('cent')) {
+    return true;
+  }
+  
+  // 3. Análise de magnitude dos valores
+  // Contas cent geralmente têm valores muito altos em cents
+  // Ex: $2.955 = 29.551.541 cents (conta cent) vs $103.222 = 10.322.229 cents (conta dollar)
+  // Threshold: 20.000.000 cents = $200.000 em conta dollar ou $2.000 em conta cent
+  // Se balance > 20.000.000 cents, provavelmente é conta cent
+  if (balance && balance > 20000000) {
     return true;
   }
   
@@ -162,8 +169,13 @@ export async function createOrUpdateAccount(account: InsertTradingAccount) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Detecta automaticamente se é conta cent baseada no broker/servidor
-  const isCent = isCentAccountByBroker(account.broker, account.server);
+  // Detecta automaticamente se é conta cent usando padrões universais
+  const isCent = isCentAccountByBroker(
+    account.broker, 
+    account.server, 
+    account.accountType,
+    account.balance
+  );
   const accountWithCentFlag = {
     ...account,
     isCentAccount: isCent,
@@ -199,44 +211,21 @@ export async function getAccountByTerminalId(terminalId: string) {
 export async function getUserAccounts(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  const accounts = await db.select().from(tradingAccounts)
+  return await db.select().from(tradingAccounts)
     .where(eq(tradingAccounts.userId, userId))
     .orderBy(desc(tradingAccounts.updatedAt));
-  
-  // Aplicar conversão para cent accounts
-  return accounts.map(acc => {
-    const divisor = acc.isCentAccount ? 100 : 1;
-    return {
-      ...acc,
-      balance: Math.floor((acc.balance || 0) / divisor),
-      equity: Math.floor((acc.equity || 0) / divisor),
-      marginFree: Math.floor((acc.marginFree || 0) / divisor),
-      marginUsed: Math.floor((acc.marginUsed || 0) / divisor),
-    };
-  });
 }
 
 export async function getActiveAccounts(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  const accounts = await db.select().from(tradingAccounts)
+  // Retorna valores em cents sem conversão - frontend fará a exibição
+  return await db.select().from(tradingAccounts)
     .where(and(
       eq(tradingAccounts.userId, userId),
       eq(tradingAccounts.isActive, true)
     ))
     .orderBy(desc(tradingAccounts.updatedAt));
-  
-  // Aplicar conversão para cent accounts
-  return accounts.map(acc => {
-    const divisor = acc.isCentAccount ? 100 : 1;
-    return {
-      ...acc,
-      balance: Math.floor((acc.balance || 0) / divisor),
-      equity: Math.floor((acc.equity || 0) / divisor),
-      marginFree: Math.floor((acc.marginFree || 0) / divisor),
-      marginUsed: Math.floor((acc.marginUsed || 0) / divisor),
-    };
-  });
 }
 
 export async function updateAccountStatus(terminalId: string, status: "connected" | "disconnected" | "error") {
@@ -672,30 +661,19 @@ export async function getAccountSummary(userId: number) {
 
   const accounts = await getActiveAccounts(userId);
   
-  // Aplicar conversão para cent accounts
-  const accountsWithConversion = accounts.map(acc => {
-    const divisor = acc.isCentAccount ? 100 : 1;
-    return {
-      ...acc,
-      balance: Math.floor((acc.balance || 0) / divisor),
-      equity: Math.floor((acc.equity || 0) / divisor),
-      marginFree: Math.floor((acc.marginFree || 0) / divisor),
-      marginUsed: Math.floor((acc.marginUsed || 0) / divisor),
-    };
-  });
-  
-  const totalBalance = accountsWithConversion.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-  const totalEquity = accountsWithConversion.reduce((sum, acc) => sum + (acc.equity || 0), 0);
-  const totalOpenPositions = accountsWithConversion.reduce((sum, acc) => sum + (acc.openPositions || 0), 0);
-  const connectedAccounts = accountsWithConversion.filter(acc => acc.status === "connected").length;
+  // Retorna valores em cents sem conversão - frontend fará a exibição
+  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+  const totalEquity = accounts.reduce((sum, acc) => sum + (acc.equity || 0), 0);
+  const totalOpenPositions = accounts.reduce((sum, acc) => sum + (acc.openPositions || 0), 0);
+  const connectedAccounts = accounts.filter(acc => acc.status === "connected").length;
 
   return {
-    totalAccounts: accountsWithConversion.length,
+    totalAccounts: accounts.length,
     connectedAccounts,
     totalBalance,
     totalEquity,
     totalOpenPositions,
-    accounts: accountsWithConversion,
+    accounts,
   };
 }
 
