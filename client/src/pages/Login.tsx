@@ -17,19 +17,27 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      console.log('[Login] Success:', data);
+      // Aguardar um pouco para garantir que o cookie foi setado
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.location.href = "/";
     },
     onError: (err) => {
+      console.error('[Login] Error:', err);
       setError(err.message);
     },
   });
 
   const registerMutation = trpc.auth.register.useMutation({
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      console.log('[Register] Success:', data);
+      // Aguardar um pouco para garantir que o cookie foi setado
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.location.href = "/";
     },
     onError: (err) => {
+      console.error('[Register] Error:', err);
       setError(err.message);
     },
   });
