@@ -207,6 +207,11 @@ export default function Home() {
                       <div className="text-xs text-muted-foreground mt-1">
                         {new Date(trade.openTime).toLocaleString("pt-BR")}
                       </div>
+                      {(trade as any).accountNumber && (
+                        <div className="text-xs text-muted-foreground font-medium mt-1">
+                          {(trade as any).broker} - {(trade as any).accountNumber}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-bold">

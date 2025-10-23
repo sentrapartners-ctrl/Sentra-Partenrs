@@ -134,6 +134,11 @@ export default function Trades() {
                         <span className="text-xs text-muted-foreground">
                           Ticket: {trade.ticket}
                         </span>
+                        {(trade as any).accountNumber && (
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {(trade as any).broker} - {(trade as any).accountNumber}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex flex-col">
