@@ -897,3 +897,60 @@ export async function updateUserStatus(userId: number, isActive: boolean) {
   await db.update(users).set({ isActive }).where(eq(users.id, userId));
 }
 
+
+
+export async function updateUser(userId: number, data: { email?: string; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) return;
+  
+  const updateData: any = {};
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+  
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+}
+
+export async function deleteUser(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Deletar todas as contas do usuário
+  await db.delete(tradingAccounts).where(eq(tradingAccounts.userId, userId));
+  
+  // Deletar todos os trades do usuário
+  await db.delete(trades).where(eq(trades.userId, userId));
+  
+  // Deletar histórico de balanço
+  await db.delete(balanceHistory).where(eq(balanceHistory.userId, userId));
+  
+  // Deletar transações
+  await db.delete(transactions).where(eq(transactions.userId, userId));
+  
+  // Deletar usuário
+  await db.delete(users).where(eq(users.id, userId));
+}
+
+export async function updateAccount(accountId: number, data: { isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) return;
+  
+  const updateData: any = {};
+  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+  
+  await db.update(tradingAccounts).set(updateData).where(eq(tradingAccounts.id, accountId));
+}
+
+export async function deleteAccount(accountId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Deletar todos os trades da conta
+  await db.delete(trades).where(eq(trades.accountId, accountId));
+  
+  // Deletar histórico de balanço
+  await db.delete(balanceHistory).where(eq(balanceHistory.accountId, accountId));
+  
+  // Deletar conta
+  await db.delete(tradingAccounts).where(eq(tradingAccounts.id, accountId));
+}
+

@@ -471,6 +471,53 @@ export const appRouter = router({
         await db.updateUserStatus(input.userId, input.isActive);
         return { success: true };
       }),
+
+    updateUser: protectedProcedure
+      .input(z.object({ 
+        userId: z.number(), 
+        email: z.string().email().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.updateUser(input.userId, input);
+        return { success: true };
+      }),
+
+    deleteUser: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.deleteUser(input.userId);
+        return { success: true };
+      }),
+
+    updateAccount: protectedProcedure
+      .input(z.object({ 
+        accountId: z.number(), 
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.updateAccount(input.accountId, input);
+        return { success: true };
+      }),
+
+    deleteAccount: protectedProcedure
+      .input(z.object({ accountId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.deleteAccount(input.accountId);
+        return { success: true };
+      }),
   }),
 
   // ===== CALENDAR =====
