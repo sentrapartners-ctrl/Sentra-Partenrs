@@ -191,6 +191,29 @@ export default function Accounts() {
                     </div>
                   </div>
 
+                  {/* Drawdown */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Drawdown:</span>
+                    <div className="text-right">
+                      <div className={`text-sm font-bold ${
+                        (() => {
+                          const balance = account.balance || 0;
+                          const equity = account.equity || 0;
+                          if (balance === 0) return "text-green-500";
+                          const dd = ((equity - balance) / balance * 100);
+                          return dd < 0 ? "text-red-500" : "text-green-500";
+                        })()
+                      }`}>
+                        {(() => {
+                          const balance = account.balance || 0;
+                          const equity = account.equity || 0;
+                          if (balance === 0) return "0.00";
+                          return (((equity - balance) / balance * 100)).toFixed(2);
+                        })()}%
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Margin */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Margem Livre:</span>

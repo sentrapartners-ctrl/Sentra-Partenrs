@@ -88,6 +88,14 @@ export default function Analytics() {
                   .reduce((sum, t) => sum + getActualProfit(t), 0)
               )
             : 0,
+        drawdown: (() => {
+          if (!accounts || accounts.length === 0) return 0;
+          const totalBalance = accounts.reduce((sum: number, acc: any) => 
+            sum + ((acc.balance || 0) / (acc.isCentAccount ? 10000 : 100)), 0);
+          const totalEquity = accounts.reduce((sum: number, acc: any) => 
+            sum + ((acc.equity || 0) / (acc.isCentAccount ? 10000 : 100)), 0);
+          return totalBalance > 0 ? ((totalEquity - totalBalance) / totalBalance * 100) : 0;
+        })(),
       }
     : null;
 
@@ -130,6 +138,7 @@ export default function Analytics() {
     averageWin: 0,
     averageLoss: 0,
     profitFactor: 0,
+    drawdown: 0,
   };
 
   return (
@@ -207,16 +216,18 @@ export default function Analytics() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Profit Factor
+                Drawdown
               </CardTitle>
-              <Percent className="h-4 w-4 text-muted-foreground" />
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.profitFactor.toFixed(2)}
+              <div className={`text-2xl font-bold ${
+                (stats.drawdown || 0) < 0 ? "text-red-500" : "text-green-500"
+              }`}>
+                {(stats.drawdown || 0).toFixed(2)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                Relação lucro/perda
+                Equity vs Balance
               </p>
             </CardContent>
           </Card>

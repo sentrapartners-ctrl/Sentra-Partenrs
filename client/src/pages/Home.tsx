@@ -27,6 +27,9 @@ export default function Home() {
     }, 0);
     const profitLoss = totalEquity - totalBalance;
     const profitLossPercent = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
+    
+    // Calcula drawdown após conversão correta
+    const drawdown = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
 
     return {
       totalBalance,
@@ -39,6 +42,7 @@ export default function Home() {
       winRate: tradeStats?.winRate || 0,
       totalTrades: tradeStats?.totalTrades || 0,
       netProfit: (tradeStats?.netProfit || 0) / 100,
+      drawdown,
     };
   }, [dashboardData]);
 
@@ -138,15 +142,17 @@ export default function Home() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Drawdown</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats?.winRate.toFixed(1) || "0.0"}%
+              <div className={`text-2xl font-bold ${
+                (stats?.drawdown || 0) < 0 ? "text-red-500" : "text-green-500"
+              }`}>
+                {(stats?.drawdown || 0).toFixed(2)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats?.totalTrades || 0} trades
+                Equity vs Balance
               </p>
             </CardContent>
           </Card>
