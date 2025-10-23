@@ -119,11 +119,14 @@ export default function Analytics() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Análises</h1>
-          <p className="text-muted-foreground">
-            Estatísticas detalhadas de performance
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Análises</h1>
+            <p className="text-muted-foreground">
+              Estatísticas detalhadas de performance
+            </p>
+          </div>
+          <PeriodFilter value={period} onChange={setPeriod} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

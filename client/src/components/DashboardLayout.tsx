@@ -34,7 +34,7 @@ const menuItems = [
   { icon: LineChart, label: "Análises", path: "/analytics" },
   { icon: Copy, label: "Copy Trading", path: "/copy-trading" },
   { icon: BookOpen, label: "Estratégias", path: "/strategies" },
-  { icon: Calendar, label: "Calendário", path: "/economic-calendar" },
+  { icon: Calendar, label: "Calendário", path: "/calendar" },
   { icon: Bell, label: "Alertas", path: "/alerts" },
   { icon: Settings, label: "Configurações", path: "/settings" },
 ];
