@@ -439,6 +439,40 @@ export const appRouter = router({
       }),
   }),
 
+  // ===== ADMIN =====
+  admin: router({
+    listUsers: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized: Admin access required");
+      }
+      return await db.getAllUsers();
+    }),
+
+    listAllAccounts: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized: Admin access required");
+      }
+      return await db.getAllAccounts();
+    }),
+
+    getSystemStats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized: Admin access required");
+      }
+      return await db.getSystemStats();
+    }),
+
+    toggleUserStatus: protectedProcedure
+      .input(z.object({ userId: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.updateUserStatus(input.userId, input.isActive);
+        return { success: true };
+      }),
+  }),
+
   // ===== CALENDAR =====
   calendar: router({
     getEvents: publicProcedure.query(async (): Promise<Array<{

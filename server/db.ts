@@ -845,3 +845,55 @@ export async function getTransactionStatistics(userId: number, startDate?: Date,
   };
 }
 
+
+
+// ===== ADMIN FUNCTIONS =====
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(users).orderBy(users.createdAt);
+}
+
+export async function getAllAccounts() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(tradingAccounts).orderBy(tradingAccounts.createdAt);
+}
+
+export async function getSystemStats() {
+  const db = await getDb();
+  if (!db) {
+    return {
+      totalUsers: 0,
+      totalAccounts: 0,
+      totalTrades: 0,
+      connectedAccounts: 0,
+    };
+  }
+  
+  const [usersCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+  const [accountsCount] = await db.select({ count: sql<number>`count(*)` }).from(tradingAccounts);
+  const [tradesCount] = await db.select({ count: sql<number>`count(*)` }).from(trades);
+  const [connectedCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(tradingAccounts)
+    .where(eq(tradingAccounts.status, "connected"));
+  
+  return {
+    totalUsers: Number(usersCount.count) || 0,
+    totalAccounts: Number(accountsCount.count) || 0,
+    totalTrades: Number(tradesCount.count) || 0,
+    connectedAccounts: Number(connectedCount.count) || 0,
+  };
+}
+
+export async function updateUserStatus(userId: number, isActive: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(users).set({ isActive }).where(eq(users.id, userId));
+}
+
