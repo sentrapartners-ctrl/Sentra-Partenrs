@@ -70,8 +70,12 @@ export const trades = mysqlTable("trades", {
   profit: int("profit").default(0), // stored in cents
   commission: int("commission").default(0), // stored in cents
   swap: int("swap").default(0), // stored in cents
+  stopLoss: int("stopLoss").default(0), // stored as integer (price * 100000)
+  takeProfit: int("takeProfit").default(0), // stored as integer (price * 100000)
+  magicNumber: int("magicNumber").default(0),
   openTime: timestamp("openTime").notNull(),
   closeTime: timestamp("closeTime"),
+  duration: int("duration").default(0), // duration in seconds
   comment: text("comment"),
   status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
