@@ -47,6 +47,7 @@ const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
+// Build: 2025-10-24-v5
 export default function DashboardLayout({
   children,
 }: {
