@@ -8,16 +8,19 @@ import { ArrowDownIcon, ArrowUpIcon, Filter } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
+import { AccountFilter } from "@/components/AccountFilter";
 
 export default function Trades() {
   const { isAuthenticated, loading } = useAuth();
   const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
   const [period, setPeriod] = useState<Period>("30d");
+  const [selectedAccount, setSelectedAccount] = useState<number | "all">("all");
 
   const periodDates = useMemo(() => getPeriodDates(period), [period]);
   
   const { data: allTrades, refetch } = trpc.trades.list.useQuery(
     { 
+      accountId: selectedAccount === "all" ? undefined : selectedAccount,
       startDate: periodDates.start,
       endDate: periodDates.end,
     },
@@ -68,7 +71,10 @@ export default function Trades() {
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <PeriodFilter value={period} onChange={setPeriod} />
+            <div className="flex gap-3 items-center">
+              <AccountFilter value={selectedAccount} onChange={setSelectedAccount} />
+              <PeriodFilter value={period} onChange={setPeriod} />
+            </div>
             <div className="flex gap-2">
             <Button
               variant={filter === "all" ? "default" : "outline"}

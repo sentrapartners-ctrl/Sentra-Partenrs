@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
+import { AccountFilter } from "@/components/AccountFilter";
 import {
   BarChart3,
   TrendingDown,
@@ -28,6 +29,7 @@ import {
 export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d");
+  const [selectedAccount, setSelectedAccount] = useState<number | "all">("all");
 
   // Aplica conversão baseada em isCentAccount
   const getActualProfit = (trade: any) => {
@@ -40,12 +42,16 @@ export default function Analytics() {
   });
   
   const { data: allTrades, refetch } = trpc.trades.list.useQuery(
-    { limit: 1000 },
+    { 
+      limit: 1000,
+      accountId: selectedAccount === "all" ? undefined : selectedAccount,
+    },
     { enabled: isAuthenticated }
   );
 
   const { data: balanceHistoryData } = trpc.balanceHistory.get.useQuery(
     {
+      accountId: selectedAccount === "all" ? undefined : selectedAccount,
       startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
       endDate: new Date(),
     },
@@ -261,7 +267,10 @@ export default function Analytics() {
               Métricas detalhadas e gráficos de performance
             </p>
           </div>
-          <PeriodFilter value={period} onChange={setPeriod} />
+          <div className="flex gap-3 items-center">
+            <AccountFilter value={selectedAccount} onChange={setSelectedAccount} />
+            <PeriodFilter value={period} onChange={setPeriod} />
+          </div>
         </div>
 
         {/* Cards de estatísticas */}
