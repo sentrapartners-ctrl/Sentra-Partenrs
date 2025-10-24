@@ -330,12 +330,7 @@ export async function getUserTrades(userId: number, limit: number = 100) {
     account: tradingAccounts
   }).from(trades)
     .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
-    .where(
-      and(
-        eq(trades.userId, userId),
-        sql`${trades.profit} != 0` // Filtrar trades com profit diferente de 0
-      )
-    )
+    .where(eq(trades.userId, userId))
     .orderBy(desc(trades.openTime))
     .limit(limit);
   

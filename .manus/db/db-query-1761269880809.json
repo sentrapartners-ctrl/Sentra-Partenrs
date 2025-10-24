@@ -1,0 +1,17 @@
+{
+  "query": "SELECT COUNT(*) as total_trades, \n       SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_trades,\n       SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_trades,\n       MIN(openTime) as oldest_trade,\n       MAX(openTime) as newest_trade\nFROM trades;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT COUNT(*) as total_trades, \n       SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_trades,\n       SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_trades,\n       MIN(openTime) as oldest_trade,\n       MAX(openTime) as newest_trade\nFROM trades;",
+  "rows": [
+    {
+      "total_trades": "0",
+      "open_trades": "NULL",
+      "closed_trades": "NULL",
+      "oldest_trade": "NULL",
+      "newest_trade": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_trades\topen_trades\tclosed_trades\toldest_trade\tnewest_trade\n0\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

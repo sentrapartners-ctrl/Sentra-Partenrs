@@ -158,12 +158,19 @@ export const appRouter = router({
   trades: router({
     list: protectedProcedure
       .input(z.object({
-        limit: z.number().optional().default(100),
+        limit: z.number().optional().default(10000),
         accountId: z.number().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
       }))
       .query(async ({ ctx, input }) => {
+        // Se não tiver datas, buscar últimos 90 dias
+        if (!input.startDate && !input.endDate) {
+          const endDate = new Date();
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - 90);
+          return await db.getTradesByDateRange(ctx.user.id, startDate, endDate);
+        }
         if (input.startDate && input.endDate) {
           return await db.getTradesByDateRange(ctx.user.id, input.startDate, input.endDate);
         }

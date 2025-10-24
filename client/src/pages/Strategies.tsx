@@ -128,21 +128,19 @@ export default function Strategies() {
           key={day}
           onClick={() => handleDateClick(day)}
           className={`
-            p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md
+            p-2 border rounded-lg cursor-pointer transition-all hover:shadow-md min-h-[60px]
             ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
             ${isToday ? 'border-blue-500 border-2' : 'border-border'}
             ${hasProfit ? (isPositive ? 'bg-green-50' : 'bg-red-50') : 'bg-background'}
           `}
         >
-          <div className="flex flex-col">
+          <div className="flex items-start justify-between gap-1">
             <span className={`text-sm font-medium ${isToday ? 'text-blue-600' : ''}`}>{day}</span>
             {hasProfit && (
-              <div className="mt-1">
-                <InlineCurrencyValue
-                  value={profit}
-                  className={`text-xs font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}
-                />
-              </div>
+              <InlineCurrencyValue
+                value={profit}
+                className={`text-xs font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}
+              />
             )}
           </div>
         </div>
