@@ -520,6 +520,68 @@ export const appRouter = router({
       }),
   }),
 
+  // ===== JOURNAL =====
+  journal: router({
+    getByDate: protectedProcedure
+      .input(z.object({ date: z.string() })) // YYYY-MM-DD
+      .query(async ({ ctx, input }) => {
+        return await db.getJournalEntryByDate(ctx.user.id, input.date);
+      }),
+
+    getByMonth: protectedProcedure
+      .input(z.object({ year: z.number(), month: z.number() })) // month: 1-12
+      .query(async ({ ctx, input }) => {
+        return await db.getJournalEntriesByMonth(ctx.user.id, input.year, input.month);
+      }),
+
+    getDailyProfits: protectedProcedure
+      .input(z.object({ year: z.number(), month: z.number() })) // month: 1-12
+      .query(async ({ ctx, input }) => {
+        return await db.getDailyProfitsByMonth(ctx.user.id, input.year, input.month);
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        date: z.string(), // YYYY-MM-DD
+        content: z.string().optional(),
+        emotion: z.enum(["confident", "nervous", "greedy", "fearful", "neutral", "disciplined"]).optional(),
+        marketCondition: z.enum(["trending", "ranging", "volatile", "quiet"]).optional(),
+        tags: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.createJournalEntry({
+          ...input,
+          userId: ctx.user.id,
+          tags: input.tags ? JSON.stringify(input.tags) : undefined,
+        });
+        return { id };
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        content: z.string().optional(),
+        emotion: z.enum(["confident", "nervous", "greedy", "fearful", "neutral", "disciplined"]).optional(),
+        marketCondition: z.enum(["trending", "ranging", "volatile", "quiet"]).optional(),
+        tags: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateJournalEntry(id, {
+          ...data,
+          tags: data.tags ? JSON.stringify(data.tags) : undefined,
+        });
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteJournalEntry(input.id);
+        return { success: true };
+      }),
+  }),
+
   // ===== CALENDAR =====
   calendar: router({
     getEvents: publicProcedure.query(async (): Promise<Array<{

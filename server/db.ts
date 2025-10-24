@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte, lt, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
@@ -31,7 +31,10 @@ import {
   CopyTradingConfig,
   alerts,
   InsertAlert,
-  Alert
+  Alert,
+  journalEntries,
+  InsertJournalEntry,
+  JournalEntry
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1005,5 +1008,113 @@ export async function removeInactiveAccounts(threshold: Date) {
     await deleteAccount(account.id);
     console.log(`[Cleanup] Removed account ${account.accountNumber}`);
   }
+}
+
+
+
+// ===== JOURNAL ENTRIES =====
+
+export async function getJournalEntryByDate(userId: number, date: string): Promise<JournalEntry | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db
+    .select()
+    .from(journalEntries)
+    .where(and(
+      eq(journalEntries.userId, userId),
+      eq(journalEntries.date, date)
+    ))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function getJournalEntriesByMonth(userId: number, year: number, month: number): Promise<JournalEntry[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Create date range for the month
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  
+  const result = await db
+    .select()
+    .from(journalEntries)
+    .where(and(
+      eq(journalEntries.userId, userId),
+      gte(journalEntries.date, startDate),
+      lte(journalEntries.date, endDate)
+    ))
+    .orderBy(journalEntries.date);
+  
+  return result;
+}
+
+export async function getDailyProfitsByMonth(userId: number, year: number, month: number): Promise<Record<string, number>> {
+  const db = await getDb();
+  if (!db) return {};
+  
+  // Create date range for the month
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+  
+  // Get all closed trades for this month
+  const result = await db
+    .select()
+    .from(trades)
+    .innerJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
+    .where(and(
+      eq(trades.userId, userId),
+      eq(trades.status, "closed"),
+      gte(trades.closeTime, startDate),
+      lte(trades.closeTime, endDate)
+    ));
+  
+  // Group by date and sum profits
+  const dailyProfits: Record<string, number> = {};
+  
+  for (const row of result) {
+    const trade = row.trades;
+    const account = row.trading_accounts;
+    
+    if (!trade.closeTime) continue;
+    
+    const dateStr = trade.closeTime.toISOString().split('T')[0];
+    
+    // Apply conversion based on account type
+    const divisor = account.isCentAccount ? 10000 : 100;
+    const profit = (trade.profit || 0) / divisor;
+    
+    if (!dailyProfits[dateStr]) {
+      dailyProfits[dateStr] = 0;
+    }
+    dailyProfits[dateStr] += profit;
+  }
+  
+  return dailyProfits;
+}
+
+export async function createJournalEntry(entry: Omit<InsertJournalEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(journalEntries).values(entry);
+  return Number(result.insertId);
+}
+
+export async function updateJournalEntry(id: number, data: Partial<Omit<InsertJournalEntry, 'id' | 'userId' | 'date' | 'createdAt' | 'updatedAt'>>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(journalEntries).set(data).where(eq(journalEntries.id, id));
+}
+
+export async function deleteJournalEntry(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.delete(journalEntries).where(eq(journalEntries.id, id));
 }
 

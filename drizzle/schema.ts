@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -198,6 +198,28 @@ export const tradeNotes = mysqlTable("trade_notes", {
 
 export type TradeNote = typeof tradeNotes.$inferSelect;
 export type InsertTradeNote = typeof tradeNotes.$inferInsert;
+
+/**
+ * Daily journal entries - Tradezella-style daily notes
+ */
+export const journalEntries = mysqlTable("journal_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  date: date("date").notNull(), // YYYY-MM-DD format
+  content: text("content"), // Rich text / markdown content
+  emotion: mysqlEnum("emotion", ["confident", "nervous", "greedy", "fearful", "neutral", "disciplined"]),
+  marketCondition: mysqlEnum("marketCondition", ["trending", "ranging", "volatile", "quiet"]),
+  tags: text("tags"), // JSON array string
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  dateIdx: index("date_idx").on(table.date),
+  userDateIdx: index("user_date_idx").on(table.userId, table.date),
+}));
+
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type InsertJournalEntry = typeof journalEntries.$inferInsert;
 
 /**
  * Economic calendar events

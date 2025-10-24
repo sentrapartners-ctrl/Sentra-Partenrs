@@ -43,6 +43,13 @@
       "when": 1761257031418,
       "tag": "0005_panoramic_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1761269008178,
+      "tag": "0006_dizzy_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }
