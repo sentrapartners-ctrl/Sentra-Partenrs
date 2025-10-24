@@ -60,9 +60,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            {APP_LOGO && (
-              <img src={APP_LOGO} alt={APP_TITLE} className="h-16 w-16 object-contain" />
-            )}
+            <img src="/logo-icon.png" alt="Sentra Partners" className="h-16 w-16 object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold">
             {isLogin ? "Bem-vindo de volta" : "Criar conta"}

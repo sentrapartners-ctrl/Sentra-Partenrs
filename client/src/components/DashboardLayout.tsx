@@ -74,9 +74,9 @@ export default function DashboardLayout({
             <div className="relative group">
               <div className="relative">
                 <img
-                  src={APP_LOGO}
-                  alt={APP_TITLE}
-                  className="h-20 w-20 rounded-xl object-cover shadow"
+                  src="/logo-full.png"
+                  alt="Sentra Partners"
+                  className="h-24 w-auto object-contain"
                 />
               </div>
             </div>
@@ -183,8 +183,8 @@ function DashboardLayoutContent({
               {isCollapsed ? (
                 <div className="relative h-8 w-8 shrink-0 group">
                   <img
-                    src={APP_LOGO}
-                    className="h-8 w-8 rounded-md object-cover ring-1 ring-border"
+                    src="/logo-icon.png"
+                    className="h-8 w-8 rounded-md object-contain"
                     alt="Logo"
                   />
                   <button
@@ -198,13 +198,10 @@ function DashboardLayoutContent({
                 <>
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src={APP_LOGO}
-                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border shrink-0"
-                      alt="Logo"
+                      src="/logo-full.png"
+                      className="h-10 w-auto object-contain shrink-0"
+                      alt="Sentra Partners"
                     />
-                    <span className="font-semibold tracking-tight truncate">
-                      {APP_TITLE}
-                    </span>
                   </div>
                   <button
                     onClick={toggleSidebar}
