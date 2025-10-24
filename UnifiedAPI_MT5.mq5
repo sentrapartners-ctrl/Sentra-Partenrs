@@ -8,7 +8,7 @@
 #property description "API Unificada MT5 - Envia dados para servidor Python centralizado"
 
 // ===== CONFIGURAÇÃO =====
-input string MasterServer = "https://3000-ifwc82p1opsn7k50rvu6f-137bd2b3.manusvm.computer/api/mt";  // URL do servidor Sentra Partners
+input string MasterServer = "https://sentrapartners.com/api/mt";  // URL do servidor Sentra Partners
 input string TerminalID = "MT5_CONTA_01";             // Identifica este terminal
 input int HeartbeatInterval = 60;                     // Envia heartbeat a cada 60 segundos
 

@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                      UnifiedAPI_MT5_MultiUser.mq5 |
+//|                                      UnifiedAPI_MT4_MultiUser.mq4 |
 //|                                  Sentra Partners Trading System |
 //|                                      Sistema Multi-Usuário v2.1  |
 //+------------------------------------------------------------------+
@@ -30,7 +30,7 @@ bool isConnected = false;
 //====================================================
 int OnInit() {
     Print("===========================================");
-    Print("Sentra Partners - API Unificada MT5 v2.10");
+    Print("Sentra Partners - API Unificada MT4 v2.10");
     Print("Sistema Multi-Usuário");
     Print("===========================================");
     Print("User Email: ", UserEmail);
@@ -58,28 +58,20 @@ int OnInit() {
     // Envia histórico na inicialização
     ExportHistoricalTrades();
     
-    // Configura timer para heartbeat
-    EventSetTimer(HeartbeatInterval);
-    
     Print("✓ EA inicializado com sucesso!");
     return(INIT_SUCCEEDED);
 }
 
 //====================================================
-// TIMER - EXECUTADO A CADA INTERVALO
+// LOOP PRINCIPAL (MT4)
 //====================================================
-void OnTimer() {
-    SendHeartbeat();
-    ExportOpenPositions();
-}
-
-//====================================================
-// EVENTO DE TRADE
-//====================================================
-void OnTrade() {
-    // Quando houver novo trade, sincroniza imediatamente
-    ExportOpenPositions();
-    ExportHistoricalTrades();
+void OnTick() {
+    // Envia heartbeat periodicamente
+    if(TimeCurrent() - lastHeartbeat >= HeartbeatInterval) {
+        SendHeartbeat();
+        ExportOpenPositions();
+        lastHeartbeat = TimeCurrent();
+    }
 }
 
 //====================================================
@@ -88,17 +80,17 @@ void OnTrade() {
 void SendHeartbeat() {
     string data = "{";
     data += "\"user_email\":\"" + UserEmail + "\",";
-    data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
-    data += "\"broker\":\"" + AccountInfoString(ACCOUNT_COMPANY) + "\",";
-    data += "\"server\":\"" + AccountInfoString(ACCOUNT_SERVER) + "\",";
-    data += "\"account_name\":\"" + AccountInfoString(ACCOUNT_NAME) + "\",";
-    data += "\"balance\":" + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + ",";
-    data += "\"equity\":" + DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY), 2) + ",";
-    data += "\"currency\":\"" + AccountInfoString(ACCOUNT_CURRENCY) + "\",";
-    data += "\"leverage\":" + IntegerToString(AccountInfoInteger(ACCOUNT_LEVERAGE)) + ",";
-    data += "\"margin_free\":" + DoubleToString(AccountInfoDouble(ACCOUNT_FREEMARGIN), 2) + ",";
-    data += "\"open_positions\":" + IntegerToString(PositionsTotal()) + ",";
-    data += "\"platform\":\"MT5\"";
+    data += "\"account_number\":\"" + IntegerToString(AccountNumber()) + "\",";
+    data += "\"broker\":\"" + AccountCompany() + "\",";
+    data += "\"server\":\"" + AccountServer() + "\",";
+    data += "\"account_name\":\"" + AccountName() + "\",";
+    data += "\"balance\":" + DoubleToStr(AccountBalance(), 2) + ",";
+    data += "\"equity\":" + DoubleToStr(AccountEquity(), 2) + ",";
+    data += "\"currency\":\"" + AccountCurrency() + "\",";
+    data += "\"leverage\":" + IntegerToString(AccountLeverage()) + ",";
+    data += "\"margin_free\":" + DoubleToStr(AccountFreeMargin(), 2) + ",";
+    data += "\"open_positions\":" + IntegerToString(OrdersTotal()) + ",";
+    data += "\"platform\":\"MT4\"";
     data += "}";
     
     bool success = SendToServer("/heartbeat", data);
@@ -117,7 +109,7 @@ void SendHeartbeat() {
 // FUNÇÃO: EXPORTAR POSIÇÕES ABERTAS (FLUTUANTES)
 //====================================================
 void ExportOpenPositions() {
-    int total = PositionsTotal();
+    int total = OrdersTotal();
     if(total == 0) {
         return;
     }
@@ -127,39 +119,30 @@ void ExportOpenPositions() {
     // Criar objeto JSON principal
     string jsonData = "{";
     jsonData += "\"user_email\":\"" + UserEmail + "\",";
-    jsonData += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    jsonData += "\"account_number\":\"" + IntegerToString(AccountNumber()) + "\",";
     jsonData += "\"positions\":[";
     
     int count = 0;
     for(int i = 0; i < total; i++) {
-        ulong ticket = PositionGetTicket(i);
-        if(ticket > 0) {
-            string symbol = PositionGetString(POSITION_SYMBOL);
-            long posType = PositionGetInteger(POSITION_TYPE);
-            double volume = PositionGetDouble(POSITION_VOLUME);
-            double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
-            double currentPrice = PositionGetDouble(POSITION_PRICE_CURRENT);
-            double profit = PositionGetDouble(POSITION_PROFIT);
-            double swap = PositionGetDouble(POSITION_SWAP);
-            double commission = PositionGetDouble(POSITION_COMMISSION);
-            datetime openTime = (datetime)PositionGetInteger(POSITION_TIME);
-            
-            if(count > 0) jsonData += ",";
-            
-            jsonData += "{";
-            jsonData += "\"ticket\":\"" + IntegerToString(ticket) + "\",";
-            jsonData += "\"symbol\":\"" + symbol + "\",";
-            jsonData += "\"type\":\"" + (posType == POSITION_TYPE_BUY ? "buy" : "sell") + "\",";
-            jsonData += "\"volume\":" + DoubleToString(volume, 2) + ",";
-            jsonData += "\"open_price\":" + DoubleToString(openPrice, 5) + ",";
-            jsonData += "\"current_price\":" + DoubleToString(currentPrice, 5) + ",";
-            jsonData += "\"profit\":" + DoubleToString(profit, 2) + ",";
-            jsonData += "\"swap\":" + DoubleToString(swap, 2) + ",";
-            jsonData += "\"commission\":" + DoubleToString(commission, 2) + ",";
-            jsonData += "\"open_time\":\"" + TimeToString(openTime, TIME_DATE|TIME_SECONDS) + "\"";
-            jsonData += "}";
-            
-            count++;
+        if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if(OrderType() == OP_BUY || OrderType() == OP_SELL) {
+                if(count > 0) jsonData += ",";
+                
+                jsonData += "{";
+                jsonData += "\"ticket\":\"" + IntegerToString(OrderTicket()) + "\",";
+                jsonData += "\"symbol\":\"" + OrderSymbol() + "\",";
+                jsonData += "\"type\":\"" + (OrderType() == OP_BUY ? "buy" : "sell") + "\",";
+                jsonData += "\"volume\":" + DoubleToStr(OrderLots(), 2) + ",";
+                jsonData += "\"open_price\":" + DoubleToStr(OrderOpenPrice(), 5) + ",";
+                jsonData += "\"current_price\":" + DoubleToStr(OrderClosePrice(), 5) + ",";
+                jsonData += "\"profit\":" + DoubleToStr(OrderProfit(), 2) + ",";
+                jsonData += "\"swap\":" + DoubleToStr(OrderSwap(), 2) + ",";
+                jsonData += "\"commission\":" + DoubleToStr(OrderCommission(), 2) + ",";
+                jsonData += "\"open_time\":\"" + TimeToStr(OrderOpenTime(), TIME_DATE|TIME_SECONDS) + "\"";
+                jsonData += "}";
+                
+                count++;
+            }
         }
     }
     
@@ -181,61 +164,45 @@ void ExportHistoricalTrades() {
         startDate = TimeCurrent() - (HistoryDays * 86400);
     }
 
-    if(!HistorySelect(startDate, TimeCurrent())) {
-        Print("✗ Erro ao selecionar histórico");
-        return;
-    }
-
-    int dealsTotal = HistoryDealsTotal();
+    int historyTotal = OrdersHistoryTotal();
     
-    if(dealsTotal == 0) {
+    if(historyTotal == 0) {
         if(EnableLogs) Print("Nenhum trade no histórico");
         return;
     }
     
-    if(EnableLogs) Print("Exportando ", dealsTotal, " deals do histórico...");
+    if(EnableLogs) Print("Exportando ", historyTotal, " trades do histórico...");
 
     // Criar objeto JSON principal
     string jsonData = "{";
     jsonData += "\"user_email\":\"" + UserEmail + "\",";
-    jsonData += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    jsonData += "\"account_number\":\"" + IntegerToString(AccountNumber()) + "\",";
     jsonData += "\"trades\":[";
     
     int count = 0;
     
-    for(int i = 0; i < dealsTotal; i++) {
-        ulong ticket = HistoryDealGetTicket(i);
-        if(ticket > 0) {
-            long dealType = HistoryDealGetInteger(ticket, DEAL_TYPE);
-            long dealEntry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
-            
-            // Apenas deals de entrada ou saída (não swaps, comissões, etc)
-            if((dealType == DEAL_TYPE_BUY || dealType == DEAL_TYPE_SELL) && 
-               (dealEntry == DEAL_ENTRY_IN || dealEntry == DEAL_ENTRY_OUT)) {
+    for(int i = 0; i < historyTotal; i++) {
+        if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY)) {
+            if(OrderType() == OP_BUY || OrderType() == OP_SELL) {
+                // Filtrar por data se configurado
+                if(HistoryDays > 0 && OrderCloseTime() < startDate) {
+                    continue;
+                }
                 
-                string symbol = HistoryDealGetString(ticket, DEAL_SYMBOL);
-                double volume = HistoryDealGetDouble(ticket, DEAL_VOLUME);
-                double price = HistoryDealGetDouble(ticket, DEAL_PRICE);
-                double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT);
-                double commission = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
-                double swap = HistoryDealGetDouble(ticket, DEAL_SWAP);
-                datetime dealTime = (datetime)HistoryDealGetInteger(ticket, DEAL_TIME);
-                long positionId = HistoryDealGetInteger(ticket, DEAL_POSITION_ID);
-
                 if(count > 0) jsonData += ",";
                 
                 jsonData += "{";
-                jsonData += "\"ticket\":\"" + IntegerToString(positionId) + "\",";
-                jsonData += "\"symbol\":\"" + symbol + "\",";
-                jsonData += "\"type\":\"" + (dealType == DEAL_TYPE_BUY ? "buy" : "sell") + "\",";
-                jsonData += "\"volume\":" + DoubleToString(volume, 2) + ",";
-                jsonData += "\"open_price\":" + DoubleToString(price, 5) + ",";
-                jsonData += "\"close_price\":" + DoubleToString(price, 5) + ",";
-                jsonData += "\"open_time\":\"" + TimeToString(dealTime, TIME_DATE|TIME_SECONDS) + "\",";
-                jsonData += "\"close_time\":\"" + TimeToString(dealTime, TIME_DATE|TIME_SECONDS) + "\",";
-                jsonData += "\"profit\":" + DoubleToString(profit, 2) + ",";
-                jsonData += "\"commission\":" + DoubleToString(commission, 2) + ",";
-                jsonData += "\"swap\":" + DoubleToString(swap, 2);
+                jsonData += "\"ticket\":\"" + IntegerToString(OrderTicket()) + "\",";
+                jsonData += "\"symbol\":\"" + OrderSymbol() + "\",";
+                jsonData += "\"type\":\"" + (OrderType() == OP_BUY ? "buy" : "sell") + "\",";
+                jsonData += "\"volume\":" + DoubleToStr(OrderLots(), 2) + ",";
+                jsonData += "\"open_price\":" + DoubleToStr(OrderOpenPrice(), 5) + ",";
+                jsonData += "\"close_price\":" + DoubleToStr(OrderClosePrice(), 5) + ",";
+                jsonData += "\"open_time\":\"" + TimeToStr(OrderOpenTime(), TIME_DATE|TIME_SECONDS) + "\",";
+                jsonData += "\"close_time\":\"" + TimeToStr(OrderCloseTime(), TIME_DATE|TIME_SECONDS) + "\",";
+                jsonData += "\"profit\":" + DoubleToStr(OrderProfit(), 2) + ",";
+                jsonData += "\"commission\":" + DoubleToStr(OrderCommission(), 2) + ",";
+                jsonData += "\"swap\":" + DoubleToStr(OrderSwap(), 2);
                 jsonData += "}";
                 
                 count++;
@@ -249,7 +216,7 @@ void ExportHistoricalTrades() {
                     // Reiniciar para próximo lote
                     jsonData = "{";
                     jsonData += "\"user_email\":\"" + UserEmail + "\",";
-                    jsonData += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+                    jsonData += "\"account_number\":\"" + IntegerToString(AccountNumber()) + "\",";
                     jsonData += "\"trades\":[";
                     count = 0;
                 }
@@ -302,7 +269,6 @@ bool SendToServer(string endpoint, string jsonData) {
 // FINALIZAÇÃO
 //====================================================
 void OnDeinit(const int reason) {
-    EventKillTimer();
     Print("===========================================");
     Print("EA finalizado. Motivo: ", reason);
     Print("Total de trades enviados: ", totalTradesSent);
