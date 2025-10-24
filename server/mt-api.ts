@@ -68,6 +68,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       open_positions,
       timestamp,
       platform,
+      account_type, // "CENT" ou "STANDARD" enviado pelo EA
       user_email // Obrigatório para multi-usuário
     } = req.body;
 
@@ -109,9 +110,25 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     // Busca ou cria a conta
     let existingAccount = await db.getAccountByTerminalId(terminalId);
     
-    // Detecta plataforma automaticamente
-    const accountStr = accountNum.toString();
-    const detectedPlatform = platform || (accountStr.length >= 8 ? "MT5" : "MT4");
+    // Detecta plataforma automaticamente SEMPRE pelo servidor primeiro
+    let detectedPlatform = platform;
+    if (server) {
+      const serverLower = server.toLowerCase();
+      // Busca explicitamente por "mt5" ou "mt4" no nome do servidor
+      if (serverLower.includes('mt5')) {
+        detectedPlatform = "MT5";
+      } else if (serverLower.includes('mt4')) {
+        detectedPlatform = "MT4";
+      } else if (!detectedPlatform) {
+        // Se não encontrou mt4/mt5 no nome, usa dígitos como fallback
+        const accountStr = accountNum.toString();
+        detectedPlatform = accountStr.length >= 8 ? "MT5" : "MT4";
+      }
+    } else if (!detectedPlatform) {
+      // Se não tem server, usa dígitos
+      const accountStr = accountNum.toString();
+      detectedPlatform = accountStr.length >= 8 ? "MT5" : "MT4";
+    }
     
     if (!existingAccount) {
       // Primeira vez que vemos este terminal - cria associado ao usuário
@@ -122,7 +139,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
         broker: broker || "Unknown",
         server: server || "",
         platform: detectedPlatform,
-        accountType: "STANDARD",
+        accountType: account_type || "STANDARD", // Usa valor do EA ou STANDARD como padrão
         currency: currency || "USD",
         leverage: leverage || 100,
         balance: toCents(balance || 0),
@@ -140,6 +157,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       await db.createOrUpdateAccount({
         ...existingAccount,
         platform: detectedPlatform, // Atualiza plataforma detectada
+        accountType: account_type || existingAccount.accountType, // Atualiza tipo se enviado pelo EA
         balance: toCents(balance || 0),
         equity: toCents(equity || 0),
         marginFree: toCents(margin_free || 0),
