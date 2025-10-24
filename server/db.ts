@@ -1,6 +1,5 @@
-import { eq, and, desc, asc, gte, lte, lt, sql, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
   users, 
@@ -32,13 +31,7 @@ import {
   CopyTradingConfig,
   alerts,
   InsertAlert,
-  Alert,
-  journalEntries,
-  InsertJournalEntry,
-  JournalEntry,
-  accountNotes,
-  InsertAccountNote,
-  AccountNote
+  Alert
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -47,8 +40,7 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const client = postgres(process.env.DATABASE_URL);
-      _db = drizzle(client);
+      _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -60,8 +52,8 @@ export async function getDb() {
 // ===== USER OPERATIONS =====
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.email) {
-    throw new Error("User email is required for upsert");
+  if (!user.openId) {
+    throw new Error("User openId is required for upsert");
   }
 
   const db = await getDb();
@@ -72,35 +64,44 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   try {
     const values: InsertUser = {
-      email: user.email,
-      password: user.password || '',
-      name: user.name || null,
-      role: user.role || 'user',
-      managerId: user.managerId || null,
-      isActive: user.isActive !== undefined ? user.isActive : true,
-      lastSignedIn: user.lastSignedIn || new Date(),
+      openId: user.openId,
+    };
+    const updateSet: Record<string, unknown> = {};
+
+    const textFields = ["name", "email", "loginMethod"] as const;
+    type TextField = (typeof textFields)[number];
+
+    const assignNullable = (field: TextField) => {
+      const value = user[field];
+      if (value === undefined) return;
+      const normalized = value ?? null;
+      values[field] = normalized;
+      updateSet[field] = normalized;
     };
 
-    const updateSet: Partial<InsertUser> = {
-      name: user.name || null,
-      lastSignedIn: new Date(),
-    };
+    textFields.forEach(assignNullable);
 
-    if (user.password) {
-      updateSet.password = user.password;
+    if (user.lastSignedIn !== undefined) {
+      values.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn;
     }
-    if (user.role) {
+    if (user.role !== undefined) {
+      values.role = user.role;
       updateSet.role = user.role;
-    }
-    if (user.managerId !== undefined) {
-      updateSet.managerId = user.managerId;
-    }
-    if (user.isActive !== undefined) {
-      updateSet.isActive = user.isActive;
+    } else if (user.openId === ENV.ownerId) {
+      values.role = 'admin';
+      updateSet.role = 'admin';
     }
 
-    await db.insert(users).values(values).onConflictDoUpdate({
-      target: users.email,
+    if (!values.lastSignedIn) {
+      values.lastSignedIn = new Date();
+    }
+
+    if (Object.keys(updateSet).length === 0) {
+      updateSet.lastSignedIn = new Date();
+    }
+
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
   } catch (error) {
@@ -109,19 +110,15 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 }
 
-export async function getUser(email: string) {
+export async function getUser(openId: string) {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
-}
-
-export async function getUserByEmail(email: string) {
-  return getUser(email);
 }
 
 export async function getUserById(id: number) {
@@ -171,27 +168,28 @@ function isCentAccountByBroker(
   return false;
 }
 
-export async function createOrUpdateAccount(account: InsertTradingAccount): Promise<number> {
+export async function createOrUpdateAccount(account: InsertTradingAccount) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Detect if account is cent type
-  const isCent = isCentAccountByBroker(account.broker, account.server, account.accountType, account.balance);
+  // Detecta automaticamente se é conta cent usando padrões universais
+  const isCent = isCentAccountByBroker(
+    account.broker, 
+    account.server, 
+    account.accountType,
+    account.balance
+  );
   const accountWithCentFlag = {
     ...account,
     isCentAccount: isCent,
-    updatedAt: new Date(),
   };
 
-  const existing = await db
-    .select()
-    .from(tradingAccounts)
+  const existing = await db.select().from(tradingAccounts)
     .where(eq(tradingAccounts.terminalId, account.terminalId))
     .limit(1);
 
   if (existing.length > 0) {
-    await db
-      .update(tradingAccounts)
+    await db.update(tradingAccounts)
       .set({
         ...accountWithCentFlag,
         updatedAt: new Date(),
@@ -199,8 +197,8 @@ export async function createOrUpdateAccount(account: InsertTradingAccount): Prom
       .where(eq(tradingAccounts.terminalId, account.terminalId));
     return existing[0].id;
   } else {
-    const result = await db.insert(tradingAccounts).values(accountWithCentFlag).returning({ id: tradingAccounts.id });
-    return result[0].id;
+    const result = await db.insert(tradingAccounts).values(accountWithCentFlag);
+    return Number(result[0].insertId);
   }
 }
 
@@ -310,9 +308,9 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
       return existing[0].id;
     } else {
       console.log(`[DB] Inserting new trade ticket=${trade.ticket}, symbol=${trade.symbol}, status=${actualStatus}`);
-      const result = await db.insert(trades).values(tradeWithStatus).returning({ id: trades.id });
-      console.log(`[DB] Trade inserted with ID=${result[0].id}`);
-      return result[0].id;
+      const result = await db.insert(trades).values(tradeWithStatus);
+      console.log(`[DB] Trade inserted with ID=${result[0].insertId}`);
+      return Number(result[0].insertId);
     }
   } catch (error) {
     console.error("[DB] Error in createOrUpdateTrade:", error);
@@ -329,7 +327,12 @@ export async function getUserTrades(userId: number, limit: number = 100) {
     account: tradingAccounts
   }).from(trades)
     .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
-    .where(eq(trades.userId, userId))
+    .where(
+      and(
+        eq(trades.userId, userId),
+        sql`${trades.profit} != 0` // Filtrar trades com profit diferente de 0
+      )
+    )
     .orderBy(desc(trades.openTime))
     .limit(limit);
   
@@ -509,8 +512,8 @@ export async function createOrUpdateUserSettings(settings: InsertUserSettings) {
 export async function createStrategy(strategy: InsertStrategy) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(strategies).values(strategy).returning({ id: strategies.id });
-  return result[0].id;
+  const result = await db.insert(strategies).values(strategy);
+  return Number(result[0].insertId);
 }
 
 export async function getUserStrategies(userId: number) {
@@ -540,8 +543,8 @@ export async function deleteStrategy(id: number) {
 export async function createTradeNote(note: InsertTradeNote) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(tradeNotes).values(note).returning({ id: tradeNotes.id });
-  return result[0].id;
+  const result = await db.insert(tradeNotes).values(note);
+  return Number(result[0].insertId);
 }
 
 export async function getTradeNotes(tradeId: number) {
@@ -565,8 +568,8 @@ export async function updateTradeNote(id: number, note: Partial<InsertTradeNote>
 export async function createEconomicEvent(event: InsertEconomicEvent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(economicEvents).values(event).returning({ id: economicEvents.id });
-  return result[0].id;
+  const result = await db.insert(economicEvents).values(event);
+  return Number(result[0].insertId);
 }
 
 export async function getEconomicEvents(startDate: Date, endDate: Date) {
@@ -598,8 +601,8 @@ export async function getUpcomingEvents(hours: number = 24) {
 export async function createCopyTradingConfig(config: InsertCopyTradingConfig) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(copyTradingConfigs).values(config).returning({ id: copyTradingConfigs.id });
-  return result[0].id;
+  const result = await db.insert(copyTradingConfigs).values(config);
+  return Number(result[0].insertId);
 }
 
 export async function getUserCopyConfigs(userId: number) {
@@ -639,8 +642,8 @@ export async function deleteCopyConfig(id: number) {
 export async function createAlert(alert: InsertAlert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(alerts).values(alert).returning({ id: alerts.id });
-  return result[0].id;
+  const result = await db.insert(alerts).values(alert);
+  return Number(result[0].insertId);
 }
 
 export async function getUserAlerts(userId: number, limit: number = 50) {
@@ -772,8 +775,8 @@ export async function createTransaction(transaction: InsertTransaction) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(transactions).values(transaction).returning({ id: transactions.id });
-  return result[0].id;
+  const result = await db.insert(transactions).values(transaction);
+  return Number(result[0].insertId);
 }
 
 export async function getAccountTransactions(accountId: number, limit: number = 100) {
@@ -949,286 +952,5 @@ export async function deleteAccount(accountId: number) {
   
   // Deletar conta
   await db.delete(tradingAccounts).where(eq(tradingAccounts.id, accountId));
-}
-
-
-
-/**
- * Marca contas como offline se não receberam heartbeat recentemente
- */
-export async function markAccountsOffline(threshold: Date) {
-  const db = await getDb();
-  if (!db) return;
-  
-  await db
-    .update(tradingAccounts)
-    .set({ status: "disconnected" })
-    .where(
-      and(
-        eq(tradingAccounts.status, "connected"),
-        lt(tradingAccounts.lastHeartbeat, threshold)
-      )
-    );
-  
-  console.log(`[Cleanup] Marked offline accounts that haven't sent heartbeat since ${threshold.toISOString()}`);
-}
-
-export async function removeInactiveAccounts(threshold: Date) {
-  const db = await getDb();
-  if (!db) return;
-  
-  // Buscar contas para remover
-  const accountsToRemove = await db
-    .select({ id: tradingAccounts.id, accountNumber: tradingAccounts.accountNumber })
-    .from(tradingAccounts)
-    .where(
-      and(
-        eq(tradingAccounts.status, "disconnected"),
-        lt(tradingAccounts.lastHeartbeat, threshold)
-      )
-    );
-  
-  if (accountsToRemove.length === 0) return;
-  
-  console.log(`[Cleanup] Removing ${accountsToRemove.length} inactive accounts`);
-  
-  // Remover cada conta
-  for (const account of accountsToRemove) {
-    await deleteAccount(account.id);
-    console.log(`[Cleanup] Removed account ${account.accountNumber}`);
-  }
-}
-
-
-
-// ===== JOURNAL ENTRIES =====
-
-export async function getJournalEntryByDate(userId: number, date: string): Promise<JournalEntry | undefined> {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  const result = await db
-    .select()
-    .from(journalEntries)
-    .where(and(
-      eq(journalEntries.userId, userId),
-      eq(journalEntries.date, date)
-    ))
-    .limit(1);
-  
-  return result[0];
-}
-
-export async function getJournalEntriesByMonth(userId: number, year: number, month: number): Promise<JournalEntry[]> {
-  const db = await getDb();
-  if (!db) return [];
-  
-  // Create date range for the month
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  
-  const result = await db
-    .select()
-    .from(journalEntries)
-    .where(and(
-      eq(journalEntries.userId, userId),
-      gte(journalEntries.date, startDate),
-      lte(journalEntries.date, endDate)
-    ))
-    .orderBy(journalEntries.date);
-  
-  return result;
-}
-
-export async function getDailyProfitsByMonth(userId: number, year: number, month: number): Promise<Record<string, number>> {
-  const db = await getDb();
-  if (!db) return {};
-  
-  // Create date range for the month
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
-  
-  // Get all closed trades for this month
-  const result = await db
-    .select()
-    .from(trades)
-    .innerJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
-    .where(and(
-      eq(trades.userId, userId),
-      eq(trades.status, "closed"),
-      gte(trades.closeTime, startDate),
-      lte(trades.closeTime, endDate)
-    ));
-  
-  // Group by date and sum profits
-  const dailyProfits: Record<string, number> = {};
-  
-  for (const row of result) {
-    const trade = row.trades;
-    const account = row.trading_accounts;
-    
-    if (!trade.closeTime) continue;
-    
-    const dateStr = trade.closeTime.toISOString().split('T')[0];
-    
-    // Apply conversion based on account type
-    const divisor = account.isCentAccount ? 10000 : 100;
-    const profit = (trade.profit || 0) / divisor;
-    
-    if (!dailyProfits[dateStr]) {
-      dailyProfits[dateStr] = 0;
-    }
-    dailyProfits[dateStr] += profit;
-  }
-  
-  return dailyProfits;
-}
-
-export async function createJournalEntry(entry: Omit<InsertJournalEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  const result = await db.insert(journalEntries).values(entry).returning({ id: journalEntries.id });
-  return result[0].id;
-}
-
-export async function updateJournalEntry(id: number, data: Partial<Omit<InsertJournalEntry, 'id' | 'userId' | 'date' | 'createdAt' | 'updatedAt'>>): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  
-  await db.update(journalEntries).set(data).where(eq(journalEntries.id, id));
-}
-
-export async function deleteJournalEntry(id: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  
-  await db.delete(journalEntries).where(eq(journalEntries.id, id));
-}
-
-
-
-// ===== USER MANAGEMENT =====
-
-export async function getClientUsers() {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return await db
-    .select()
-    .from(users)
-    .where(eq(users.role, 'user'))
-    .orderBy(desc(users.createdAt));
-}
-
-export async function getManagerUsers() {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-    })
-    .from(users)
-    .where(eq(users.role, 'manager'))
-    .orderBy(users.name);
-}
-
-export async function assignManagerToUser(userId: number, managerId: number | null) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  
-  await db
-    .update(users)
-    .set({ managerId })
-    .where(eq(users.id, userId));
-}
-
-export async function getClientsByManager(managerId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return await db
-    .select()
-    .from(users)
-    .where(and(
-      eq(users.managerId, managerId),
-      eq(users.isActive, true)
-    ))
-    .orderBy(users.name);
-}
-
-
-
-
-// ===== ACCOUNT NOTES =====
-
-export async function getAccountNotes(accountId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  
-  const result = await db
-    .select()
-    .from(accountNotes)
-    .where(eq(accountNotes.accountId, accountId))
-    .limit(1);
-  
-  return result[0] || null;
-}
-
-export async function saveAccountNotes(data: {
-  accountId: number;
-  mt5Login?: string | null;
-  mt5Password?: string | null;
-  mt5Server?: string | null;
-  mt5InvestorPassword?: string | null;
-  vpsProvider?: string | null;
-  vpsIp?: string | null;
-  vpsUsername?: string | null;
-  vpsPassword?: string | null;
-  vpsPort?: number | null;
-  notes?: string | null;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  
-  const existing = await getAccountNotes(data.accountId);
-  
-  if (existing) {
-    await db
-      .update(accountNotes)
-      .set({
-        mt5Login: data.mt5Login,
-        mt5Password: data.mt5Password,
-        mt5Server: data.mt5Server,
-        mt5InvestorPassword: data.mt5InvestorPassword,
-        vpsProvider: data.vpsProvider,
-        vpsIp: data.vpsIp,
-        vpsUsername: data.vpsUsername,
-        vpsPassword: data.vpsPassword,
-        vpsPort: data.vpsPort,
-        notes: data.notes,
-        updatedAt: new Date(),
-      })
-      .where(eq(accountNotes.accountId, data.accountId));
-  } else {
-    await db.insert(accountNotes).values({
-      accountId: data.accountId,
-      mt5Login: data.mt5Login,
-      mt5Password: data.mt5Password,
-      mt5Server: data.mt5Server,
-      mt5InvestorPassword: data.mt5InvestorPassword,
-      vpsProvider: data.vpsProvider,
-      vpsIp: data.vpsIp,
-      vpsUsername: data.vpsUsername,
-      vpsPassword: data.vpsPassword,
-      vpsPort: data.vpsPort,
-      notes: data.notes,
-    });
-  }
 }
 

@@ -1,44 +1,19 @@
-import { pgTable, pgEnum, serial, integer, bigint, varchar, text, timestamp, boolean, date, index } from "drizzle-orm/pg-core";
-
-// ============================================
-// ENUMS - Devem ser declarados ANTES das tabelas
-// ============================================
-
-export const userRoleEnum = pgEnum("user_role", ["user", "manager", "admin"]);
-export const platformEnum = pgEnum("platform", ["MT4", "MT5", "cTrader", "DXTrade", "TradeLocker", "MatchTrade", "Tradovate"]);
-export const accountTypeEnum = pgEnum("account_type", ["CENT", "STANDARD", "DEMO", "LIVE"]);
-export const accountStatusEnum = pgEnum("account_status", ["connected", "disconnected", "error"]);
-export const tradeTypeEnum = pgEnum("trade_type", ["BUY", "SELL", "PENDING", "OTHER"]);
-export const tradeStatusEnum = pgEnum("trade_status", ["open", "closed"]);
-export const transactionTypeEnum = pgEnum("transaction_type", ["deposit", "withdrawal"]);
-export const themeEnum = pgEnum("theme", ["light", "dark"]);
-export const emotionEnum = pgEnum("emotion", ["confident", "nervous", "greedy", "fearful", "neutral", "disciplined"]);
-export const marketConditionEnum = pgEnum("market_condition", ["trending", "ranging", "volatile", "quiet"]);
-export const impactEnum = pgEnum("impact", ["low", "medium", "high"]);
-export const alertTypeEnum = pgEnum("alert_type", ["balance", "drawdown", "trade", "connection", "economic"]);
-export const severityEnum = pgEnum("severity", ["info", "warning", "error"]);
-
-// ============================================
-// TABELAS
-// ============================================
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
  */
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = mysqlTable("users", {
+  id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(), // bcrypt hash
   name: text("name"),
-  role: userRoleEnum("role").default("user").notNull(),
-  managerId: integer("managerId"), // ID do gerente responsável (null se for admin/manager)
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-}, (table) => ({
-  managerIdIdx: index("managerId_idx").on(table.managerId),
-}));
+});
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -46,30 +21,30 @@ export type InsertUser = typeof users.$inferInsert;
 /**
  * Trading accounts table - stores MT4/MT5 account information
  */
-export const tradingAccounts = pgTable("trading_accounts", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
+export const tradingAccounts = mysqlTable("trading_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
   terminalId: varchar("terminalId", { length: 128 }).notNull().unique(),
   accountNumber: varchar("accountNumber", { length: 64 }).notNull(),
   broker: varchar("broker", { length: 256 }),
-  platform: platformEnum("platform").notNull(),
-  accountType: accountTypeEnum("accountType").default("STANDARD").notNull(),
+  platform: mysqlEnum("platform", ["MT4", "MT5", "cTrader", "DXTrade", "TradeLocker", "MatchTrade", "Tradovate"]).notNull(),
+  accountType: mysqlEnum("accountType", ["CENT", "STANDARD", "DEMO", "LIVE"]).default("STANDARD").notNull(),
   server: varchar("server", { length: 256 }),
   currency: varchar("currency", { length: 10 }).default("USD"),
-  leverage: integer("leverage").default(100),
-  balance: integer("balance").default(0), // stored in cents
-  equity: integer("equity").default(0), // stored in cents
-  marginFree: integer("marginFree").default(0), // stored in cents
-  marginUsed: integer("marginUsed").default(0), // stored in cents
-  marginLevel: integer("marginLevel").default(0), // percentage * 100
-  openPositions: integer("openPositions").default(0),
-  status: accountStatusEnum("status").default("disconnected").notNull(),
+  leverage: int("leverage").default(100),
+  balance: int("balance").default(0), // stored in cents
+  equity: int("equity").default(0), // stored in cents
+  marginFree: int("marginFree").default(0), // stored in cents
+  marginUsed: int("marginUsed").default(0), // stored in cents
+  marginLevel: int("marginLevel").default(0), // percentage * 100
+  openPositions: int("openPositions").default(0),
+  status: mysqlEnum("status", ["connected", "disconnected", "error"]).default("disconnected").notNull(),
   lastHeartbeat: timestamp("lastHeartbeat"),
   classification: varchar("classification", { length: 128 }),
   isCentAccount: boolean("isCentAccount").default(false).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   userIdIdx: index("userId_idx").on(table.userId),
   statusIdx: index("status_idx").on(table.status),
@@ -81,30 +56,26 @@ export type InsertTradingAccount = typeof tradingAccounts.$inferInsert;
 /**
  * Trades table - stores individual trade records
  */
-export const trades = pgTable("trades", {
-  id: serial("id").primaryKey(),
-  accountId: integer("accountId").notNull(),
-  userId: integer("userId").notNull(),
+export const trades = mysqlTable("trades", {
+  id: int("id").autoincrement().primaryKey(),
+  accountId: int("accountId").notNull(),
+  userId: int("userId").notNull(),
   ticket: varchar("ticket", { length: 64 }).notNull(),
   symbol: varchar("symbol", { length: 32 }).notNull(),
-  type: tradeTypeEnum("type").notNull(),
-  volume: integer("volume").notNull(), // stored in lots * 100
-  openPrice: bigint("openPrice", { mode: "number" }).notNull(), // stored as integer (price * 100000)
-  closePrice: bigint("closePrice", { mode: "number" }).default(0), // stored as integer (price * 100000)
-  currentPrice: bigint("currentPrice", { mode: "number" }).default(0), // stored as integer (price * 100000)
-  profit: integer("profit").default(0), // stored in cents
-  commission: integer("commission").default(0), // stored in cents
-  swap: integer("swap").default(0), // stored in cents
-  stopLoss: bigint("stopLoss", { mode: "number" }).default(0), // stored as integer (price * 100000)
-  takeProfit: bigint("takeProfit", { mode: "number" }).default(0), // stored as integer (price * 100000)
-  magicNumber: integer("magicNumber").default(0),
+  type: mysqlEnum("type", ["BUY", "SELL", "PENDING", "OTHER"]).notNull(),
+  volume: int("volume").notNull(), // stored in lots * 100
+  openPrice: int("openPrice").notNull(), // stored as integer (price * 100000)
+  closePrice: int("closePrice").default(0), // stored as integer (price * 100000)
+  currentPrice: int("currentPrice").default(0), // stored as integer (price * 100000)
+  profit: int("profit").default(0), // stored in cents
+  commission: int("commission").default(0), // stored in cents
+  swap: int("swap").default(0), // stored in cents
   openTime: timestamp("openTime").notNull(),
   closeTime: timestamp("closeTime"),
-  duration: integer("duration").default(0), // duration in seconds
   comment: text("comment"),
-  status: tradeStatusEnum("status").default("open").notNull(),
+  status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   accountIdIdx: index("accountId_idx").on(table.accountId),
   userIdIdx: index("userId_idx").on(table.userId),
@@ -119,12 +90,12 @@ export type InsertTrade = typeof trades.$inferInsert;
 /**
  * Account balance history - tracks balance changes over time
  */
-export const balanceHistory = pgTable("balance_history", {
-  id: serial("id").primaryKey(),
-  accountId: integer("accountId").notNull(),
-  userId: integer("userId").notNull(),
-  balance: integer("balance").notNull(), // stored in cents
-  equity: integer("equity").notNull(), // stored in cents
+export const balanceHistory = mysqlTable("balance_history", {
+  id: int("id").autoincrement().primaryKey(),
+  accountId: int("accountId").notNull(),
+  userId: int("userId").notNull(),
+  balance: int("balance").notNull(), // stored in cents
+  equity: int("equity").notNull(), // stored in cents
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 }, (table) => ({
   accountIdIdx: index("accountId_idx").on(table.accountId),
@@ -137,14 +108,14 @@ export type InsertBalanceHistory = typeof balanceHistory.$inferInsert;
 /**
  * Account transactions - tracks deposits and withdrawals
  */
-export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  accountId: integer("accountId").notNull(),
-  userId: integer("userId").notNull(),
-  type: transactionTypeEnum("type").notNull(),
-  amount: integer("amount").notNull(), // stored in cents
-  balanceBefore: integer("balanceBefore").notNull(), // stored in cents
-  balanceAfter: integer("balanceAfter").notNull(), // stored in cents
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  accountId: int("accountId").notNull(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["deposit", "withdrawal"]).notNull(),
+  amount: int("amount").notNull(), // stored in cents
+  balanceBefore: int("balanceBefore").notNull(), // stored in cents
+  balanceAfter: int("balanceAfter").notNull(), // stored in cents
   comment: text("comment"),
   timestamp: timestamp("timestamp").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -161,25 +132,25 @@ export type InsertTransaction = typeof transactions.$inferInsert;
 /**
  * User settings and preferences
  */
-export const userSettings = pgTable("user_settings", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().unique(),
-  theme: themeEnum("theme").default("light").notNull(),
+export const userSettings = mysqlTable("user_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  theme: mysqlEnum("theme", ["light", "dark"]).default("light").notNull(),
   displayCurrency: varchar("displayCurrency", { length: 10 }).default("USD"),
   dateFormat: varchar("dateFormat", { length: 32 }).default("YYYY-MM-DD"),
   timezone: varchar("timezone", { length: 64 }).default("UTC"),
-  decimalPrecision: integer("decimalPrecision").default(2),
-  heartbeatInterval: integer("heartbeatInterval").default(60), // seconds
+  decimalPrecision: int("decimalPrecision").default(2),
+  heartbeatInterval: int("heartbeatInterval").default(60), // seconds
   alertsEnabled: boolean("alertsEnabled").default(true),
   alertBalance: boolean("alertBalance").default(true),
   alertDrawdown: boolean("alertDrawdown").default(true),
   alertTrades: boolean("alertTrades").default(true),
   alertConnection: boolean("alertConnection").default(true),
-  drawdownThreshold: integer("drawdownThreshold").default(1000), // percentage * 100 (10.00%)
+  drawdownThreshold: int("drawdownThreshold").default(1000), // percentage * 100 (10.00%)
   telegramChatId: varchar("telegramChatId", { length: 64 }),
   telegramEnabled: boolean("telegramEnabled").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type UserSettings = typeof userSettings.$inferSelect;
@@ -188,9 +159,9 @@ export type InsertUserSettings = typeof userSettings.$inferInsert;
 /**
  * Trading strategies/playbooks
  */
-export const strategies = pgTable("strategies", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
+export const strategies = mysqlTable("strategies", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
   name: varchar("name", { length: 256 }).notNull(),
   description: text("description"),
   rules: text("rules"), // JSON string
@@ -199,7 +170,7 @@ export const strategies = pgTable("strategies", {
   riskManagement: text("riskManagement"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   userIdIdx: index("userId_idx").on(table.userId),
 }));
@@ -210,16 +181,16 @@ export type InsertStrategy = typeof strategies.$inferInsert;
 /**
  * Trade notes and journal entries
  */
-export const tradeNotes = pgTable("trade_notes", {
-  id: serial("id").primaryKey(),
-  tradeId: integer("tradeId").notNull(),
-  userId: integer("userId").notNull(),
+export const tradeNotes = mysqlTable("trade_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  tradeId: int("tradeId").notNull(),
+  userId: int("userId").notNull(),
   note: text("note"),
   tags: text("tags"), // JSON array string
   screenshot: varchar("screenshot", { length: 512 }), // S3 URL
-  emotion: emotionEnum("emotion"),
+  emotion: mysqlEnum("emotion", ["confident", "nervous", "greedy", "fearful", "neutral"]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   tradeIdIdx: index("tradeId_idx").on(table.tradeId),
   userIdIdx: index("userId_idx").on(table.userId),
@@ -229,36 +200,14 @@ export type TradeNote = typeof tradeNotes.$inferSelect;
 export type InsertTradeNote = typeof tradeNotes.$inferInsert;
 
 /**
- * Daily journal entries - Tradezella-style daily notes
- */
-export const journalEntries = pgTable("journal_entries", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  date: date("date").notNull(), // YYYY-MM-DD format
-  content: text("content"), // Rich text / markdown content
-  emotion: emotionEnum("emotion"),
-  marketCondition: marketConditionEnum("marketCondition"),
-  tags: text("tags"), // JSON array string
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("userId_idx").on(table.userId),
-  dateIdx: index("date_idx").on(table.date),
-  userDateIdx: index("user_date_idx").on(table.userId, table.date),
-}));
-
-export type JournalEntry = typeof journalEntries.$inferSelect;
-export type InsertJournalEntry = typeof journalEntries.$inferInsert;
-
-/**
  * Economic calendar events
  */
-export const economicEvents = pgTable("economic_events", {
-  id: serial("id").primaryKey(),
+export const economicEvents = mysqlTable("economic_events", {
+  id: int("id").autoincrement().primaryKey(),
   eventTime: timestamp("eventTime").notNull(),
   currency: varchar("currency", { length: 10 }).notNull(),
   eventName: varchar("eventName", { length: 256 }).notNull(),
-  impact: impactEnum("impact").notNull(),
+  impact: mysqlEnum("impact", ["low", "medium", "high"]).notNull(),
   previousValue: varchar("previousValue", { length: 64 }),
   forecastValue: varchar("forecastValue", { length: 64 }),
   actualValue: varchar("actualValue", { length: 64 }),
@@ -275,19 +224,19 @@ export type InsertEconomicEvent = typeof economicEvents.$inferInsert;
 /**
  * Copy trading configurations
  */
-export const copyTradingConfigs = pgTable("copy_trading_configs", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
+export const copyTradingConfigs = mysqlTable("copy_trading_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
   name: varchar("name", { length: 256 }).notNull(),
-  sourceAccountId: integer("sourceAccountId").notNull(),
-  targetAccountId: integer("targetAccountId").notNull(),
-  copyRatio: integer("copyRatio").default(100), // percentage * 100
-  maxLotSize: integer("maxLotSize").default(0), // lots * 100
-  minLotSize: integer("minLotSize").default(0), // lots * 100
-  stopOnDrawdown: integer("stopOnDrawdown").default(0), // percentage * 100
+  sourceAccountId: int("sourceAccountId").notNull(),
+  targetAccountId: int("targetAccountId").notNull(),
+  copyRatio: int("copyRatio").default(100), // percentage * 100
+  maxLotSize: int("maxLotSize").default(0), // lots * 100
+  minLotSize: int("minLotSize").default(0), // lots * 100
+  stopOnDrawdown: int("stopOnDrawdown").default(0), // percentage * 100
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   userIdIdx: index("userId_idx").on(table.userId),
   sourceAccountIdIdx: index("sourceAccountId_idx").on(table.sourceAccountId),
@@ -300,13 +249,13 @@ export type InsertCopyTradingConfig = typeof copyTradingConfigs.$inferInsert;
 /**
  * Alerts and notifications
  */
-export const alerts = pgTable("alerts", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  type: alertTypeEnum("type").notNull(),
+export const alerts = mysqlTable("alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["balance", "drawdown", "trade", "connection", "economic"]).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
   message: text("message"),
-  severity: severityEnum("severity").default("info").notNull(),
+  severity: mysqlEnum("severity", ["info", "warning", "error"]).default("info").notNull(),
   isRead: boolean("isRead").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
@@ -317,36 +266,4 @@ export const alerts = pgTable("alerts", {
 
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
-
-/**
- * Account notes table - stores sensitive account information (MT5 credentials, VPS details, etc)
- */
-export const accountNotes = pgTable("account_notes", {
-  id: serial("id").primaryKey(),
-  accountId: integer("accountId").notNull().unique(), // One note per account
-  
-  // MT5/MT4 Credentials
-  mt5Login: varchar("mt5Login", { length: 128 }),
-  mt5Password: text("mt5Password"), // Encrypted
-  mt5Server: varchar("mt5Server", { length: 256 }),
-  mt5InvestorPassword: text("mt5InvestorPassword"), // Encrypted
-  
-  // VPS/VM Details
-  vpsProvider: varchar("vpsProvider", { length: 128 }),
-  vpsIp: varchar("vpsIp", { length: 64 }),
-  vpsUsername: varchar("vpsUsername", { length: 128 }),
-  vpsPassword: text("vpsPassword"), // Encrypted
-  vpsPort: integer("vpsPort"),
-  
-  // General Notes
-  notes: text("notes"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => ({
-  accountIdIdx: index("accountId_idx").on(table.accountId),
-}));
-
-export type AccountNote = typeof accountNotes.$inferSelect;
-export type InsertAccountNote = typeof accountNotes.$inferInsert;
 

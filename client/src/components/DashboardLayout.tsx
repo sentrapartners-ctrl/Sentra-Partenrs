@@ -21,13 +21,12 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { CurrencySelector } from "./CurrencySelector";
-import { ThemeToggle } from "./ThemeToggle";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -41,10 +40,7 @@ const menuItems = [
   { icon: Settings, label: "Configurações", path: "/settings" },
 ];
 
-const adminMenuItems = [
-  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
-  { icon: Users, label: "Clientes", path: "/clients", adminOnly: true },
-];
+const adminMenuItem = { icon: Shield, label: "Admin", path: "/admin", adminOnly: true };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -241,28 +237,27 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                 );
               })}
-              {user?.role === "admin" && adminMenuItems.map(item => (
-                <SidebarMenuItem key={item.path}>
+              {user?.role === "admin" && (
+                <SidebarMenuItem key={adminMenuItem.path}>
                   <SidebarMenuButton
-                    isActive={location === item.path}
-                    onClick={() => setLocation(item.path)}
-                    tooltip={item.label}
+                    isActive={location === adminMenuItem.path}
+                    onClick={() => setLocation(adminMenuItem.path)}
+                    tooltip={adminMenuItem.label}
                     className={`h-10 transition-all font-normal`}
                   >
-                    <item.icon
-                      className={`h-4 w-4 ${location === item.path ? "text-primary" : ""}`}
+                    <adminMenuItem.icon
+                      className={`h-4 w-4 ${location === adminMenuItem.path ? "text-primary" : ""}`}
                     />
-                    <span>{item.label}</span>
+                    <span>{adminMenuItem.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              )}
             </SidebarMenu>
           </SidebarContent>
 
           <SidebarFooter className="p-3 space-y-2">
-            <div className="flex items-center justify-center gap-2 group-data-[collapsible=icon]:px-0">
+            <div className="flex justify-center group-data-[collapsible=icon]:px-0">
               <CurrencySelector />
-              <ThemeToggle />
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

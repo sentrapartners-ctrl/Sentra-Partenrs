@@ -1,9 +1,0 @@
-{
-  "query": "SELECT id, userId, accountId, ticket, symbol, type, status, volume, profit, openTime, closeTime \nFROM trades \nLIMIT 5;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT id, userId, accountId, ticket, symbol, type, status, volume, profit, openTime, closeTime \nFROM trades \nLIMIT 5;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 48
-}

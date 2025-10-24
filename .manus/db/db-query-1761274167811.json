@@ -1,9 +1,0 @@
-{
-  "query": "SELECT t.ticket, t.symbol, t.type, t.status, t.profit, t.openTime\nFROM trades t\nJOIN trading_accounts ta ON t.accountId = ta.id\nWHERE ta.accountNumber = '163032743'\nORDER BY t.createdAt DESC\nLIMIT 5;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT t.ticket, t.symbol, t.type, t.status, t.profit, t.openTime\nFROM trades t\nJOIN trading_accounts ta ON t.accountId = ta.id\nWHERE ta.accountNumber = '163032743'\nORDER BY t.createdAt DESC\nLIMIT 5;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 50
-}

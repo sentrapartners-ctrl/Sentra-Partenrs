@@ -68,9 +68,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       open_positions,
       timestamp,
       platform,
-      user_email, // Obrigatório para multi-usuário
-      positions, // Array de posições abertas (opcional)
-      history // Array de histórico de trades (opcional)
+      user_email // Obrigatório para multi-usuário
     } = req.body;
 
     // Suporta tanto formato antigo (terminal_id + account) quanto novo (user_email + account_number)
@@ -160,143 +158,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       });
     }
 
-    // Processa posições abertas se enviadas
-    let positionsProcessed = 0;
-    if (positions && Array.isArray(positions) && existingAccount) {
-      console.log(`[MT API] Processing ${positions.length} open positions`);
-      for (const pos of positions) {
-        try {
-          const {
-            ticket,
-            type,
-            symbol,
-            volume,
-            open_price,
-            current_price,
-            stop_loss,
-            take_profit,
-            profit,
-            swap,
-            commission,
-            magic_number,
-            comment,
-            open_time
-          } = pos;
-
-          await db.createOrUpdateTrade({
-            accountId: existingAccount.id,
-            userId: existingAccount.userId,
-            ticket: ticket.toString(),
-            symbol: symbol || "UNKNOWN",
-            type: type === "BUY" ? "BUY" : type === "SELL" ? "SELL" : "OTHER",
-            volume: toLotsInt(volume || 0),
-            openPrice: toPriceInt(open_price || 0),
-            currentPrice: toPriceInt(current_price || 0),
-            stopLoss: toPriceInt(stop_loss || 0),
-            takeProfit: toPriceInt(take_profit || 0),
-            profit: toCents(profit || 0),
-            swap: toCents(swap || 0),
-            commission: toCents(commission || 0),
-            magicNumber: magic_number || 0,
-            comment: comment || "",
-            openTime: new Date(open_time * 1000),
-            status: "open",
-          });
-          positionsProcessed++;
-        } catch (err) {
-          console.error("[MT API] Error processing position:", err);
-        }
-      }
-    }
-
-    // Processa histórico de trades se enviado
-    let historyProcessed = 0;
-    if (history && Array.isArray(history) && existingAccount) {
-      console.log(`[MT API] Processing ${history.length} history trades`);
-      for (const trade of history) {
-        try {
-          const {
-            ticket,
-            type,
-            symbol,
-            volume,
-            open_price,
-            close_price,
-            price,
-            profit,
-            swap,
-            commission,
-            magic_number,
-            comment,
-            open_time,
-            close_time,
-            time
-          } = trade;
-
-          // MT5 envia deals com apenas 'time' e 'price'
-          // MT4 envia trades com 'open_time', 'close_time', 'open_price', 'close_price'
-          const isDeals = !open_time && time;
-          const isTrade = open_time || open_price;
-
-          if (isDeals) {
-            // MT5 Deal
-            const dealTime = time && time > 0 ? time * 1000 : Date.now();
-            await db.createOrUpdateTrade({
-              accountId: existingAccount.id,
-              userId: existingAccount.userId,
-              ticket: ticket.toString(),
-              symbol: symbol || "UNKNOWN",
-              type: type === "BUY" ? "BUY" : type === "SELL" ? "SELL" : "OTHER",
-              volume: toLotsInt(volume || 0),
-              openPrice: toPriceInt(price || 0),
-              closePrice: toPriceInt(price || 0),
-              profit: toCents(profit || 0),
-              swap: toCents(swap || 0),
-              commission: toCents(commission || 0),
-              magicNumber: magic_number || 0,
-              comment: comment || "",
-              openTime: new Date(dealTime),
-              closeTime: new Date(dealTime),
-              status: "closed",
-            });
-          } else if (isTrade) {
-            // MT4 Trade
-            const tradeCloseTime = close_time || time;
-            const isClosed = tradeCloseTime && tradeCloseTime > 0;
-            const openTimeValue = open_time && open_time > 0 ? open_time * 1000 : Date.now();
-
-            await db.createOrUpdateTrade({
-              accountId: existingAccount.id,
-              userId: existingAccount.userId,
-              ticket: ticket.toString(),
-              symbol: symbol || "UNKNOWN",
-              type: type === "BUY" ? "BUY" : type === "SELL" ? "SELL" : "OTHER",
-              volume: toLotsInt(volume || 0),
-              openPrice: toPriceInt(open_price || 0),
-              closePrice: isClosed ? toPriceInt(close_price || 0) : 0,
-              profit: toCents(profit || 0),
-              swap: toCents(swap || 0),
-              commission: toCents(commission || 0),
-              magicNumber: magic_number || 0,
-              comment: comment || "",
-              openTime: new Date(openTimeValue),
-              closeTime: isClosed ? new Date(tradeCloseTime * 1000) : null,
-              status: isClosed ? "closed" : "open",
-            });
-          }
-          historyProcessed++;
-        } catch (err) {
-          console.error("[MT API] Error processing history trade:", err);
-        }
-      }
-    }
-
-    res.json({ 
-      success: true, 
-      message: "Heartbeat received",
-      positionsProcessed,
-      historyProcessed
-    });
+    res.json({ success: true, message: "Heartbeat received" });
   } catch (error) {
     console.error("[MT API] Heartbeat error:", error);
     res.status(500).json({ error: "Internal server error" });

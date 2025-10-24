@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO users (email, password, name, role, isActive, createdAt) VALUES ('adm2@sentra.com', '$2b$10$rQJ5vZ8qX9yK3L2mN4pQ5.8ZxYwX7vK9mL3nR5tP6qW8sA1bC2dE3', 'Admin 2', 'admin', 1, NOW());",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute INSERT INTO users (email, password, name, role, isActive, createdAt) VALUES ('adm2@sentra.com', '$2b$10$rQJ5vZ8qX9yK3L2mN4pQ5.8ZxYwX7vK9mL3nR5tP6qW8sA1bC2dE3', 'Admin 2', 'admin', 1, NOW());",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 50
-}

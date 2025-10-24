@@ -152,80 +152,18 @@ export const appRouter = router({
         }
         return await db.getAccountTransactions(input.accountId);
       }),
-
-    getNotes: protectedProcedure
-      .input(z.object({ accountId: z.number() }))
-      .query(async ({ input, ctx }) => {
-        // Verificar permissão (owner, manager ou admin)
-        const accounts = await db.getUserAccounts(ctx.user.id);
-        const account = accounts.find(a => a.id === input.accountId);
-        
-        if (!account) {
-          // Se não for owner, verificar se é manager ou admin
-          if (ctx.user.role === 'admin') {
-            return await db.getAccountNotes(input.accountId);
-          }
-          if (ctx.user.role === 'manager') {
-            const clients = await db.getClientsByManager(ctx.user.id);
-            const accountOwner = clients.find(c => {
-              const ownerAccounts = db.getUserAccounts(c.id);
-              return ownerAccounts.then(accs => accs.some(a => a.id === input.accountId));
-            });
-            if (accountOwner) {
-              return await db.getAccountNotes(input.accountId);
-            }
-          }
-          throw new Error("Account not found or unauthorized");
-        }
-        
-        return await db.getAccountNotes(input.accountId);
-      }),
-
-    saveNotes: protectedProcedure
-      .input(z.object({
-        accountId: z.number(),
-        mt5Login: z.string().optional().nullable(),
-        mt5Password: z.string().optional().nullable(),
-        mt5Server: z.string().optional().nullable(),
-        mt5InvestorPassword: z.string().optional().nullable(),
-        vpsProvider: z.string().optional().nullable(),
-        vpsIp: z.string().optional().nullable(),
-        vpsUsername: z.string().optional().nullable(),
-        vpsPassword: z.string().optional().nullable(),
-        vpsPort: z.number().optional().nullable(),
-        notes: z.string().optional().nullable(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        // Verificar permissão (owner, manager ou admin)
-        const accounts = await db.getUserAccounts(ctx.user.id);
-        const account = accounts.find(a => a.id === input.accountId);
-        
-        if (!account && ctx.user.role !== 'admin' && ctx.user.role !== 'manager') {
-          throw new Error("Account not found or unauthorized");
-        }
-        
-        await db.saveAccountNotes(input);
-        return { success: true };
-      }),
   }),
 
   // ===== TRADES =====
   trades: router({
     list: protectedProcedure
       .input(z.object({
-        limit: z.number().optional().default(10000),
+        limit: z.number().optional().default(100),
         accountId: z.number().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
       }))
       .query(async ({ ctx, input }) => {
-        // Se não tiver datas, buscar últimos 90 dias
-        if (!input.startDate && !input.endDate) {
-          const endDate = new Date();
-          const startDate = new Date();
-          startDate.setDate(startDate.getDate() - 90);
-          return await db.getTradesByDateRange(ctx.user.id, startDate, endDate);
-        }
         if (input.startDate && input.endDate) {
           return await db.getTradesByDateRange(ctx.user.id, input.startDate, input.endDate);
         }
@@ -578,98 +516,6 @@ export const appRouter = router({
           throw new Error("Unauthorized: Admin access required");
         }
         await db.deleteAccount(input.accountId);
-        return { success: true };
-      }),
-  }),
-
-  // ===== JOURNAL =====
-  journal: router({
-    getByDate: protectedProcedure
-      .input(z.object({ date: z.string() })) // YYYY-MM-DD
-      .query(async ({ ctx, input }) => {
-        return await db.getJournalEntryByDate(ctx.user.id, input.date);
-      }),
-
-    getByMonth: protectedProcedure
-      .input(z.object({ year: z.number(), month: z.number() })) // month: 1-12
-      .query(async ({ ctx, input }) => {
-        return await db.getJournalEntriesByMonth(ctx.user.id, input.year, input.month);
-      }),
-
-    getDailyProfits: protectedProcedure
-      .input(z.object({ year: z.number(), month: z.number() })) // month: 1-12
-      .query(async ({ ctx, input }) => {
-        return await db.getDailyProfitsByMonth(ctx.user.id, input.year, input.month);
-      }),
-
-    create: protectedProcedure
-      .input(z.object({
-        date: z.string(), // YYYY-MM-DD
-        content: z.string().optional(),
-        emotion: z.enum(["confident", "nervous", "greedy", "fearful", "neutral", "disciplined"]).optional(),
-        marketCondition: z.enum(["trending", "ranging", "volatile", "quiet"]).optional(),
-        tags: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const id = await db.createJournalEntry({
-          ...input,
-          userId: ctx.user.id,
-          tags: input.tags ? JSON.stringify(input.tags) : undefined,
-        });
-        return { id };
-      }),
-
-    update: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        content: z.string().optional(),
-        emotion: z.enum(["confident", "nervous", "greedy", "fearful", "neutral", "disciplined"]).optional(),
-        marketCondition: z.enum(["trending", "ranging", "volatile", "quiet"]).optional(),
-        tags: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        await db.updateJournalEntry(id, {
-          ...data,
-          tags: data.tags ? JSON.stringify(data.tags) : undefined,
-        });
-        return { success: true };
-      }),
-
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.deleteJournalEntry(input.id);
-        return { success: true };
-      }),
-  }),
-
-  // ===== USERS MANAGEMENT =====
-  users: router({ 
-    listClients: protectedProcedure.query(async ({ ctx }) => {
-      if (ctx.user.role !== 'admin') {
-        throw new Error('Unauthorized');
-      }
-      return await db.getClientUsers();
-    }),
-
-    listManagers: protectedProcedure.query(async ({ ctx }) => {
-      if (ctx.user.role !== 'admin') {
-        throw new Error('Unauthorized');
-      }
-      return await db.getManagerUsers();
-    }),
-
-    assignManager: protectedProcedure
-      .input(z.object({
-        userId: z.number(),
-        managerId: z.number().nullable(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== 'admin') {
-          throw new Error('Unauthorized');
-        }
-        await db.assignManagerToUser(input.userId, input.managerId);
         return { success: true };
       }),
   }),

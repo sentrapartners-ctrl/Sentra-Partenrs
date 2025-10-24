@@ -1,8 +1,0 @@
-{
-  "query": "SELECT COUNT(*) as total_trades, \n       SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_trades,\n       SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_trades,\n       MIN(open_time) as oldest_trade,\n       MAX(open_time) as newest_trade\nFROM trades;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT COUNT(*) as total_trades, \n       SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_trades,\n       SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_trades,\n       MIN(open_time) as oldest_trade,\n       MAX(open_time) as newest_trade\nFROM trades;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'open_time' in ''"
-  ]
-}

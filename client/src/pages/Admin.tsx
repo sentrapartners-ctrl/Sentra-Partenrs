@@ -382,8 +382,8 @@ function AccountsTab() {
                     Usuário ID: {account.userId} | {account.platform}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Balance: ${((account.balance || 0) / 100).toFixed(2)} | Equity: $
-                    {((account.equity || 0) / 100).toFixed(2)}
+                    Balance: ${(account.balance / 100).toFixed(2)} | Equity: $
+                    {(account.equity / 100).toFixed(2)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

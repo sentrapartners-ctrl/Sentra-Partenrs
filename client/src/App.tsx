@@ -16,7 +16,6 @@ import Strategies from "./pages/Strategies";
 import Calendar from "./pages/Calendar";
 import Alerts from "./pages/Alerts";
 import Settings from "./pages/Settings";
-import Clients from "./pages/Clients";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -63,7 +62,6 @@ function Router() {
       <Route path="/calendar">{() => <ProtectedRoute component={Calendar} />}</Route>
       <Route path="/alerts">{() => <ProtectedRoute component={Alerts} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
-      <Route path="/clients">{() => <ProtectedRoute component={Clients} />}</Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

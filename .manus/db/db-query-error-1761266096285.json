@@ -1,8 +1,0 @@
-{
-  "query": "DELETE FROM tradingAccounts;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute DELETE FROM tradingAccounts;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 1: Table 'u7perjfz8y27qdzuycbk8j.tradingAccounts' doesn't exist"
-  ]
-}
