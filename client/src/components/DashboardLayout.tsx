@@ -27,6 +27,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { CurrencySelector } from "./CurrencySelector";
+import { ThemeToggle } from "./ThemeToggle";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -256,8 +257,9 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3 space-y-2">
-            <div className="flex justify-center group-data-[collapsible=icon]:px-0">
+            <div className="flex items-center justify-center gap-2 group-data-[collapsible=icon]:px-0">
               <CurrencySelector />
+              <ThemeToggle />
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
