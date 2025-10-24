@@ -5,12 +5,79 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { getForexFactoryEvents } from "./forex-calendar";
+import { registerUser, loginUser } from "./auth";
 
 export const appRouter = router({
   system: systemRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    
+    register: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const result = await registerUser(input.email, input.password, input.name);
+        
+        if (!result.success || !result.user) {
+          throw new Error(result.error || 'Registration failed');
+        }
+
+        // Create session token
+        const { createToken } = await import('./auth');
+        const token = await createToken(result.user);
+
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        return {
+          success: true,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role,
+          },
+        };
+      }),
+
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const result = await loginUser(input.email, input.password);
+        
+        if (!result.success || !result.user || !result.token) {
+          throw new Error(result.error || 'Login failed');
+        }
+
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, result.token, {
+          ...cookieOptions,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        return {
+          success: true,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role,
+          },
+        };
+      }),
+    
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -368,6 +435,87 @@ export const appRouter = router({
           ...input,
           userId: ctx.user.id,
         });
+        return { success: true };
+      }),
+  }),
+
+  // ===== ADMIN =====
+  admin: router({
+    listUsers: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized: Admin access required");
+      }
+      return await db.getAllUsers();
+    }),
+
+    listAllAccounts: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized: Admin access required");
+      }
+      return await db.getAllAccounts();
+    }),
+
+    getSystemStats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized: Admin access required");
+      }
+      return await db.getSystemStats();
+    }),
+
+    toggleUserStatus: protectedProcedure
+      .input(z.object({ userId: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.updateUserStatus(input.userId, input.isActive);
+        return { success: true };
+      }),
+
+    updateUser: protectedProcedure
+      .input(z.object({ 
+        userId: z.number(), 
+        email: z.string().email().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.updateUser(input.userId, input);
+        return { success: true };
+      }),
+
+    deleteUser: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.deleteUser(input.userId);
+        return { success: true };
+      }),
+
+    updateAccount: protectedProcedure
+      .input(z.object({ 
+        accountId: z.number(), 
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.updateAccount(input.accountId, input);
+        return { success: true };
+      }),
+
+    deleteAccount: protectedProcedure
+      .input(z.object({ accountId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized: Admin access required");
+        }
+        await db.deleteAccount(input.accountId);
         return { success: true };
       }),
   }),

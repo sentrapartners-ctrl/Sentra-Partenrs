@@ -1,0 +1,8 @@
+{
+  "query": "DELETE FROM trading_accounts WHERE account_number = '163032743' AND user_id = 90001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute DELETE FROM trading_accounts WHERE account_number = '163032743' AND user_id = 90001;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'account_number' in 'where clause'"
+  ]
+}

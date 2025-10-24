@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM trading_accounts WHERE accountNumber = '163032743' AND userId = 90001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute DELETE FROM trading_accounts WHERE accountNumber = '163032743' AND userId = 90001;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 147
+}
