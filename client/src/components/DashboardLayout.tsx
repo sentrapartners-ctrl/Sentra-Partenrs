@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -41,7 +41,10 @@ const menuItems = [
   { icon: Settings, label: "Configurações", path: "/settings" },
 ];
 
-const adminMenuItem = { icon: Shield, label: "Admin", path: "/admin", adminOnly: true };
+const adminMenuItems = [
+  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
+  { icon: Users, label: "Clientes", path: "/clients", adminOnly: true },
+];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -238,21 +241,21 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                 );
               })}
-              {user?.role === "admin" && (
-                <SidebarMenuItem key={adminMenuItem.path}>
+              {user?.role === "admin" && adminMenuItems.map(item => (
+                <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
-                    isActive={location === adminMenuItem.path}
-                    onClick={() => setLocation(adminMenuItem.path)}
-                    tooltip={adminMenuItem.label}
+                    isActive={location === item.path}
+                    onClick={() => setLocation(item.path)}
+                    tooltip={item.label}
                     className={`h-10 transition-all font-normal`}
                   >
-                    <adminMenuItem.icon
-                      className={`h-4 w-4 ${location === adminMenuItem.path ? "text-primary" : ""}`}
+                    <item.icon
+                      className={`h-4 w-4 ${location === item.path ? "text-primary" : ""}`}
                     />
-                    <span>{adminMenuItem.label}</span>
+                    <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
+              ))}
             </SidebarMenu>
           </SidebarContent>
 

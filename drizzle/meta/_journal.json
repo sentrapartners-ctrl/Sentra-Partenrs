@@ -64,6 +64,20 @@
       "when": 1761273389976,
       "tag": "0008_concerned_diamondback",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1761275418451,
+      "tag": "0009_lumpy_zaran",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1761275649027,
+      "tag": "0010_white_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

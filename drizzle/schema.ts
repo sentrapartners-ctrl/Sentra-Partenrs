@@ -8,12 +8,15 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(), // bcrypt hash
   name: text("name"),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "manager", "admin"]).default("user").notNull(),
+  managerId: int("managerId"), // ID do gerente responsável (null se for admin/manager)
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+}, (table) => ({
+  managerIdIdx: index("managerId_idx").on(table.managerId),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -292,4 +295,38 @@ export const alerts = mysqlTable("alerts", {
 
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
+
+
+
+/**
+ * Account notes table - stores sensitive account information (MT5 credentials, VPS details, etc)
+ */
+export const accountNotes = mysqlTable("account_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  accountId: int("accountId").notNull().unique(), // One note per account
+  
+  // MT5/MT4 Credentials
+  mt5Login: varchar("mt5Login", { length: 128 }),
+  mt5Password: text("mt5Password"), // Encrypted
+  mt5Server: varchar("mt5Server", { length: 256 }),
+  mt5InvestorPassword: text("mt5InvestorPassword"), // Encrypted
+  
+  // VPS/VM Details
+  vpsProvider: varchar("vpsProvider", { length: 128 }),
+  vpsIp: varchar("vpsIp", { length: 64 }),
+  vpsUsername: varchar("vpsUsername", { length: 128 }),
+  vpsPassword: text("vpsPassword"), // Encrypted
+  vpsPort: int("vpsPort"),
+  
+  // General Notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  accountIdIdx: index("accountId_idx").on(table.accountId),
+}));
+
+export type AccountNote = typeof accountNotes.$inferSelect;
+export type InsertAccountNote = typeof accountNotes.$inferInsert;
 

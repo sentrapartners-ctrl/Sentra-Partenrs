@@ -4,10 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, AlertCircle, FileText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
+import { AccountNotesModal } from "@/components/AccountNotesModal";
 
 export default function Accounts() {
   const { data: accounts, isLoading, refetch } = trpc.accounts.list.useQuery(
@@ -26,6 +27,8 @@ export default function Accounts() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [classification, setClassification] = useState("");
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<{ id: number; number: string } | null>(null);
 
   const handleSaveClassification = (terminalId: string) => {
     updateClassification.mutate({ terminalId, classification });
@@ -281,16 +284,28 @@ export default function Accounts() {
                             {account.classification || "Não definida"}
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingId(account.id);
-                            setClassification(account.classification || "");
-                          }}
-                        >
-                          Editar
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingId(account.id);
+                              setClassification(account.classification || "");
+                            }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedAccount({ id: account.id, number: account.accountNumber });
+                              setNotesModalOpen(true);
+                            }}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -308,6 +323,16 @@ export default function Accounts() {
           </div>
         )}
       </div>
+
+      {/* Account Notes Modal */}
+      {selectedAccount && (
+        <AccountNotesModal
+          accountId={selectedAccount.id}
+          accountNumber={selectedAccount.number}
+          open={notesModalOpen}
+          onOpenChange={setNotesModalOpen}
+        />
+      )}
     </DashboardLayout>
   );
 }

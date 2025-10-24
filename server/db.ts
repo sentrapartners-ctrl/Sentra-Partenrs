@@ -34,7 +34,10 @@ import {
   Alert,
   journalEntries,
   InsertJournalEntry,
-  JournalEntry
+  JournalEntry,
+  accountNotes,
+  InsertAccountNote,
+  AccountNote
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1111,5 +1114,130 @@ export async function deleteJournalEntry(id: number): Promise<void> {
   if (!db) return;
   
   await db.delete(journalEntries).where(eq(journalEntries.id, id));
+}
+
+
+
+// ===== USER MANAGEMENT =====
+
+export async function getClientUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select()
+    .from(users)
+    .where(eq(users.role, 'user'))
+    .orderBy(desc(users.createdAt));
+}
+
+export async function getManagerUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+    })
+    .from(users)
+    .where(eq(users.role, 'manager'))
+    .orderBy(users.name);
+}
+
+export async function assignManagerToUser(userId: number, managerId: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  await db
+    .update(users)
+    .set({ managerId })
+    .where(eq(users.id, userId));
+}
+
+export async function getClientsByManager(managerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select()
+    .from(users)
+    .where(and(
+      eq(users.managerId, managerId),
+      eq(users.isActive, true)
+    ))
+    .orderBy(users.name);
+}
+
+
+
+
+// ===== ACCOUNT NOTES =====
+
+export async function getAccountNotes(accountId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(accountNotes)
+    .where(eq(accountNotes.accountId, accountId))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+export async function saveAccountNotes(data: {
+  accountId: number;
+  mt5Login?: string | null;
+  mt5Password?: string | null;
+  mt5Server?: string | null;
+  mt5InvestorPassword?: string | null;
+  vpsProvider?: string | null;
+  vpsIp?: string | null;
+  vpsUsername?: string | null;
+  vpsPassword?: string | null;
+  vpsPort?: number | null;
+  notes?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  const existing = await getAccountNotes(data.accountId);
+  
+  if (existing) {
+    await db
+      .update(accountNotes)
+      .set({
+        mt5Login: data.mt5Login,
+        mt5Password: data.mt5Password,
+        mt5Server: data.mt5Server,
+        mt5InvestorPassword: data.mt5InvestorPassword,
+        vpsProvider: data.vpsProvider,
+        vpsIp: data.vpsIp,
+        vpsUsername: data.vpsUsername,
+        vpsPassword: data.vpsPassword,
+        vpsPort: data.vpsPort,
+        notes: data.notes,
+        updatedAt: new Date(),
+      })
+      .where(eq(accountNotes.accountId, data.accountId));
+  } else {
+    await db.insert(accountNotes).values({
+      accountId: data.accountId,
+      mt5Login: data.mt5Login,
+      mt5Password: data.mt5Password,
+      mt5Server: data.mt5Server,
+      mt5InvestorPassword: data.mt5InvestorPassword,
+      vpsProvider: data.vpsProvider,
+      vpsIp: data.vpsIp,
+      vpsUsername: data.vpsUsername,
+      vpsPassword: data.vpsPassword,
+      vpsPort: data.vpsPort,
+      notes: data.notes,
+    });
+  }
 }
 

@@ -152,6 +152,61 @@ export const appRouter = router({
         }
         return await db.getAccountTransactions(input.accountId);
       }),
+
+    getNotes: protectedProcedure
+      .input(z.object({ accountId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        // Verificar permissão (owner, manager ou admin)
+        const accounts = await db.getUserAccounts(ctx.user.id);
+        const account = accounts.find(a => a.id === input.accountId);
+        
+        if (!account) {
+          // Se não for owner, verificar se é manager ou admin
+          if (ctx.user.role === 'admin') {
+            return await db.getAccountNotes(input.accountId);
+          }
+          if (ctx.user.role === 'manager') {
+            const clients = await db.getClientsByManager(ctx.user.id);
+            const accountOwner = clients.find(c => {
+              const ownerAccounts = db.getUserAccounts(c.id);
+              return ownerAccounts.then(accs => accs.some(a => a.id === input.accountId));
+            });
+            if (accountOwner) {
+              return await db.getAccountNotes(input.accountId);
+            }
+          }
+          throw new Error("Account not found or unauthorized");
+        }
+        
+        return await db.getAccountNotes(input.accountId);
+      }),
+
+    saveNotes: protectedProcedure
+      .input(z.object({
+        accountId: z.number(),
+        mt5Login: z.string().optional().nullable(),
+        mt5Password: z.string().optional().nullable(),
+        mt5Server: z.string().optional().nullable(),
+        mt5InvestorPassword: z.string().optional().nullable(),
+        vpsProvider: z.string().optional().nullable(),
+        vpsIp: z.string().optional().nullable(),
+        vpsUsername: z.string().optional().nullable(),
+        vpsPassword: z.string().optional().nullable(),
+        vpsPort: z.number().optional().nullable(),
+        notes: z.string().optional().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Verificar permissão (owner, manager ou admin)
+        const accounts = await db.getUserAccounts(ctx.user.id);
+        const account = accounts.find(a => a.id === input.accountId);
+        
+        if (!account && ctx.user.role !== 'admin' && ctx.user.role !== 'manager') {
+          throw new Error("Account not found or unauthorized");
+        }
+        
+        await db.saveAccountNotes(input);
+        return { success: true };
+      }),
   }),
 
   // ===== TRADES =====
@@ -585,6 +640,36 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await db.deleteJournalEntry(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // ===== USERS MANAGEMENT =====
+  users: router({ 
+    listClients: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Unauthorized');
+      }
+      return await db.getClientUsers();
+    }),
+
+    listManagers: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Unauthorized');
+      }
+      return await db.getManagerUsers();
+    }),
+
+    assignManager: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        managerId: z.number().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        await db.assignManagerToUser(input.userId, input.managerId);
         return { success: true };
       }),
   }),
