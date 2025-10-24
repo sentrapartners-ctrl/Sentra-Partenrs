@@ -38,12 +38,18 @@ import { ENV } from './_core/env';
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
+  if (!_db) {
+    // Priorizar AIVEN_DATABASE_URL se existir, senão usar DATABASE_URL (banco Manus)
+    const dbUrl = process.env.AIVEN_DATABASE_URL || process.env.DATABASE_URL;
+    
+    if (dbUrl) {
+      try {
+        console.log("[Database] Connecting to:", dbUrl.includes('aiven') ? 'Aiven MySQL' : 'Manus TiDB');
+        _db = drizzle(dbUrl);
+      } catch (error) {
+        console.warn("[Database] Failed to connect:", error);
+        _db = null;
+      }
     }
   }
   return _db;
