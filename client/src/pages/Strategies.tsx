@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useState, useMemo } from "react";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
 
@@ -180,84 +180,94 @@ export default function Strategies() {
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <Button onClick={goToPreviousMonth} variant="ghost" size="icon">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <CardTitle className="text-xl capitalize">{monthName}</CardTitle>
-              <Button onClick={goToNextMonth} variant="ghost" size="icon">
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Cabeçalho dos dias da semana */}
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
-                  {day}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Calendário */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <Button onClick={goToPreviousMonth} variant="ghost" size="icon">
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <CardTitle className="text-xl capitalize">{monthName}</CardTitle>
+                  <Button onClick={goToNextMonth} variant="ghost" size="icon">
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
                 </div>
-              ))}
-            </div>
-
-            {/* Dias do mês */}
-            <div className="grid grid-cols-7 gap-2">
-              {days.map((day, index) => {
-                if (!day) {
-                  return <div key={`empty-${index}`} className="aspect-square" />;
-                }
-
-                const dateStr = day.toISOString().split('T')[0];
-                const profit = dailyProfits.get(dateStr) || 0;
-                const isToday = day.toDateString() === new Date().toDateString();
-                const hasJournal = !!getJournalForDate(day);
-                const hasProfit = profit !== 0;
-
-                return (
-                  <button
-                    key={day.toISOString()}
-                    onClick={() => handleDateClick(day)}
-                    className={`
-                      aspect-square p-2 rounded-lg border transition-all hover:bg-accent cursor-pointer
-                      ${isToday ? 'border-blue-500 ring-2 ring-blue-500' : 'border-border'}
-                      ${day.getMonth() !== currentDate.getMonth() ? 'opacity-50' : ''}
-                    `}
-                  >
-                    <div className="flex flex-col h-full">
-                      <span className={`text-sm font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                        {day.getDate()}
-                      </span>
-                      {hasProfit && (
-                        <div className={`text-xs font-semibold mt-1 ${profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {profit > 0 ? '+' : ''}<InlineCurrencyValue value={profit} />
-                        </div>
-                      )}
-                      {hasJournal && (
-                        <div className="mt-auto">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mx-auto" />
-                        </div>
-                      )}
+              </CardHeader>
+              <CardContent>
+                {/* Cabeçalho dos dias da semana */}
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                    <div key={day} className="text-center font-semibold text-xs text-muted-foreground py-2">
+                      {day}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
 
-            {/* Legenda */}
-            <div className="mt-6 flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span>Com anotações</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full border-2 border-blue-500" />
-                <span>Hoje</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                {/* Dias do mês */}
+                <div className="grid grid-cols-7 gap-1">
+                  {days.map((day, index) => {
+                    if (!day) {
+                      return <div key={`empty-${index}`} className="h-20" />;
+                    }
+
+                    const dateStr = day.toISOString().split('T')[0];
+                    const profit = dailyProfits.get(dateStr) || 0;
+                    const isToday = day.toDateString() === new Date().toDateString();
+                    const hasJournal = !!getJournalForDate(day);
+                    const hasProfit = profit !== 0;
+
+                    return (
+                      <button
+                        key={day.toISOString()}
+                        onClick={() => handleDateClick(day)}
+                        className={`
+                          h-20 p-2 rounded border transition-all hover:bg-accent cursor-pointer
+                          ${isToday ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2' : 'border-border'}
+                          ${day.getMonth() !== currentDate.getMonth() ? 'opacity-40' : ''}
+                          ${hasProfit && profit > 0 ? 'bg-green-50 dark:bg-green-950/20' : ''}
+                          ${hasProfit && profit < 0 ? 'bg-red-50 dark:bg-red-950/20' : ''}
+                        `}
+                      >
+                        <div className="flex flex-col h-full">
+                          <span className={`text-sm font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                            {day.getDate()}
+                          </span>
+                          {hasProfit && (
+                            <div className={`text-xs font-semibold mt-auto ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {profit > 0 ? '++' : ''}<InlineCurrencyValue value={profit} />
+                            </div>
+                          )}
+                          {hasJournal && (
+                            <div className="flex justify-center mt-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Painel lateral de instruções */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Selecione um dia</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <div className="text-6xl mb-4">📅</div>
+                <p className="text-sm text-muted-foreground">
+                  Clique em um dia no calendário para adicionar anotações
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* Sheet para adicionar/editar anotações */}
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -290,7 +300,7 @@ export default function Strategies() {
               <div className="space-y-2">
                 <Label htmlFor="mood">Como você se sentiu?</Label>
                 <Select value={mood} onValueChange={setMood}>
-                  <SelectTrigger id="mood">
+                  <SelectTrigger id="mood" className="border-border">
                     <SelectValue placeholder="Selecione seu humor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -311,6 +321,7 @@ export default function Strategies() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={5}
+                  className="border-border resize-none"
                 />
               </div>
 
@@ -322,6 +333,7 @@ export default function Strategies() {
                   value={marketConditions}
                   onChange={(e) => setMarketConditions(e.target.value)}
                   rows={3}
+                  className="border-border resize-none"
                 />
               </div>
 
@@ -333,6 +345,7 @@ export default function Strategies() {
                   value={lessonsLearned}
                   onChange={(e) => setLessonsLearned(e.target.value)}
                   rows={3}
+                  className="border-border resize-none"
                 />
               </div>
 
