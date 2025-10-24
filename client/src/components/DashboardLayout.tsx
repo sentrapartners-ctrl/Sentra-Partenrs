@@ -22,7 +22,7 @@ import {
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, Moon, Sun } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -61,7 +61,7 @@ export default function DashboardLayout({
   const { theme, toggleTheme } = useTheme();
   
   // Wrapper para garantir que toggleTheme sempre existe
-  const handleToggleTheme = React.useCallback(() => {
+  const handleToggleTheme = useCallback(() => {
     if (toggleTheme) {
       toggleTheme();
     }
