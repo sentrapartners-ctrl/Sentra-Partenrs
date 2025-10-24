@@ -59,13 +59,6 @@ export default function DashboardLayout({
   });
   const { loading, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  
-  // Wrapper para garantir que toggleTheme sempre existe
-  const handleToggleTheme = useCallback(() => {
-    if (toggleTheme) {
-      toggleTheme();
-    }
-  }, [toggleTheme]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -266,7 +259,7 @@ function DashboardLayoutContent({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleToggleTheme}
+                onClick={() => toggleTheme?.()}
                 className="h-9 w-9"
                 title={theme === "dark" ? "Modo claro" : "Modo escuro"}
               >
@@ -331,7 +324,7 @@ function DashboardLayoutContent({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleToggleTheme}
+                onClick={() => toggleTheme?.()}
                 className="h-9 w-9"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
