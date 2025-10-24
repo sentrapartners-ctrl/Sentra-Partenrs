@@ -3,12 +3,12 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,7 +27,7 @@ export default function Strategies() {
   const { isAuthenticated, loading } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Form state
   const [notes, setNotes] = useState("");
@@ -48,7 +48,7 @@ export default function Strategies() {
   const saveJournalMutation = trpc.journal.save.useMutation({
     onSuccess: () => {
       refetchJournal();
-      setIsSheetOpen(false);
+      setIsDialogOpen(false);
     },
   });
 
@@ -127,7 +127,7 @@ export default function Strategies() {
       setLessonsLearned("");
     }
     
-    setIsSheetOpen(true);
+    setIsDialogOpen(true);
   };
 
   // Salvar anotação
@@ -269,18 +269,18 @@ export default function Strategies() {
           </div>
         </div>
 
-        {/* Sheet para adicionar/editar anotações */}
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>
+        {/* Dialog para adicionar/editar anotações */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
                 {selectedDate?.toLocaleDateString('pt-BR', { 
                   day: '2-digit', 
                   month: 'long', 
                   year: 'numeric' 
                 })}
-              </SheetTitle>
-              <SheetDescription>
+              </DialogTitle>
+              <DialogDescription>
                 {selectedDate && dailyProfits.get(selectedDate.toISOString().split('T')[0]) !== undefined && (
                   <div className="mt-2">
                     <span className="text-sm text-muted-foreground">Lucro do dia: </span>
@@ -293,8 +293,8 @@ export default function Strategies() {
                     </span>
                   </div>
                 )}
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="space-y-6 mt-6">
               <div className="space-y-2">
@@ -358,8 +358,8 @@ export default function Strategies() {
                 {saveJournalMutation.isPending ? 'Salvando...' : 'Salvar Anotações'}
               </Button>
             </div>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
