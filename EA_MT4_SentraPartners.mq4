@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Sentra Partners"
 #property link      "https://sentrapartners.com"
-#property version   "2.0"
+#property version   "2.1"
 #property strict
 
 //--- Input Parameters
@@ -18,6 +18,7 @@ input bool DebugMode = false;                       // Modo debug (mais logs)
 //--- Global Variables
 string API_URL = "https://sentrapartners.com/api/mt";
 datetime lastHeartbeat = 0;
+bool initialSyncDone = false;  // Flag para sincronização inicial
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -25,7 +26,7 @@ datetime lastHeartbeat = 0;
 int OnInit()
 {
     Print("========================================");
-    Print("Sentra Partners EA - MT4 Connector v2.0");
+    Print("Sentra Partners EA - MT4 Connector v2.1");
     Print("========================================");
     Print("Email: ", UserEmail);
     Print("Conta: ", AccountNumber());
@@ -48,6 +49,17 @@ int OnInit()
     // Envia heartbeat inicial
     SendHeartbeat();
     
+    // IMPORTANTE: Sincroniza histórico logo no início
+    if(SendTrades) {
+        Print("[SYNC] Iniciando sincronização inicial de trades...");
+        SendAllTrades();
+        initialSyncDone = true;
+        Print("[SYNC] Sincronização inicial concluída!");
+    }
+    
+    // Inicia timer para heartbeat periódico
+    EventSetTimer(HeartbeatInterval);
+    
     return(INIT_SUCCEEDED);
 }
 
@@ -56,24 +68,20 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
+    EventKillTimer();
     Print("EA Sentra Partners desconectado. Motivo: ", reason);
 }
 
 //+------------------------------------------------------------------+
-//| Expert tick function                                             |
+//| Timer function (executado a cada HeartbeatInterval segundos)     |
 //+------------------------------------------------------------------+
-void OnTick()
+void OnTimer()
 {
-    // Envia heartbeat a cada X segundos
-    if(TimeCurrent() - lastHeartbeat >= HeartbeatInterval) {
-        SendHeartbeat();
-        lastHeartbeat = TimeCurrent();
-        
-        // Envia trades se habilitado (junto com heartbeat para não sobrecarregar)
-        if(SendTrades) {
-            SendOpenTrades();      // Trades abertos
-            SendHistoryTrades();   // Histórico (fechados)
-        }
+    SendHeartbeat();
+    
+    // Envia trades periodicamente
+    if(SendTrades) {
+        SendAllTrades();
     }
 }
 
@@ -129,55 +137,50 @@ void SendHeartbeat()
 }
 
 //+------------------------------------------------------------------+
-//| Envia trades abertos para o servidor                             |
+//| Envia TODOS os trades (abertos + histórico)                      |
 //+------------------------------------------------------------------+
-void SendOpenTrades()
+void SendAllTrades()
 {
-    int total = OrdersTotal();
-    Print("[DEBUG] Total de trades abertos: ", total);
+    // 1. Envia trades abertos
+    int open_total = OrdersTotal();
+    int open_sent = 0;
     
-    int sent = 0;
-    for(int i = 0; i < total; i++) {
+    for(int i = 0; i < open_total; i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
-            Print("[DEBUG] Enviando trade #", OrderTicket(), " ", OrderSymbol());
-            SendTrade(OrderTicket());
-            sent++;
-        }
-    }
-    Print("✅ Enviados ", sent, " trades abertos");
-}
-
-//+------------------------------------------------------------------+
-//| Envia histórico de trades para o servidor                        |
-//+------------------------------------------------------------------+
-void SendHistoryTrades()
-{
-    int total = OrdersHistoryTotal();
-    Print("[DEBUG] Total de trades no histórico: ", total);
-    
-    // Envia últimos 100 trades do histórico para não sobrecarregar
-    int start = MathMax(0, total - 100);
-    int sent = 0;
-    
-    for(int i = start; i < total; i++) {
-        if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY)) {
-            if(sent < 5 || DebugMode) {
-                Print("[DEBUG] Enviando histórico #", OrderTicket(), " ", OrderSymbol(), " P/L=", OrderProfit());
+            if(SendTrade(OrderTicket())) {
+                open_sent++;
             }
-            SendTrade(OrderTicket());
-            sent++;
         }
     }
     
-    Print("✅ Enviados ", sent, " trades do histórico (de ", start, " a ", total, ")");
+    if(open_sent > 0 || DebugMode) {
+        Print("[TRADES] Enviados ", open_sent, " trades abertos");
+    }
+    
+    // 2. Envia histórico (últimos 100)
+    int history_total = OrdersHistoryTotal();
+    int history_sent = 0;
+    int start = MathMax(0, history_total - 100);
+    
+    for(int i = start; i < history_total; i++) {
+        if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY)) {
+            if(SendTrade(OrderTicket())) {
+                history_sent++;
+            }
+        }
+    }
+    
+    if(history_sent > 0 || DebugMode) {
+        Print("[HISTORY] Enviados ", history_sent, " trades do histórico (", start, " a ", history_total, ")");
+    }
 }
 
 //+------------------------------------------------------------------+
 //| Envia um trade específico                                        |
 //+------------------------------------------------------------------+
-void SendTrade(int ticket)
+bool SendTrade(int ticket)
 {
-    if(!OrderSelect(ticket, SELECT_BY_TICKET)) return;
+    if(!OrderSelect(ticket, SELECT_BY_TICKET)) return false;
     
     string url = API_URL + "/trade";
     
@@ -222,12 +225,15 @@ void SendTrade(int ticket)
     int res = WebRequest("POST", url, headers, 5000, post, result, headers);
     
     if(res == 200) {
-        // Sucesso - não loga para não poluir
+        return true;
     } else {
-        Print("❌ Erro ao enviar trade #", ticket, ": HTTP ", res);
-        if(res == -1) {
-            Print("ERRO: Adicione ", API_URL, " nas URLs permitidas!");
+        if(DebugMode) {
+            Print("❌ Erro ao enviar trade #", ticket, ": HTTP ", res);
+            if(res == -1) {
+                Print("ERRO: Adicione ", API_URL, " nas URLs permitidas!");
+            }
         }
+        return false;
     }
 }
 
