@@ -336,6 +336,121 @@ router.post("/history", async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/mt/trades
+ * Recebe trades do terminal MT4/MT5 (mesmo que /history, mas com formato do EA)
+ */
+router.post("/trades", async (req: Request, res: Response) => {
+  try {
+    console.log("[MT API] ===== TRADES RECEIVED =====");
+    console.log("[MT API] Body:", JSON.stringify(req.body, null, 2));
+    console.log("[MT API] ===================================");
+    
+    const { user_email, account_number, trades } = req.body;
+
+    if (!user_email || !account_number) {
+      console.log("[MT API] Missing required fields");
+      return res.status(400).json({ 
+        error: "Missing required fields: user_email and account_number are required" 
+      });
+    }
+
+    // Busca usuário pelo email
+    const { getUserByEmail } = await import('./auth');
+    const user = await getUserByEmail(user_email);
+    if (!user) {
+      console.log("[MT API] User not found for email:", user_email);
+      return res.status(404).json({ 
+        error: "User not found",
+        email: user_email 
+      });
+    }
+
+    // Busca conta pelo terminal_id
+    const terminalId = `${user_email}_${account_number}`;
+    const account = await db.getAccountByTerminalId(terminalId);
+    
+    if (!account) {
+      console.log("[MT API] Account not found for terminalId:", terminalId);
+      return res.status(404).json({ error: "Account not found. Send heartbeat first." });
+    }
+
+    if (!Array.isArray(trades)) {
+      console.log("[MT API] Trades is not an array:", typeof trades);
+      return res.status(400).json({ error: "Expected array of trades" });
+    }
+
+    console.log(`[MT API] Processing ${trades.length} trades for account ${account_number}`);
+
+    // Processa cada trade
+    let processedCount = 0;
+    let errorCount = 0;
+    
+    for (const trade of trades) {
+      try {
+        const {
+          ticket,
+          type,
+          symbol,
+          volume,
+          open_price,
+          close_price,
+          profit,
+          commission,
+          swap,
+          open_time,
+          close_time
+        } = trade;
+
+        // Converte timestamps de string para Date
+        const parseDateTime = (dateStr: string) => {
+          if (!dateStr) return new Date();
+          // Formato: "2025.10.24 13:33:36" ou "2025-10-24 13:33:36"
+          const normalized = dateStr.replace(/\./g, '-').replace(' ', 'T');
+          return new Date(normalized);
+        };
+
+        const openTimeDate = open_time ? parseDateTime(open_time) : new Date();
+        const closeTimeDate = close_time ? parseDateTime(close_time) : undefined;
+        const isClosed = !!close_time && close_price > 0;
+
+        await db.createOrUpdateTrade({
+          accountId: account.id,
+          userId: account.userId,
+          ticket: ticket.toString(),
+          symbol: symbol || "UNKNOWN",
+          type: type?.toLowerCase() === "buy" ? "BUY" : type?.toLowerCase() === "sell" ? "SELL" : "OTHER",
+          volume: toLotsInt(volume || 0),
+          openPrice: toPriceInt(open_price || 0),
+          closePrice: isClosed ? toPriceInt(close_price || 0) : 0,
+          profit: toCents(profit || 0),
+          commission: toCents(commission || 0),
+          swap: toCents(swap || 0),
+          openTime: openTimeDate,
+          closeTime: closeTimeDate,
+          status: isClosed ? "closed" : "open",
+        });
+        
+        processedCount++;
+      } catch (tradeError) {
+        console.error("[MT API] Error processing trade:", trade, tradeError);
+        errorCount++;
+      }
+    }
+
+    console.log(`[MT API] Trades processed: ${processedCount} success, ${errorCount} errors`);
+    res.json({ 
+      success: true, 
+      message: `Processed ${processedCount} trades successfully`,
+      processed: processedCount,
+      errors: errorCount
+    });
+  } catch (error) {
+    console.error("[MT API] Trades error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * GET /api/mt/status
  * Retorna status da API
  */
