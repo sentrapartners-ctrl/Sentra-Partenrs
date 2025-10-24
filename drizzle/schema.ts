@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index, date } from "drizzle-orm/mysql-core";
+import { int, bigint, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -64,14 +64,14 @@ export const trades = mysqlTable("trades", {
   symbol: varchar("symbol", { length: 32 }).notNull(),
   type: mysqlEnum("type", ["BUY", "SELL", "PENDING", "OTHER"]).notNull(),
   volume: int("volume").notNull(), // stored in lots * 100
-  openPrice: int("openPrice").notNull(), // stored as integer (price * 100000)
-  closePrice: int("closePrice").default(0), // stored as integer (price * 100000)
-  currentPrice: int("currentPrice").default(0), // stored as integer (price * 100000)
+  openPrice: bigint("openPrice", { mode: "number" }).notNull(), // stored as integer (price * 100000)
+  closePrice: bigint("closePrice", { mode: "number" }).default(0), // stored as integer (price * 100000)
+  currentPrice: bigint("currentPrice", { mode: "number" }).default(0), // stored as integer (price * 100000)
   profit: int("profit").default(0), // stored in cents
   commission: int("commission").default(0), // stored in cents
   swap: int("swap").default(0), // stored in cents
-  stopLoss: int("stopLoss").default(0), // stored as integer (price * 100000)
-  takeProfit: int("takeProfit").default(0), // stored as integer (price * 100000)
+  stopLoss: bigint("stopLoss", { mode: "number" }).default(0), // stored as integer (price * 100000)
+  takeProfit: bigint("takeProfit", { mode: "number" }).default(0), // stored as integer (price * 100000)
   magicNumber: int("magicNumber").default(0),
   openTime: timestamp("openTime").notNull(),
   closeTime: timestamp("closeTime"),

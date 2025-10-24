@@ -1,0 +1,20 @@
+{
+  "query": "SELECT t.id, t.ticket, t.symbol, t.type, t.status, t.profit, t.openTime, u.email\nFROM trades t\nJOIN users u ON t.userId = u.id\nWHERE u.email = 'adm1@sentra.com'\nORDER BY t.createdAt DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT t.id, t.ticket, t.symbol, t.type, t.status, t.profit, t.openTime, u.email\nFROM trades t\nJOIN users u ON t.userId = u.id\nWHERE u.email = 'adm1@sentra.com'\nORDER BY t.createdAt DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "60001",
+      "ticket": "123",
+      "symbol": "EURUSD",
+      "type": "BUY",
+      "status": "open",
+      "profit": "200",
+      "openTime": "2009-02-13 23:31:30",
+      "email": "adm1@sentra.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tticket\tsymbol\ttype\tstatus\tprofit\topenTime\temail\n60001\t123\tEURUSD\tBUY\topen\t200\t2009-02-13 23:31:30\tadm1@sentra.com\n",
+  "stderr": "",
+  "execution_time_ms": 49
+}

@@ -1,0 +1,19 @@
+{
+  "query": "SELECT t.ticket, t.symbol, t.type, t.status, t.profit, t.openTime, t.createdAt\nFROM trades t\nJOIN users u ON t.userId = u.id\nWHERE u.email = 'adm1@sentra.com'\nORDER BY t.createdAt DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT t.ticket, t.symbol, t.type, t.status, t.profit, t.openTime, t.createdAt\nFROM trades t\nJOIN users u ON t.userId = u.id\nWHERE u.email = 'adm1@sentra.com'\nORDER BY t.createdAt DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "ticket": "888001",
+      "symbol": "BTCUSD",
+      "type": "BUY",
+      "status": "open",
+      "profit": "1050",
+      "openTime": "2024-10-24 00:00:00",
+      "createdAt": "2025-10-24 02:37:08"
+    }
+  ],
+  "messages": [],
+  "stdout": "ticket\tsymbol\ttype\tstatus\tprofit\topenTime\tcreatedAt\n888001\tBTCUSD\tBUY\topen\t1050\t2024-10-24 00:00:00\t2025-10-24 02:37:08\n",
+  "stderr": "",
+  "execution_time_ms": 194
+}

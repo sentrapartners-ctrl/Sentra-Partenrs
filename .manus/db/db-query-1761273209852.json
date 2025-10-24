@@ -1,0 +1,32 @@
+{
+  "query": "SELECT ticket, symbol, type, status, profit, swap, commission, magicNumber, comment\nFROM trades\nWHERE ticket IN ('999001', '999002', '999003')\nORDER BY ticket;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 33ExLKejDoGAsBq.root --database U7PERJfz8y27QdzUYcBk8J --execute SELECT ticket, symbol, type, status, profit, swap, commission, magicNumber, comment\nFROM trades\nWHERE ticket IN ('999001', '999002', '999003')\nORDER BY ticket;",
+  "rows": [
+    {
+      "ticket": "999002",
+      "symbol": "EURUSD",
+      "type": "SELL",
+      "status": "open",
+      "profit": "520",
+      "swap": "-10",
+      "commission": "-30",
+      "magicNumber": "12345",
+      "comment": "test2"
+    },
+    {
+      "ticket": "999003",
+      "symbol": "GBPUSD",
+      "type": "BUY",
+      "status": "closed",
+      "profit": "1550",
+      "swap": "-50",
+      "commission": "-20",
+      "magicNumber": "0",
+      "comment": "closed"
+    }
+  ],
+  "messages": [],
+  "stdout": "ticket\tsymbol\ttype\tstatus\tprofit\tswap\tcommission\tmagicNumber\tcomment\n999002\tEURUSD\tSELL\topen\t520\t-10\t-30\t12345\ttest2\n999003\tGBPUSD\tBUY\tclosed\t1550\t-50\t-20\t0\tclosed\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}
