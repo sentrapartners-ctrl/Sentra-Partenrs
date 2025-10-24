@@ -133,14 +133,18 @@ void SendHeartbeat()
 //+------------------------------------------------------------------+
 void SendOpenTrades()
 {
+    int total = OrdersTotal();
+    Print("[DEBUG] Total de trades abertos: ", total);
+    
     int sent = 0;
-    for(int i = 0; i < OrdersTotal(); i++) {
+    for(int i = 0; i < total; i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            Print("[DEBUG] Enviando trade #", OrderTicket(), " ", OrderSymbol());
             SendTrade(OrderTicket());
             sent++;
         }
     }
-    if(DebugMode && sent > 0) Print("✅ Enviados ", sent, " trades abertos");
+    Print("✅ Enviados ", sent, " trades abertos");
 }
 
 //+------------------------------------------------------------------+
@@ -148,20 +152,24 @@ void SendOpenTrades()
 //+------------------------------------------------------------------+
 void SendHistoryTrades()
 {
-    int sent = 0;
     int total = OrdersHistoryTotal();
+    Print("[DEBUG] Total de trades no histórico: ", total);
     
     // Envia últimos 100 trades do histórico para não sobrecarregar
     int start = MathMax(0, total - 100);
+    int sent = 0;
     
     for(int i = start; i < total; i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY)) {
+            if(sent < 5 || DebugMode) {
+                Print("[DEBUG] Enviando histórico #", OrderTicket(), " ", OrderSymbol(), " P/L=", OrderProfit());
+            }
             SendTrade(OrderTicket());
             sent++;
         }
     }
     
-    if(DebugMode && sent > 0) Print("✅ Enviados ", sent, " trades do histórico");
+    Print("✅ Enviados ", sent, " trades do histórico (de ", start, " a ", total, ")");
 }
 
 //+------------------------------------------------------------------+
@@ -214,9 +222,12 @@ void SendTrade(int ticket)
     int res = WebRequest("POST", url, headers, 5000, post, result, headers);
     
     if(res == 200) {
-        if(DebugMode) Print("✅ Trade enviado: #", ticket, " ", symbol, " ", type);
-    } else if(res != -1) {
+        // Sucesso - não loga para não poluir
+    } else {
         Print("❌ Erro ao enviar trade #", ticket, ": HTTP ", res);
+        if(res == -1) {
+            Print("ERRO: Adicione ", API_URL, " nas URLs permitidas!");
+        }
     }
 }
 
