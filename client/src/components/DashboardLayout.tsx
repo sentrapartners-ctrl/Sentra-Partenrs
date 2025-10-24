@@ -61,11 +61,11 @@ export default function DashboardLayout({
   const { theme, toggleTheme } = useTheme();
   
   // Wrapper para garantir que toggleTheme sempre existe
-  const handleToggleTheme = () => {
+  const handleToggleTheme = React.useCallback(() => {
     if (toggleTheme) {
       toggleTheme();
     }
-  };
+  }, [toggleTheme]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
