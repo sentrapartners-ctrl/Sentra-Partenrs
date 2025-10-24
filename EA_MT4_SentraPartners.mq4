@@ -68,11 +68,12 @@ void OnTick()
     if(TimeCurrent() - lastHeartbeat >= HeartbeatInterval) {
         SendHeartbeat();
         lastHeartbeat = TimeCurrent();
-    }
-    
-    // Envia trades se habilitado
-    if(SendTrades) {
-        SendOpenTrades();
+        
+        // Envia trades se habilitado (junto com heartbeat para não sobrecarregar)
+        if(SendTrades) {
+            SendOpenTrades();      // Trades abertos
+            SendHistoryTrades();   // Histórico (fechados)
+        }
     }
 }
 
@@ -132,11 +133,35 @@ void SendHeartbeat()
 //+------------------------------------------------------------------+
 void SendOpenTrades()
 {
+    int sent = 0;
     for(int i = 0; i < OrdersTotal(); i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             SendTrade(OrderTicket());
+            sent++;
         }
     }
+    if(DebugMode && sent > 0) Print("✅ Enviados ", sent, " trades abertos");
+}
+
+//+------------------------------------------------------------------+
+//| Envia histórico de trades para o servidor                        |
+//+------------------------------------------------------------------+
+void SendHistoryTrades()
+{
+    int sent = 0;
+    int total = OrdersHistoryTotal();
+    
+    // Envia últimos 100 trades do histórico para não sobrecarregar
+    int start = MathMax(0, total - 100);
+    
+    for(int i = start; i < total; i++) {
+        if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY)) {
+            SendTrade(OrderTicket());
+            sent++;
+        }
+    }
+    
+    if(DebugMode && sent > 0) Print("✅ Enviados ", sent, " trades do histórico");
 }
 
 //+------------------------------------------------------------------+

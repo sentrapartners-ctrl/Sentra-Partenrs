@@ -67,11 +67,12 @@ void OnTick()
     if(TimeCurrent() - lastHeartbeat >= HeartbeatInterval) {
         SendHeartbeat();
         lastHeartbeat = TimeCurrent();
-    }
-    
-    // Envia trades se habilitado
-    if(SendTrades) {
-        SendOpenTrades();
+        
+        // Envia trades se habilitado (junto com heartbeat para não sobrecarregar)
+        if(SendTrades) {
+            SendOpenTrades();      // Posições abertas
+            SendHistoryTrades();   // Histórico (fechados)
+        }
     }
 }
 
@@ -128,16 +129,48 @@ void SendHeartbeat()
 }
 
 //+------------------------------------------------------------------+
-//| Envia trades abertos para o servidor                             |
+//| Envia posições abertas para o servidor                           |
 //+------------------------------------------------------------------+
 void SendOpenTrades()
 {
+    int sent = 0;
     for(int i = 0; i < PositionsTotal(); i++) {
         ulong ticket = PositionGetTicket(i);
         if(ticket > 0) {
             SendTrade(ticket);
+            sent++;
         }
     }
+    if(DebugMode && sent > 0) Print("✅ Enviados ", sent, " trades abertos");
+}
+
+//+------------------------------------------------------------------+
+//| Envia histórico de trades para o servidor                        |
+//+------------------------------------------------------------------+
+void SendHistoryTrades()
+{
+    int sent = 0;
+    datetime from = TimeCurrent() - (90 * 24 * 3600); // Últimos 90 dias
+    datetime to = TimeCurrent();
+    
+    HistorySelect(from, to);
+    int total = HistoryDealsTotal();
+    
+    // Envia últimos 100 deals para não sobrecarregar
+    int start = MathMax(0, total - 100);
+    
+    for(int i = start; i < total; i++) {
+        ulong ticket = HistoryDealGetTicket(i);
+        if(ticket > 0) {
+            if(HistoryDealGetInteger(ticket, DEAL_ENTRY) == DEAL_ENTRY_OUT) {
+                // Apenas deals de saída (trades fechados)
+                SendHistoryDeal(ticket);
+                sent++;
+            }
+        }
+    }
+    
+    if(DebugMode && sent > 0) Print("✅ Enviados ", sent, " trades do histórico");
 }
 
 //+------------------------------------------------------------------+
@@ -195,5 +228,59 @@ void SendTrade(ulong ticket)
     }
 }
 
+//+------------------------------------------------------------------+
+
+
+
+
+//+------------------------------------------------------------------+
+//| Envia um deal do histórico                                       |
+//+------------------------------------------------------------------+
+void SendHistoryDeal(ulong ticket)
+{
+    string url = API_URL + "/trade";
+    
+    string trade_id = IntegerToString(ticket);
+    string symbol = HistoryDealGetString(ticket, DEAL_SYMBOL);
+    string type = (HistoryDealGetInteger(ticket, DEAL_TYPE) == DEAL_TYPE_BUY) ? "BUY" : "SELL";
+    double volume = HistoryDealGetDouble(ticket, DEAL_VOLUME);
+    double price = HistoryDealGetDouble(ticket, DEAL_PRICE);
+    double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT);
+    double commission = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+    double swap = HistoryDealGetDouble(ticket, DEAL_SWAP);
+    datetime time = (datetime)HistoryDealGetInteger(ticket, DEAL_TIME);
+    
+    string params = 
+        "user_email=" + UserEmail +
+        "&account_number=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) +
+        "&trade_id=" + trade_id +
+        "&symbol=" + symbol +
+        "&type=" + type +
+        "&volume=" + DoubleToString(volume, 2) +
+        "&open_price=" + DoubleToString(price, 5) +
+        "&close_price=" + DoubleToString(price, 5) +
+        "&stop_loss=0" +
+        "&take_profit=0" +
+        "&profit=" + DoubleToString(profit, 2) +
+        "&commission=" + DoubleToString(commission, 2) +
+        "&swap=" + DoubleToString(swap, 2) +
+        "&status=closed" +
+        "&open_time=" + IntegerToString(time) +
+        "&close_time=" + IntegerToString(time);
+    
+    char post[], result[];
+    string headers = "Content-Type: application/x-www-form-urlencoded\r\n";
+    
+    StringToCharArray(params, post, 0, StringLen(params));
+    ArrayResize(result, 0);
+    
+    int res = WebRequest("POST", url, headers, 5000, post, result, headers);
+    
+    if(res == 200) {
+        if(DebugMode) Print("✅ Deal histórico enviado: #", ticket, " ", symbol);
+    } else if(res != -1) {
+        Print("❌ Erro ao enviar deal #", ticket, ": HTTP ", res);
+    }
+}
 //+------------------------------------------------------------------+
 
