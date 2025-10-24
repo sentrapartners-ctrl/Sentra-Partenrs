@@ -256,15 +256,17 @@ function DashboardLayoutContent({
 
           <SidebarFooter className="p-3 space-y-2">
             <div className="flex items-center justify-center gap-2 group-data-[collapsible=icon]:flex-col">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="h-9 w-9"
-                title={theme === "dark" ? "Modo claro" : "Modo escuro"}
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+              {toggleTheme && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="h-9 w-9"
+                  title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              )}
               <CurrencySelector />
             </div>
             <DropdownMenu>
@@ -321,14 +323,16 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="h-9 w-9"
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+              {toggleTheme && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="h-9 w-9"
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              )}
               <CurrencySelector />
             </div>
           </div>
