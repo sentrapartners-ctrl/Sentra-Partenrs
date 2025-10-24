@@ -961,7 +961,7 @@ export async function getDailyJournal(userId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  const { dailyJournal } = await import("@/drizzle/schema");
+  const { dailyJournal } = await import("../drizzle/schema");
   
   const entries = await db
     .select()
@@ -988,7 +988,7 @@ export async function saveDailyJournal(
   const db = await getDb();
   if (!db) return { success: false };
   
-  const { dailyJournal } = await import("@/drizzle/schema");
+  const { dailyJournal } = await import("../drizzle/schema");
   
   // Verificar se já existe entrada para esta data
   const existing = await db
