@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, Moon, Sun } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { CurrencySelector } from "./CurrencySelector";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -58,6 +59,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -254,7 +256,18 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3 space-y-2">
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-2 group-data-[collapsible=icon]:flex-col">
+              {toggleTheme && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="h-9 w-9"
+                  title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              )}
               <CurrencySelector />
             </div>
             <DropdownMenu>
@@ -311,6 +324,16 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {toggleTheme && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="h-9 w-9"
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              )}
               <CurrencySelector />
             </div>
           </div>
