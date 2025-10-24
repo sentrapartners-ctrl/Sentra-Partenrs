@@ -1,11 +1,5 @@
--- Sentra Partners - Complete Database Schema for Supabase (PostgreSQL)
--- Version: 2.0 (Updated with Manager Hierarchy + Account Notes)
--- Generated: 2025-10-24
-
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ===== USERS TABLE =====
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   "openId" VARCHAR(255) UNIQUE NOT NULL,
@@ -22,7 +16,6 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_manager ON users("managerId");
 
--- ===== TRADING ACCOUNTS TABLE =====
 CREATE TABLE IF NOT EXISTS trading_accounts (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -52,7 +45,6 @@ CREATE TABLE IF NOT EXISTS trading_accounts (
 CREATE INDEX IF NOT EXISTS idx_trading_accounts_userId ON trading_accounts("userId");
 CREATE INDEX IF NOT EXISTS idx_trading_accounts_status ON trading_accounts(status);
 
--- ===== ACCOUNT NOTES TABLE (NEW) =====
 CREATE TABLE IF NOT EXISTS account_notes (
   id SERIAL PRIMARY KEY,
   "accountId" INTEGER UNIQUE NOT NULL REFERENCES trading_accounts(id) ON DELETE CASCADE,
@@ -72,7 +64,6 @@ CREATE TABLE IF NOT EXISTS account_notes (
 
 CREATE INDEX IF NOT EXISTS idx_account_notes_accountId ON account_notes("accountId");
 
--- ===== TRADES TABLE =====
 CREATE TABLE IF NOT EXISTS trades (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -106,7 +97,6 @@ CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
 CREATE INDEX IF NOT EXISTS idx_trades_openTime ON trades("openTime");
 CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
 
--- ===== BALANCE HISTORY TABLE =====
 CREATE TABLE IF NOT EXISTS balance_history (
   id SERIAL PRIMARY KEY,
   "accountId" INTEGER NOT NULL REFERENCES trading_accounts(id) ON DELETE CASCADE,
@@ -119,7 +109,6 @@ CREATE TABLE IF NOT EXISTS balance_history (
 CREATE INDEX IF NOT EXISTS idx_balance_history_accountId ON balance_history("accountId");
 CREATE INDEX IF NOT EXISTS idx_balance_history_timestamp ON balance_history(timestamp);
 
--- ===== TRANSACTIONS TABLE =====
 CREATE TABLE IF NOT EXISTS transactions (
   id SERIAL PRIMARY KEY,
   "accountId" INTEGER NOT NULL REFERENCES trading_accounts(id) ON DELETE CASCADE,
@@ -136,7 +125,6 @@ CREATE INDEX IF NOT EXISTS idx_transactions_accountId ON transactions("accountId
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
 CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON transactions(timestamp);
 
--- ===== USER SETTINGS TABLE =====
 CREATE TABLE IF NOT EXISTS user_settings (
   "userId" INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   theme VARCHAR(20) DEFAULT 'light',
@@ -158,7 +146,6 @@ CREATE TABLE IF NOT EXISTS user_settings (
   "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- ===== STRATEGIES TABLE =====
 CREATE TABLE IF NOT EXISTS strategies (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -176,7 +163,6 @@ CREATE TABLE IF NOT EXISTS strategies (
 
 CREATE INDEX IF NOT EXISTS idx_strategies_userId ON strategies("userId");
 
--- ===== TRADE NOTES TABLE =====
 CREATE TABLE IF NOT EXISTS trade_notes (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -193,7 +179,6 @@ CREATE TABLE IF NOT EXISTS trade_notes (
 CREATE INDEX IF NOT EXISTS idx_trade_notes_userId ON trade_notes("userId");
 CREATE INDEX IF NOT EXISTS idx_trade_notes_tradeId ON trade_notes("tradeId");
 
--- ===== JOURNAL ENTRIES TABLE =====
 CREATE TABLE IF NOT EXISTS journal_entries (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -209,7 +194,6 @@ CREATE TABLE IF NOT EXISTS journal_entries (
 CREATE INDEX IF NOT EXISTS idx_journal_entries_userId ON journal_entries("userId");
 CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(date);
 
--- ===== ECONOMIC EVENTS TABLE =====
 CREATE TABLE IF NOT EXISTS economic_events (
   id SERIAL PRIMARY KEY,
   title VARCHAR(512) NOT NULL,
@@ -227,7 +211,6 @@ CREATE INDEX IF NOT EXISTS idx_economic_events_timestamp ON economic_events(time
 CREATE INDEX IF NOT EXISTS idx_economic_events_currency ON economic_events(currency);
 CREATE INDEX IF NOT EXISTS idx_economic_events_impact ON economic_events(impact);
 
--- ===== COPY TRADING CONFIGS TABLE =====
 CREATE TABLE IF NOT EXISTS copy_trading_configs (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -249,7 +232,6 @@ CREATE INDEX IF NOT EXISTS idx_copy_trading_userId ON copy_trading_configs("user
 CREATE INDEX IF NOT EXISTS idx_copy_trading_sourceAccountId ON copy_trading_configs("sourceAccountId");
 CREATE INDEX IF NOT EXISTS idx_copy_trading_targetAccountId ON copy_trading_configs("targetAccountId");
 
--- ===== ALERTS TABLE =====
 CREATE TABLE IF NOT EXISTS alerts (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -265,7 +247,6 @@ CREATE INDEX IF NOT EXISTS idx_alerts_userId ON alerts("userId");
 CREATE INDEX IF NOT EXISTS idx_alerts_isRead ON alerts("isRead");
 CREATE INDEX IF NOT EXISTS idx_alerts_createdAt ON alerts("createdAt");
 
--- ===== TRIGGERS FOR UPDATED_AT =====
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -284,15 +265,9 @@ CREATE TRIGGER update_trade_notes_updated_at BEFORE UPDATE ON trade_notes FOR EA
 CREATE TRIGGER update_journal_entries_updated_at BEFORE UPDATE ON journal_entries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_copy_trading_configs_updated_at BEFORE UPDATE ON copy_trading_configs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ===== INITIAL DATA =====
--- Create default admin user (change password in production!)
 INSERT INTO users ("openId", name, email, role, "loginMethod", "isActive")
 VALUES 
   ('admin_default_001', 'Admin 1', 'adm1@sentra.com', 'admin', 'email', true),
   ('admin_default_002', 'Admin 2', 'adm2@sentra.com', 'admin', 'email', true)
 ON CONFLICT ("openId") DO NOTHING;
-
--- Schema version: 2.0
--- Last updated: 2025-10-24
--- Features: Manager hierarchy, Account notes (MT5 + VPS credentials)
 

@@ -171,27 +171,28 @@ function isCentAccountByBroker(
   return false;
 }
 
-export async function createOrUpdateAccount(account: InsertTradingAccount): Promise<number> {
+export async function createOrUpdateAccount(account: InsertTradingAccount) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Detect if account is cent type
-  const isCent = isCentAccountByBroker(account.broker, account.server, account.accountType, account.balance);
+  // Detecta automaticamente se é conta cent usando padrões universais
+  const isCent = isCentAccountByBroker(
+    account.broker, 
+    account.server, 
+    account.accountType,
+    account.balance
+  );
   const accountWithCentFlag = {
     ...account,
     isCentAccount: isCent,
-    updatedAt: new Date(),
   };
 
-  const existing = await db
-    .select()
-    .from(tradingAccounts)
+  const existing = await db.select().from(tradingAccounts)
     .where(eq(tradingAccounts.terminalId, account.terminalId))
     .limit(1);
 
   if (existing.length > 0) {
-    await db
-      .update(tradingAccounts)
+    await db.update(tradingAccounts)
       .set({
         ...accountWithCentFlag,
         updatedAt: new Date(),
@@ -199,8 +200,8 @@ export async function createOrUpdateAccount(account: InsertTradingAccount): Prom
       .where(eq(tradingAccounts.terminalId, account.terminalId));
     return existing[0].id;
   } else {
-    const result = await db.insert(tradingAccounts).values(accountWithCentFlag).returning({ id: tradingAccounts.id });
-    return result[0].id;
+    const result = await db.insert(tradingAccounts).values(accountWithCentFlag);
+    return Number(result[0].insertId);
   }
 }
 
@@ -310,9 +311,9 @@ export async function createOrUpdateTrade(trade: InsertTrade) {
       return existing[0].id;
     } else {
       console.log(`[DB] Inserting new trade ticket=${trade.ticket}, symbol=${trade.symbol}, status=${actualStatus}`);
-      const result = await db.insert(trades).values(tradeWithStatus).returning({ id: trades.id });
-      console.log(`[DB] Trade inserted with ID=${result[0].id}`);
-      return result[0].id;
+      const result = await db.insert(trades).values(tradeWithStatus);
+      console.log(`[DB] Trade inserted with ID=${result[0].insertId}`);
+      return Number(result[0].insertId);
     }
   } catch (error) {
     console.error("[DB] Error in createOrUpdateTrade:", error);
@@ -509,8 +510,8 @@ export async function createOrUpdateUserSettings(settings: InsertUserSettings) {
 export async function createStrategy(strategy: InsertStrategy) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(strategies).values(strategy).returning({ id: strategies.id });
-  return result[0].id;
+  const result = await db.insert(strategies).values(strategy);
+  return Number(result[0].insertId);
 }
 
 export async function getUserStrategies(userId: number) {
@@ -540,8 +541,8 @@ export async function deleteStrategy(id: number) {
 export async function createTradeNote(note: InsertTradeNote) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(tradeNotes).values(note).returning({ id: tradeNotes.id });
-  return result[0].id;
+  const result = await db.insert(tradeNotes).values(note);
+  return Number(result[0].insertId);
 }
 
 export async function getTradeNotes(tradeId: number) {
@@ -565,8 +566,8 @@ export async function updateTradeNote(id: number, note: Partial<InsertTradeNote>
 export async function createEconomicEvent(event: InsertEconomicEvent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(economicEvents).values(event).returning({ id: economicEvents.id });
-  return result[0].id;
+  const result = await db.insert(economicEvents).values(event);
+  return Number(result[0].insertId);
 }
 
 export async function getEconomicEvents(startDate: Date, endDate: Date) {
@@ -598,8 +599,8 @@ export async function getUpcomingEvents(hours: number = 24) {
 export async function createCopyTradingConfig(config: InsertCopyTradingConfig) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(copyTradingConfigs).values(config).returning({ id: copyTradingConfigs.id });
-  return result[0].id;
+  const result = await db.insert(copyTradingConfigs).values(config);
+  return Number(result[0].insertId);
 }
 
 export async function getUserCopyConfigs(userId: number) {
@@ -639,8 +640,8 @@ export async function deleteCopyConfig(id: number) {
 export async function createAlert(alert: InsertAlert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(alerts).values(alert).returning({ id: alerts.id });
-  return result[0].id;
+  const result = await db.insert(alerts).values(alert);
+  return Number(result[0].insertId);
 }
 
 export async function getUserAlerts(userId: number, limit: number = 50) {
@@ -772,8 +773,8 @@ export async function createTransaction(transaction: InsertTransaction) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(transactions).values(transaction).returning({ id: transactions.id });
-  return result[0].id;
+  const result = await db.insert(transactions).values(transaction);
+  return Number(result[0].insertId);
 }
 
 export async function getAccountTransactions(accountId: number, limit: number = 100) {
@@ -960,7 +961,7 @@ export async function markAccountsOffline(threshold: Date) {
   const db = await getDb();
   if (!db) return;
   
-  await db
+  const result = await db
     .update(tradingAccounts)
     .set({ status: "disconnected" })
     .where(
@@ -970,9 +971,14 @@ export async function markAccountsOffline(threshold: Date) {
       )
     );
   
-  console.log(`[Cleanup] Marked offline accounts that haven't sent heartbeat since ${threshold.toISOString()}`);
+  if (result && result.rowsAffected && result.rowsAffected > 0) {
+    console.log(`[Cleanup] Marked ${result.rowsAffected} accounts as offline`);
+  }
 }
 
+/**
+ * Remove contas que não receberam heartbeat há muito tempo
+ */
 export async function removeInactiveAccounts(threshold: Date) {
   const db = await getDb();
   if (!db) return;
@@ -1089,8 +1095,8 @@ export async function createJournalEntry(entry: Omit<InsertJournalEntry, 'id' | 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(journalEntries).values(entry).returning({ id: journalEntries.id });
-  return result[0].id;
+  const result = await db.insert(journalEntries).values(entry);
+  return Number(result.insertId);
 }
 
 export async function updateJournalEntry(id: number, data: Partial<Omit<InsertJournalEntry, 'id' | 'userId' | 'date' | 'createdAt' | 'updatedAt'>>): Promise<void> {
