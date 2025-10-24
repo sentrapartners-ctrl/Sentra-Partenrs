@@ -48,7 +48,10 @@ const isCentAccount = (symbol?: string): boolean => {
 
 router.post("/heartbeat", async (req: Request, res: Response) => {
   try {
-    console.log("[MT API] Heartbeat received:", JSON.stringify(req.body, null, 2));
+    console.log("[MT API] ===== HEARTBEAT RECEIVED =====");
+    console.log("[MT API] Body:", JSON.stringify(req.body, null, 2));
+    console.log("[MT API] Headers:", req.headers);
+    console.log("[MT API] ===================================");
     
     const {
       terminal_id,
