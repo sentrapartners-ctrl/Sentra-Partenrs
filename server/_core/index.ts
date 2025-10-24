@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import mtApiRouter from "../mt-api";
 import newsApiRouter from "../news-api";
+import { startCleanupService } from "../cleanup-service";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -68,6 +69,8 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Iniciar serviço de limpeza automática
+    startCleanupService();
   });
 }
 

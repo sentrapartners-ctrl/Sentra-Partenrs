@@ -954,3 +954,56 @@ export async function deleteAccount(accountId: number) {
   await db.delete(tradingAccounts).where(eq(tradingAccounts.id, accountId));
 }
 
+
+
+/**
+ * Marca contas como offline se não receberam heartbeat recentemente
+ */
+export async function markAccountsOffline(threshold: Date) {
+  const db = await getDb();
+  if (!db) return;
+  
+  const result = await db
+    .update(tradingAccounts)
+    .set({ status: "disconnected" })
+    .where(
+      and(
+        eq(tradingAccounts.status, "connected"),
+        lt(tradingAccounts.lastHeartbeat, threshold)
+      )
+    );
+  
+  if (result && result.rowsAffected && result.rowsAffected > 0) {
+    console.log(`[Cleanup] Marked ${result.rowsAffected} accounts as offline`);
+  }
+}
+
+/**
+ * Remove contas que não receberam heartbeat há muito tempo
+ */
+export async function removeInactiveAccounts(threshold: Date) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Buscar contas para remover
+  const accountsToRemove = await db
+    .select({ id: tradingAccounts.id, accountNumber: tradingAccounts.accountNumber })
+    .from(tradingAccounts)
+    .where(
+      and(
+        eq(tradingAccounts.status, "disconnected"),
+        lt(tradingAccounts.lastHeartbeat, threshold)
+      )
+    );
+  
+  if (accountsToRemove.length === 0) return;
+  
+  console.log(`[Cleanup] Removing ${accountsToRemove.length} inactive accounts`);
+  
+  // Remover cada conta
+  for (const account of accountsToRemove) {
+    await deleteAccount(account.id);
+    console.log(`[Cleanup] Removed account ${account.accountNumber}`);
+  }
+}
+
