@@ -955,3 +955,77 @@ export async function deleteAccount(accountId: number) {
   await db.delete(tradingAccounts).where(eq(tradingAccounts.id, accountId));
 }
 
+
+// ===== DAILY JOURNAL =====
+export async function getDailyJournal(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { dailyJournal } = await import("@/drizzle/schema");
+  
+  const entries = await db
+    .select()
+    .from(dailyJournal)
+    .where(eq(dailyJournal.userId, userId))
+    .orderBy(desc(dailyJournal.date));
+  
+  return entries.map(entry => ({
+    ...entry,
+    date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : '',
+  }));
+}
+
+export async function saveDailyJournal(
+  userId: number,
+  data: {
+    date: string;
+    notes?: string;
+    mood?: "excellent" | "good" | "neutral" | "bad" | "terrible";
+    marketConditions?: string;
+    lessonsLearned?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  
+  const { dailyJournal } = await import("@/drizzle/schema");
+  
+  // Verificar se já existe entrada para esta data
+  const existing = await db
+    .select()
+    .from(dailyJournal)
+    .where(
+      and(
+        eq(dailyJournal.userId, userId),
+        eq(dailyJournal.date, data.date)
+      )
+    )
+    .limit(1);
+  
+  if (existing.length > 0) {
+    // Atualizar entrada existente
+    await db
+      .update(dailyJournal)
+      .set({
+        notes: data.notes || null,
+        mood: data.mood || null,
+        marketConditions: data.marketConditions || null,
+        lessonsLearned: data.lessonsLearned || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(dailyJournal.id, existing[0].id));
+  } else {
+    // Criar nova entrada
+    await db.insert(dailyJournal).values({
+      userId,
+      date: data.date,
+      notes: data.notes || null,
+      mood: data.mood || null,
+      marketConditions: data.marketConditions || null,
+      lessonsLearned: data.lessonsLearned || null,
+    });
+  }
+  
+  return { success: true };
+}
+

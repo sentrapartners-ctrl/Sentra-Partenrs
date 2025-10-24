@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, index, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -266,4 +266,28 @@ export const alerts = mysqlTable("alerts", {
 
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
+
+
+/**
+ * Daily journal entries - trading diary by date
+ */
+export const dailyJournal = mysqlTable("daily_journal", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  date: date("date").notNull(), // YYYY-MM-DD
+  notes: text("notes"), // Daily notes/observations
+  mood: mysqlEnum("mood", ["excellent", "good", "neutral", "bad", "terrible"]),
+  marketConditions: text("marketConditions"),
+  lessonsLearned: text("lessonsLearned"),
+  tags: text("tags"), // JSON array string
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  dateIdx: index("date_idx").on(table.date),
+  userDateIdx: index("user_date_idx").on(table.userId, table.date),
+}));
+
+export type DailyJournal = typeof dailyJournal.$inferSelect;
+export type InsertDailyJournal = typeof dailyJournal.$inferInsert;
 

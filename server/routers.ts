@@ -520,6 +520,25 @@ export const appRouter = router({
       }),
   }),
 
+  // ===== JOURNAL =====
+  journal: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getDailyJournal(ctx.user!.id);
+    }),
+
+    save: protectedProcedure
+      .input(z.object({
+        date: z.string(),
+        notes: z.string().optional(),
+        mood: z.enum(["excellent", "good", "neutral", "bad", "terrible"]).optional(),
+        marketConditions: z.string().optional(),
+        lessonsLearned: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.saveDailyJournal(ctx.user!.id, input);
+      }),
+  }),
+
   // ===== CALENDAR =====
   calendar: router({
     getEvents: publicProcedure.query(async (): Promise<Array<{
