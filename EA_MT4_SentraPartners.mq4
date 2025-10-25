@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Sentra Partners"
 #property link      "https://sentrapartners.com"
-#property version   "2.1"
+#property version   "2.2"
 #property strict
 
 //--- Input Parameters
@@ -18,7 +18,8 @@ input bool DebugMode = false;                       // Modo debug (mais logs)
 //--- Global Variables
 string API_URL = "https://sentrapartners.com/api/mt";
 datetime lastHeartbeat = 0;
-bool initialSyncDone = false;  // Flag para sincronização inicial
+datetime lastTradeSync = 0;
+bool initialSyncDone = false;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -26,7 +27,7 @@ bool initialSyncDone = false;  // Flag para sincronização inicial
 int OnInit()
 {
     Print("========================================");
-    Print("Sentra Partners EA - MT4 Connector v2.1");
+    Print("Sentra Partners EA - MT4 Connector v2.2");
     Print("========================================");
     Print("Email: ", UserEmail);
     Print("Conta: ", AccountNumber());
@@ -46,19 +47,21 @@ int OnInit()
         return(INIT_FAILED);
     }
     
-    // Envia heartbeat inicial
+    // Sincronização inicial IMEDIATA
+    Print("[SYNC] Iniciando sincronização inicial...");
     SendHeartbeat();
     
-    // IMPORTANTE: Sincroniza histórico logo no início
     if(SendTrades) {
-        Print("[SYNC] Iniciando sincronização inicial de trades...");
         SendAllTrades();
         initialSyncDone = true;
-        Print("[SYNC] Sincronização inicial concluída!");
     }
     
-    // Inicia timer para heartbeat periódico
-    EventSetTimer(HeartbeatInterval);
+    Print("[SYNC] Sincronização inicial concluída!");
+    Print("[INFO] EA funcionando! Heartbeat a cada ", HeartbeatInterval, " segundos");
+    
+    // Inicializa timestamps
+    lastHeartbeat = TimeCurrent();
+    lastTradeSync = TimeCurrent();
     
     return(INIT_SUCCEEDED);
 }
@@ -68,20 +71,26 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-    EventKillTimer();
     Print("EA Sentra Partners desconectado. Motivo: ", reason);
 }
 
 //+------------------------------------------------------------------+
-//| Timer function (executado a cada HeartbeatInterval segundos)     |
+//| Expert tick function - Executa a cada tick (qualquer movimento)  |
 //+------------------------------------------------------------------+
-void OnTimer()
+void OnTick()
 {
-    SendHeartbeat();
+    datetime now = TimeCurrent();
     
-    // Envia trades periodicamente
-    if(SendTrades) {
-        SendAllTrades();
+    // Verifica se passou o intervalo do heartbeat
+    if(now - lastHeartbeat >= HeartbeatInterval) {
+        SendHeartbeat();
+        lastHeartbeat = now;
+        
+        // Envia trades junto com heartbeat
+        if(SendTrades) {
+            SendAllTrades();
+            lastTradeSync = now;
+        }
     }
 }
 
@@ -127,11 +136,12 @@ void SendHeartbeat()
     int res = WebRequest("POST", url, headers, 5000, post, result, headers);
     
     if(res == 200) {
-        if(DebugMode) Print("✅ Heartbeat enviado: Balance=", balance, " Equity=", equity);
+        Print("✅ Heartbeat OK - Balance: $", DoubleToString(balance, 2), " | Equity: $", DoubleToString(equity, 2));
     } else {
         Print("❌ Erro no heartbeat: HTTP ", res);
         if(res == -1) {
-            Print("ERRO: Adicione ", API_URL, " nas URLs permitidas em Ferramentas > Opções > Expert Advisors");
+            Print("ERRO: Adicione ", API_URL, " nas URLs permitidas!");
+            Print("Ferramentas > Opções > Expert Advisors > Permitir WebRequest");
         }
     }
 }
@@ -141,37 +151,33 @@ void SendHeartbeat()
 //+------------------------------------------------------------------+
 void SendAllTrades()
 {
+    int total_sent = 0;
+    
     // 1. Envia trades abertos
     int open_total = OrdersTotal();
-    int open_sent = 0;
     
     for(int i = 0; i < open_total; i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             if(SendTrade(OrderTicket())) {
-                open_sent++;
+                total_sent++;
             }
         }
     }
     
-    if(open_sent > 0 || DebugMode) {
-        Print("[TRADES] Enviados ", open_sent, " trades abertos");
-    }
-    
     // 2. Envia histórico (últimos 100)
     int history_total = OrdersHistoryTotal();
-    int history_sent = 0;
     int start = MathMax(0, history_total - 100);
     
     for(int i = start; i < history_total; i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY)) {
             if(SendTrade(OrderTicket())) {
-                history_sent++;
+                total_sent++;
             }
         }
     }
     
-    if(history_sent > 0 || DebugMode) {
-        Print("[HISTORY] Enviados ", history_sent, " trades do histórico (", start, " a ", history_total, ")");
+    if(total_sent > 0) {
+        Print("📊 Trades sincronizados: ", total_sent, " (", open_total, " abertos + ", (history_total - start), " histórico)");
     }
 }
 
@@ -228,10 +234,7 @@ bool SendTrade(int ticket)
         return true;
     } else {
         if(DebugMode) {
-            Print("❌ Erro ao enviar trade #", ticket, ": HTTP ", res);
-            if(res == -1) {
-                Print("ERRO: Adicione ", API_URL, " nas URLs permitidas!");
-            }
+            Print("❌ Erro trade #", ticket, ": HTTP ", res);
         }
         return false;
     }
