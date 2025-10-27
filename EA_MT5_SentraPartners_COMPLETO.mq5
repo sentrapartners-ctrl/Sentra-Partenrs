@@ -286,6 +286,7 @@ void SendHeartbeat()
         "&open_positions=" + IntegerToString(open_positions) +
         "&leverage=" + IntegerToString(leverage) +
         "&account_type=" + AccountType +
+        "&platform=MT5" +
         "&timestamp=" + IntegerToString(TimeCurrent());
     
     char post[], result[];

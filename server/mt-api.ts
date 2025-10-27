@@ -110,24 +110,26 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     // Busca ou cria a conta
     let existingAccount = await db.getAccountByTerminalId(terminalId);
     
-    // Detecta plataforma automaticamente SEMPRE pelo servidor primeiro
-    let detectedPlatform = platform;
-    if (server) {
+    // Detecta plataforma: prioriza valor enviado pelo EA, depois tenta detectar pelo servidor
+    let detectedPlatform = platform; // Se EA enviou, usa o valor dele
+    
+    if (!detectedPlatform && server) {
       const serverLower = server.toLowerCase();
       // Busca explicitamente por "mt5" ou "mt4" no nome do servidor
       if (serverLower.includes('mt5')) {
         detectedPlatform = "MT5";
       } else if (serverLower.includes('mt4')) {
         detectedPlatform = "MT4";
-      } else if (!detectedPlatform) {
-        // Se não encontrou mt4/mt5 no nome, usa dígitos como fallback
-        const accountStr = accountNum.toString();
-        detectedPlatform = accountStr.length >= 8 ? "MT5" : "MT4";
       }
-    } else if (!detectedPlatform) {
-      // Se não tem server, usa dígitos
+    }
+    
+    // Fallback: usa número de dígitos apenas se ainda não detectou
+    if (!detectedPlatform) {
       const accountStr = accountNum.toString();
       detectedPlatform = accountStr.length >= 8 ? "MT5" : "MT4";
+      console.log("[MT API] Platform detected by account digits:", detectedPlatform);
+    } else {
+      console.log("[MT API] Platform from EA:", detectedPlatform);
     }
     
     if (!existingAccount) {
