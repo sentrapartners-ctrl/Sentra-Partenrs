@@ -7,6 +7,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { CurrencyProvider } from "./contexts/CurrencyContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import Accounts from "./pages/Accounts";
@@ -56,6 +58,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/">{() => <ProtectedRoute component={Home} />}</Route>
       <Route path="/admin">{() => <ProtectedRoute component={Admin} />}</Route>
       <Route path="/manager">{() => <ProtectedRoute component={ManagerDashboard} />}</Route>
