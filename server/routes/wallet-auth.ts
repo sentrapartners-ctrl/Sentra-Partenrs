@@ -45,8 +45,12 @@ router.post("/wallet-login", async (req, res) => {
     }
 
     console.log("[Wallet Login] Obtendo conexão com banco de dados...");
-    const db = getDb();
+    const db = await getDb();
     console.log("[Wallet Login] Conexão obtida");
+    
+    if (!db) {
+      throw new Error("Banco de dados não disponível");
+    }
 
     // Buscar usuário pelo endereço da wallet
     console.log("[Wallet Login] Buscando usuário com endereço:", walletAddress.toLowerCase());
