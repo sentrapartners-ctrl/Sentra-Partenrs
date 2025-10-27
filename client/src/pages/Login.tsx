@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { APP_LOGO, APP_TITLE } from "@/const";
-import MultiWalletLogin from "@/components/MultiWalletLogin";
+import { Web3WalletButton } from "@/components/Web3WalletButton";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -76,7 +76,7 @@ export default function Login() {
           <CardContent className="space-y-4">
             {isLogin && (
               <>
-                <MultiWalletLogin />
+                <Web3WalletButton />
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t" />
