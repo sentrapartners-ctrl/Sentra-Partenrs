@@ -108,9 +108,10 @@ router.post("/wallet-login", async (req, res) => {
 
     // Criar sessão de wallet
     await db.insert(walletSessions).values({
-      userId: user[0].id,
       walletAddress: walletAddress.toLowerCase(),
+      nonce: message, // A mensagem assinada serve como nonce
       signature,
+      isVerified: true, // Já verificamos a assinatura acima
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
     });
 
