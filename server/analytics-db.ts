@@ -8,385 +8,281 @@ import { eq, and, sql, desc, asc, gte, lte } from "drizzle-orm";
 export async function getMonthlyGrowth(accountId: number, year: number) {
   const db = await getDb();
   
-  // Tentar primeiro com balance_history
-  const historyQuery = sql`
-    SELECT COUNT(*) as count FROM balance_history WHERE accountId = ${accountId}
+  // Calcular baseado em trades fechados (closeTime é UNIX timestamp)
+  const query = sql`
+    WITH monthly_profits AS (
+      SELECT 
+        DATE_FORMAT(FROM_UNIXTIME(closeTime), '%Y-%m') as month,
+        SUM(profit) as monthly_profit,
+        COUNT(*) as trade_count
+      FROM trades
+      WHERE accountId = ${accountId} 
+        AND status = 'closed'
+        AND YEAR(FROM_UNIXTIME(closeTime)) = ${year}
+      GROUP BY DATE_FORMAT(FROM_UNIXTIME(closeTime), '%Y-%m')
+    ),
+    account_info AS (
+      SELECT balance as initial_balance FROM trading_accounts WHERE id = ${accountId} LIMIT 1
+    ),
+    cumulative_balance AS (
+      SELECT 
+        month,
+        monthly_profit,
+        trade_count,
+        (SELECT initial_balance FROM account_info) + SUM(monthly_profit) OVER (ORDER BY month ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) as start_balance,
+        (SELECT initial_balance FROM account_info) + SUM(monthly_profit) OVER (ORDER BY month) as end_balance
+      FROM monthly_profits
+    )
+    SELECT 
+      month,
+      COALESCE(start_balance, (SELECT initial_balance FROM account_info)) as start_balance,
+      end_balance,
+      monthly_profit,
+      trade_count,
+      CASE 
+        WHEN COALESCE(start_balance, (SELECT initial_balance FROM account_info)) > 0 
+        THEN (monthly_profit / COALESCE(start_balance, (SELECT initial_balance FROM account_info)) * 100)
+        ELSE 0 
+      END as growth_percent
+    FROM cumulative_balance
+    ORDER BY month ASC
   `;
-  const historyCheck = await db.execute(historyQuery);
-  const hasHistory = (historyCheck.rows[0] as any)?.count > 0;
-
-  if (hasHistory) {
-    // Usar balance_history se disponível
-    const query = sql`
-      WITH monthly_data AS (
-        SELECT 
-          DATE_FORMAT(timestamp, '%Y-%m') as month,
-          MIN(timestamp) as first_timestamp,
-          MAX(timestamp) as last_timestamp
-        FROM balance_history
-        WHERE accountId = ${accountId} AND YEAR(timestamp) = ${year}
-        GROUP BY DATE_FORMAT(timestamp, '%Y-%m')
-      ),
-      monthly_balances AS (
-        SELECT 
-          md.month,
-          (SELECT balance FROM balance_history 
-           WHERE accountId = ${accountId} AND timestamp = md.first_timestamp 
-           LIMIT 1) as start_balance,
-          (SELECT balance FROM balance_history 
-           WHERE accountId = ${accountId} AND timestamp = md.last_timestamp 
-           LIMIT 1) as end_balance
-        FROM monthly_data md
-      )
-      SELECT 
-        month,
-        start_balance,
-        end_balance,
-        CASE 
-          WHEN start_balance > 0 
-          THEN ((end_balance - start_balance) / start_balance * 100)
-          ELSE 0 
-        END as growth_percent
-      FROM monthly_balances
-      ORDER BY month ASC
-    `;
-    const result = await db.execute(query);
-    return result.rows;
-  } else {
-    // Fallback: calcular baseado em trades fechados
-    const query = sql`
-      WITH monthly_profits AS (
-        SELECT 
-          DATE_FORMAT(closeTime, '%Y-%m') as month,
-          SUM(profit) as monthly_profit,
-          COUNT(*) as trade_count
-        FROM trades
-        WHERE accountId = ${accountId} 
-          AND status = 'closed'
-          AND YEAR(closeTime) = ${year}
-        GROUP BY DATE_FORMAT(closeTime, '%Y-%m')
-      ),
-      cumulative_balance AS (
-        SELECT 
-          month,
-          monthly_profit,
-          trade_count,
-          SUM(monthly_profit) OVER (ORDER BY month) as cumulative_profit
-        FROM monthly_profits
-      )
-      SELECT 
-        month,
-        cumulative_profit - monthly_profit as start_balance,
-        cumulative_profit as end_balance,
-        CASE 
-          WHEN (cumulative_profit - monthly_profit) > 0
-          THEN (monthly_profit / (cumulative_profit - monthly_profit) * 100)
-          ELSE 0
-        END as growth_percent
-      FROM cumulative_balance
-      ORDER BY month ASC
-    `;
-    const result = await db.execute(query);
-    return result.rows;
-  }
+  
+  const result = await db.execute(query);
+  return result.rows;
 }
 
 /**
- * Calcula o drawdown máximo e histórico
+ * Retorna histórico de drawdown vs balance
  */
 export async function getDrawdownHistory(accountId: number) {
   const db = await getDb();
+  
+  // Usar balance_history se disponível
   const query = sql`
-    WITH running_peak AS (
-      SELECT 
-        timestamp,
-        balance,
-        equity,
-        MAX(equity) OVER (ORDER BY timestamp) as peak_equity
-      FROM balance_history
-      WHERE accountId = ${accountId}
-      ORDER BY timestamp ASC
-    )
     SELECT 
       timestamp,
       balance,
       equity,
-      peak_equity,
-      CASE 
-        WHEN peak_equity > 0 
-        THEN ((peak_equity - equity) / peak_equity * 100)
-        ELSE 0 
-      END as drawdown_percent
-    FROM running_peak
+      balance - equity as drawdown
+    FROM balance_history
+    WHERE accountId = ${accountId}
     ORDER BY timestamp ASC
+    LIMIT 1000
   `;
-
+  
   const result = await db.execute(query);
   return result.rows;
 }
 
 /**
- * Calcula o Profit Factor (Gross Profit / Gross Loss)
+ * Calcula métricas de risco (Sharp Ratio, Profit Factor, Recovery Factor)
  */
-export async function getProfitFactor(accountId: number) {
+export async function getRiskMetrics(accountId: number) {
   const db = await getDb();
+  
   const query = sql`
-    SELECT 
-      SUM(CASE WHEN profit > 0 THEN profit ELSE 0 END) as gross_profit,
-      ABS(SUM(CASE WHEN profit < 0 THEN profit ELSE 0 END)) as gross_loss
-    FROM trades
-    WHERE accountId = ${accountId} AND status = 'closed'
-  `;
-
-  const result = await db.execute(query);
-  const row: any = result.rows[0];
-  
-  if (!row || row.gross_loss === 0) return 0;
-  return row.gross_profit / row.gross_loss;
-}
-
-/**
- * Calcula o Sharp Ratio (retorno médio / desvio padrão dos retornos)
- */
-export async function getSharpRatio(accountId: number) {
-  const db = await getDb();
-  const query = sql`
-    SELECT 
-      AVG(profit) as avg_profit,
-      STDDEV(profit) as stddev_profit
-    FROM trades
-    WHERE accountId = ${accountId} AND status = 'closed'
-  `;
-
-  const result = await db.execute(query);
-  const row: any = result.rows[0];
-  
-  if (!row || row.stddev_profit === 0) return 0;
-  return row.avg_profit / row.stddev_profit;
-}
-
-/**
- * Calcula o Recovery Factor (Net Profit / Max Drawdown)
- */
-export async function getRecoveryFactor(accountId: number) {
-  const db = await getDb();
-  // Calcular lucro líquido total
-  const profitQuery = sql`
-    SELECT SUM(profit) as net_profit
-    FROM trades
-    WHERE accountId = ${accountId} AND status = 'closed'
-  `;
-  
-  const profitResult = await db.execute(profitQuery);
-  const netProfit: any = profitResult.rows[0]?.net_profit || 0;
-
-  // Calcular max drawdown
-  const ddQuery = sql`
-    WITH running_peak AS (
+    WITH trade_stats AS (
       SELECT 
-        equity,
-        MAX(equity) OVER (ORDER BY timestamp) as peak_equity
+        profit,
+        CASE WHEN profit > 0 THEN profit ELSE 0 END as win_profit,
+        CASE WHEN profit < 0 THEN ABS(profit) ELSE 0 END as loss_amount
+      FROM trades
+      WHERE accountId = ${accountId} AND status = 'closed'
+    ),
+    metrics AS (
+      SELECT 
+        AVG(profit) as avg_return,
+        STDDEV(profit) as std_dev,
+        SUM(win_profit) as total_wins,
+        SUM(loss_amount) as total_losses,
+        COUNT(*) as total_trades
+      FROM trade_stats
+    ),
+    drawdown_calc AS (
+      SELECT MAX(balance - equity) as max_drawdown
       FROM balance_history
       WHERE accountId = ${accountId}
     )
     SELECT 
-      MAX(peak_equity - equity) as max_drawdown
-    FROM running_peak
-    WHERE peak_equity > 0
+      CASE 
+        WHEN m.std_dev > 0 THEN (m.avg_return / m.std_dev) * SQRT(252)
+        ELSE 0 
+      END as sharp_ratio,
+      CASE 
+        WHEN m.total_losses > 0 THEN m.total_wins / m.total_losses
+        ELSE 0 
+      END as profit_factor,
+      CASE 
+        WHEN d.max_drawdown > 0 THEN (m.total_wins - m.total_losses) / d.max_drawdown
+        ELSE 0 
+      END as recovery_factor,
+      COALESCE(d.max_drawdown, 0) as max_drawdown
+    FROM metrics m
+    CROSS JOIN drawdown_calc d
   `;
-
-  const ddResult = await db.execute(ddQuery);
-  const maxDrawdown: any = ddResult.rows[0]?.max_drawdown || 1;
-
-  if (maxDrawdown === 0) return 0;
-  return netProfit / maxDrawdown;
+  
+  const result = await db.execute(query);
+  return result.rows[0] || { sharp_ratio: 0, profit_factor: 0, recovery_factor: 0, max_drawdown: 0 };
 }
 
 /**
- * Calcula estatísticas de trades consecutivos
+ * Retorna estatísticas de vitórias/derrotas consecutivas
  */
 export async function getConsecutiveStats(accountId: number) {
   const db = await getDb();
-  const allTrades = await db
-    .select()
-    .from(trades)
-    .where(and(eq(trades.accountId, accountId), eq(trades.status, "closed")))
-    .orderBy(asc(trades.closeTime));
-
-  let maxConsecutiveWins = 0;
-  let maxConsecutiveLosses = 0;
-  let maxConsecutiveProfit = 0;
-  let maxConsecutiveLoss = 0;
-  let bestTrade = 0;
-  let worstTrade = 0;
-
-  let currentWinStreak = 0;
-  let currentLossStreak = 0;
-  let currentProfitStreak = 0;
-  let currentLossValueStreak = 0;
-
-  for (const trade of allTrades) {
-    const profit = trade.profit || 0;
-
-    // Best/Worst trade
-    if (profit > bestTrade) bestTrade = profit;
-    if (profit < worstTrade) worstTrade = profit;
-
-    // Consecutive wins/losses
-    if (profit > 0) {
-      currentWinStreak++;
-      currentLossStreak = 0;
-      currentProfitStreak += profit;
-      if (currentWinStreak > maxConsecutiveWins) {
-        maxConsecutiveWins = currentWinStreak;
-      }
-      if (currentProfitStreak > maxConsecutiveProfit) {
-        maxConsecutiveProfit = currentProfitStreak;
-      }
-      currentLossValueStreak = 0;
-    } else if (profit < 0) {
-      currentLossStreak++;
-      currentWinStreak = 0;
-      currentLossValueStreak += profit;
-      if (currentLossStreak > maxConsecutiveLosses) {
-        maxConsecutiveLosses = currentLossStreak;
-      }
-      if (currentLossValueStreak < maxConsecutiveLoss) {
-        maxConsecutiveLoss = currentLossValueStreak;
-      }
-      currentProfitStreak = 0;
-    }
-  }
-
-  return {
-    maxConsecutiveWins,
-    maxConsecutiveLosses,
-    maxConsecutiveProfit,
-    maxConsecutiveLoss,
-    bestTrade,
-    worstTrade,
+  
+  const query = sql`
+    WITH trade_sequence AS (
+      SELECT 
+        profit,
+        CASE WHEN profit > 0 THEN 1 ELSE 0 END as is_win,
+        closeTime
+      FROM trades
+      WHERE accountId = ${accountId} AND status = 'closed'
+      ORDER BY closeTime ASC
+    ),
+    consecutive_groups AS (
+      SELECT 
+        profit,
+        is_win,
+        closeTime,
+        SUM(CASE WHEN is_win != LAG(is_win, 1, is_win) OVER (ORDER BY closeTime) THEN 1 ELSE 0 END) 
+          OVER (ORDER BY closeTime) as group_id
+      FROM trade_sequence
+    ),
+    streak_stats AS (
+      SELECT 
+        is_win,
+        group_id,
+        COUNT(*) as streak_length,
+        SUM(profit) as streak_profit
+      FROM consecutive_groups
+      GROUP BY is_win, group_id
+    )
+    SELECT 
+      MAX(CASE WHEN is_win = 1 THEN streak_length ELSE 0 END) as max_consecutive_wins,
+      MAX(CASE WHEN is_win = 0 THEN streak_length ELSE 0 END) as max_consecutive_losses,
+      MAX(CASE WHEN is_win = 1 THEN streak_profit ELSE 0 END) as max_consecutive_profit,
+      MIN(CASE WHEN is_win = 0 THEN streak_profit ELSE 0 END) as max_consecutive_loss,
+      (SELECT profit FROM trades WHERE accountId = ${accountId} AND status = 'closed' ORDER BY profit DESC LIMIT 1) as best_trade,
+      (SELECT profit FROM trades WHERE accountId = ${accountId} AND status = 'closed' ORDER BY profit ASC LIMIT 1) as worst_trade
+    FROM streak_stats
+  `;
+  
+  const result = await db.execute(query);
+  return result.rows[0] || {
+    max_consecutive_wins: 0,
+    max_consecutive_losses: 0,
+    max_consecutive_profit: 0,
+    max_consecutive_loss: 0,
+    best_trade: 0,
+    worst_trade: 0
   };
 }
 
 /**
- * Calcula performance por dia da semana
+ * Retorna performance por dia da semana
  */
 export async function getWeeklyPerformance(accountId: number) {
   const db = await getDb();
+  
   const query = sql`
     SELECT 
-      DAYOFWEEK(closeTime) as day_of_week,
-      DAYNAME(closeTime) as day_name,
-      COUNT(*) as total_trades,
-      SUM(CASE WHEN profit > 0 THEN 1 ELSE 0 END) as wins,
-      SUM(profit) as total_profit
+      DAYNAME(FROM_UNIXTIME(closeTime)) as day_name,
+      DAYOFWEEK(FROM_UNIXTIME(closeTime)) as day_num,
+      COUNT(*) as trade_count,
+      SUM(profit) as total_profit,
+      AVG(profit) as avg_profit,
+      SUM(CASE WHEN profit > 0 THEN 1 ELSE 0 END) as wins
     FROM trades
     WHERE accountId = ${accountId} AND status = 'closed'
-    GROUP BY DAYOFWEEK(closeTime), DAYNAME(closeTime)
-    ORDER BY DAYOFWEEK(closeTime)
+    GROUP BY day_name, day_num
+    ORDER BY day_num ASC
   `;
-
+  
   const result = await db.execute(query);
   return result.rows;
 }
 
 /**
- * Calcula métricas de risco adicionais
- */
-export async function getRiskMetrics(accountId: number) {
-  const db = await getDb();
-  const drawdownHistory = await getDrawdownHistory(accountId);
-  const maxDrawdown = Math.max(...drawdownHistory.map((d: any) => d.drawdown_percent || 0));
-
-  // Calcular Average Hold Time
-  const holdTimeQuery = sql`
-    SELECT 
-      AVG(TIMESTAMPDIFF(MINUTE, openTime, closeTime)) as avg_hold_minutes
-    FROM trades
-    WHERE accountId = ${accountId} AND status = 'closed' AND closeTime IS NOT NULL
-  `;
-  
-  const holdTimeResult = await db.execute(holdTimeQuery);
-  const avgHoldMinutes: any = holdTimeResult.rows[0]?.avg_hold_minutes || 0;
-
-  // Calcular Trades per Week
-  const tradesPerWeekQuery = sql`
-    SELECT 
-      COUNT(*) / NULLIF(TIMESTAMPDIFF(WEEK, MIN(closeTime), MAX(closeTime)), 0) as trades_per_week
-    FROM trades
-    WHERE accountId = ${accountId} AND status = 'closed'
-  `;
-  
-  const tradesPerWeekResult = await db.execute(tradesPerWeekQuery);
-  const tradesPerWeek: any = tradesPerWeekResult.rows[0]?.trades_per_week || 0;
-
-  // Calcular Max Deposit Load (margem utilizada / balance)
-  const account = await db
-    .select()
-    .from(tradingAccounts)
-    .where(eq(tradingAccounts.id, accountId))
-    .limit(1);
-
-  const maxDepositLoad = account[0]?.balance 
-    ? (account[0].marginUsed / account[0].balance) * 100 
-    : 0;
-
-  return {
-    maxDrawdown,
-    maxDepositLoad,
-    avgHoldMinutes,
-    tradesPerWeek,
-  };
-}
-
-/**
- * Calcula distribuição de trades por origem (robot/signal/manual)
+ * Retorna distribuição de trades por origem (robot/signal/manual)
  */
 export async function getTradesByOrigin(accountId: number) {
   const db = await getDb();
+  
   const query = sql`
     SELECT 
       origin,
       COUNT(*) as count,
       SUM(profit) as total_profit,
-      SUM(CASE WHEN profit > 0 THEN 1 ELSE 0 END) as wins
+      AVG(profit) as avg_profit,
+      SUM(CASE WHEN profit > 0 THEN 1 ELSE 0 END) as wins,
+      COUNT(*) * 100.0 / (SELECT COUNT(*) FROM trades WHERE accountId = ${accountId} AND status = 'closed') as percentage
     FROM trades
-    WHERE accountId = ${accountId} AND status = 'closed'
+    WHERE accountId = ${accountId} 
+      AND status = 'closed'
+      AND origin != 'unknown'
     GROUP BY origin
-    HAVING origin != 'unknown'
   `;
-
+  
   const result = await db.execute(query);
+  
+  // Se não houver dados com origin definido, retornar array vazio
+  if (!result.rows || result.rows.length === 0) {
+    return [];
+  }
+  
   return result.rows;
 }
 
 /**
- * Calcula análise de Profit & Loss por período
+ * Retorna profit/loss breakdown
  */
-export async function getProfitLossAnalysis(accountId: number, startDate?: Date, endDate?: Date) {
+export async function getProfitLossBreakdown(accountId: number) {
   const db = await getDb();
-  let query = sql`
+  
+  const query = sql`
     SELECT 
-      DATE(closeTime) as date,
       SUM(CASE WHEN profit > 0 THEN profit ELSE 0 END) as gross_profit,
-      ABS(SUM(CASE WHEN profit < 0 THEN profit ELSE 0 END)) as gross_loss,
+      SUM(CASE WHEN profit < 0 THEN ABS(profit) ELSE 0 END) as gross_loss,
       SUM(profit) as net_profit,
-      SUM(commission) as total_commission,
-      SUM(swap) as total_swap
+      COUNT(CASE WHEN profit > 0 THEN 1 END) as winning_trades,
+      COUNT(CASE WHEN profit < 0 THEN 1 END) as losing_trades
     FROM trades
     WHERE accountId = ${accountId} AND status = 'closed'
   `;
-
-  if (startDate) {
-    query = sql`${query} AND closeTime >= ${startDate}`;
-  }
-  if (endDate) {
-    query = sql`${query} AND closeTime <= ${endDate}`;
-  }
-
-  query = sql`${query} GROUP BY DATE(closeTime) ORDER BY date ASC`;
-
+  
   const result = await db.execute(query);
-  return result.rows;
+  return result.rows[0] || {
+    gross_profit: 0,
+    gross_loss: 0,
+    net_profit: 0,
+    winning_trades: 0,
+    losing_trades: 0
+  };
+}
+
+/**
+ * Retorna métricas adicionais
+ */
+export async function getAdditionalMetrics(accountId: number) {
+  const db = await getDb();
+  
+  const query = sql`
+    SELECT 
+      AVG(TIMESTAMPDIFF(SECOND, openTime, closeTime)) as avg_hold_time_seconds,
+      MAX(volume) as max_deposit_load,
+      COUNT(*) / (DATEDIFF(MAX(FROM_UNIXTIME(closeTime)), MIN(FROM_UNIXTIME(closeTime))) / 7) as trades_per_week
+    FROM trades
+    WHERE accountId = ${accountId} AND status = 'closed'
+  `;
+  
+  const result = await db.execute(query);
+  return result.rows[0] || {
+    avg_hold_time_seconds: 0,
+    max_deposit_load: 0,
+    trades_per_week: 0
+  };
 }
 

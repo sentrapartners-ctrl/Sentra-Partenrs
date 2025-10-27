@@ -34,17 +34,7 @@ export const analyticsRouter = router({
       accountId: z.number() 
     }))
     .query(async ({ input }) => {
-      const profitFactor = await analyticsDb.getProfitFactor(input.accountId);
-      const sharpRatio = await analyticsDb.getSharpRatio(input.accountId);
-      const recoveryFactor = await analyticsDb.getRecoveryFactor(input.accountId);
-      const riskMetrics = await analyticsDb.getRiskMetrics(input.accountId);
-
-      return {
-        profitFactor,
-        sharpRatio,
-        recoveryFactor,
-        ...riskMetrics,
-      };
+      return await analyticsDb.getRiskMetrics(input.accountId);
     }),
 
   /**
@@ -83,18 +73,12 @@ export const analyticsRouter = router({
   /**
    * Retorna análise de Profit & Loss
    */
-  getProfitLossAnalysis: protectedProcedure
+  getProfitLossBreakdown: protectedProcedure
     .input(z.object({ 
-      accountId: z.number(),
-      startDate: z.date().optional(),
-      endDate: z.date().optional(),
+      accountId: z.number()
     }))
     .query(async ({ input }) => {
-      return await analyticsDb.getProfitLossAnalysis(
-        input.accountId, 
-        input.startDate, 
-        input.endDate
-      );
+      return await analyticsDb.getProfitLossBreakdown(input.accountId);
     }),
 });
 
