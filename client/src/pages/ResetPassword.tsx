@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,8 @@ import { trpc } from "@/lib/trpc";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 
 export default function ResetPassword() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
   const token = searchParams.get("token");
 
   const [newPassword, setNewPassword] = useState("");
@@ -24,7 +24,7 @@ export default function ResetPassword() {
   const resetPasswordMutation = trpc.passwordReset.resetPassword.useMutation({
     onSuccess: () => {
       setSuccess(true);
-      setTimeout(() => navigate("/login"), 3000);
+      setTimeout(() => setLocation("/login"), 3000);
     },
     onError: (error) => {
       alert(`Erro: ${error.message}`);
@@ -61,7 +61,7 @@ export default function ResetPassword() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate("/login")} className="w-full">
+            <Button onClick={() => setLocation("/login")} className="w-full">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar para Login
             </Button>
@@ -97,10 +97,10 @@ export default function ResetPassword() {
             <p className="text-sm text-muted-foreground">
               Por favor, solicite um novo link de redefinição de senha.
             </p>
-            <Button onClick={() => navigate("/forgot-password")} className="w-full">
+            <Button onClick={() => setLocation("/forgot-password")} className="w-full">
               Solicitar Novo Link
             </Button>
-            <Button onClick={() => navigate("/login")} variant="ghost" className="w-full">
+            <Button onClick={() => setLocation("/login")} variant="ghost" className="w-full">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar para Login
             </Button>
@@ -127,7 +127,7 @@ export default function ResetPassword() {
             <p className="text-sm text-muted-foreground mb-4">
               Você será redirecionado para a página de login em alguns segundos...
             </p>
-            <Button onClick={() => navigate("/login")} className="w-full">
+            <Button onClick={() => setLocation("/login")} className="w-full">
               Ir para Login
             </Button>
           </CardContent>
@@ -184,7 +184,7 @@ export default function ResetPassword() {
 
             <Button
               type="button"
-              onClick={() => navigate("/login")}
+              onClick={() => setLocation("/login")}
               variant="ghost"
               className="w-full"
             >

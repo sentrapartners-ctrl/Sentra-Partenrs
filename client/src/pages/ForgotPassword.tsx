@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { ArrowLeft } from "lucide-react";
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -41,7 +41,7 @@ export default function ForgotPassword() {
               Verifique sua caixa de entrada e spam. O link expira em 1 hora.
             </p>
             <Button
-              onClick={() => navigate("/login")}
+              onClick={() => setLocation("/login")}
               variant="outline"
               className="w-full"
             >
@@ -87,7 +87,7 @@ export default function ForgotPassword() {
 
             <Button
               type="button"
-              onClick={() => navigate("/login")}
+              onClick={() => setLocation("/login")}
               variant="ghost"
               className="w-full"
             >
