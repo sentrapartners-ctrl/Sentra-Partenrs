@@ -36,11 +36,18 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
         provider = window.ethereum;
         
       } else if (walletType === 'uniswap') {
-        // Uniswap Wallet (usa window.ethereum se disponível)
+        // Uniswap Wallet - verifica se está instalado
+        // Uniswap Wallet também expõe window.ethereum, mas com isUniswapWallet = true
         if (!window.ethereum) {
           alert("Uniswap Wallet não encontrado. Por favor, instale a extensão Uniswap Wallet.");
           return;
         }
+        
+        // Verificar se é Uniswap Wallet
+        const isUniswap = (window.ethereum as any).isUniswapWallet;
+        console.log('Uniswap Wallet detectado:', isUniswap);
+        console.log('Providers disponíveis:', window.ethereum);
+        
         provider = window.ethereum;
         
       } else if (walletType === 'walletconnect') {
@@ -56,20 +63,27 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
       }
 
       // Solicitar acesso à carteira
+      console.log(`Solicitando acesso à ${walletType}...`);
       const accounts = await provider.request({
         method: "eth_requestAccounts",
       });
 
       walletAddress = accounts[0];
+      console.log('Endereço da carteira:', walletAddress);
 
       // Solicitar assinatura para verificar propriedade
       const message = `Sentra Partners - Login\nWallet: ${walletType}\nEndereço: ${walletAddress}\nTimestamp: ${Date.now()}`;
+      console.log('Mensagem para assinar:', message);
+      
       const signature = await provider.request({
         method: "personal_sign",
         params: [message, walletAddress],
       });
+      
+      console.log('Assinatura obtida:', signature.substring(0, 20) + '...');
 
       // Enviar para o backend
+      console.log('Enviando para backend...');
       const response = await fetch("/api/auth/wallet-login", {
         method: "POST",
         headers: {
@@ -83,12 +97,16 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
         }),
       });
 
+      console.log('Resposta do backend:', response.status, response.statusText);
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Erro ao fazer login");
+        const error = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+        console.error('Erro do backend:', error);
+        throw new Error(error.message || `Erro ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('Login bem-sucedido:', data);
 
       if (onSuccess) {
         onSuccess();
