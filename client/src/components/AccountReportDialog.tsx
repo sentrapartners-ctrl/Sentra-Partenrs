@@ -51,7 +51,7 @@ export function AccountReportDialog({ account, open, onOpenChange }: AccountRepo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[1600px] h-[95vh] overflow-y-auto">
+      <DialogContent className="!w-[95vw] !max-w-[1600px] h-[95vh] overflow-y-auto sm:!max-w-[1600px]">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             Relatório Completo - {account.broker} #{account.accountNumber}
