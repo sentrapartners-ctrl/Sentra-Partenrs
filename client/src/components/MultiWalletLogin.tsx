@@ -144,7 +144,8 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
         <Button
           onClick={() => connectWallet('metamask')}
           disabled={isConnecting}
-          className="w-full bg-orange-500 hover:bg-orange-600"
+          variant="outline"
+          className="w-full border-2 border-orange-500 text-orange-500 hover:bg-orange-50 bg-white"
           size="lg"
         >
           {isConnecting && connectingWallet === 'metamask' ? (
@@ -168,7 +169,8 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
         <Button
           onClick={() => connectWallet('walletconnect')}
           disabled={isConnecting}
-          className="w-full bg-blue-500 hover:bg-blue-600"
+          variant="outline"
+          className="w-full border-2 border-blue-500 text-blue-500 hover:bg-blue-50 bg-white"
           size="lg"
         >
           {isConnecting && connectingWallet === 'walletconnect' ? (
@@ -188,7 +190,8 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
         <Button
           onClick={() => connectWallet('uniswap')}
           disabled={isConnecting}
-          className="w-full bg-pink-500 hover:bg-pink-600"
+          variant="outline"
+          className="w-full border-2 border-pink-500 text-pink-500 hover:bg-pink-50 bg-white"
           size="lg"
         >
           {isConnecting && connectingWallet === 'uniswap' ? (
@@ -198,11 +201,9 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
             </>
           ) : (
             <>
-              <img 
-                src="https://cryptologos.cc/logos/uniswap-uni-logo.svg" 
-                alt="Uniswap" 
-                className="mr-2 h-5 w-5"
-              />
+              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 16.246c-.346.654-1.019 1.06-1.752 1.06-.346 0-.692-.087-1.019-.26l-2.308-1.231-2.308 1.231c-.327.173-.673.26-1.019.26-.733 0-1.406-.406-1.752-1.06-.346-.654-.346-1.444 0-2.098l2.308-4.365c.346-.654 1.019-1.06 1.752-1.06s1.406.406 1.752 1.06l2.308 4.365c.346.654.346 1.444 0 2.098z"/>
+              </svg>
               Uniswap Wallet
             </>
           )}
