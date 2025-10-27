@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { getDb } from "./db";
 import * as db from "./db";
-import { subscriptionPlans, eaProducts, vpsProducts } from "../drizzle/schema";
+import { subscriptionPlans, eaProducts, vpsProducts, clientTransferHistory, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -71,6 +71,66 @@ export const adminRouter = router({
     .mutation(async ({ input }) => {
       await db.deleteAccount(input.accountId);
       return { success: true };
+    }),
+
+  // Transferir cliente entre gerentes
+  transferClient: adminProcedure
+    .input(z.object({
+      clientId: z.number(),
+      toManagerId: z.number(),
+      reason: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const database = getDb();
+
+      // Buscar cliente atual
+      const client = await database.select().from(users).where(eq(users.id, input.clientId)).limit(1);
+      if (!client[0]) {
+        throw new Error('Cliente não encontrado');
+      }
+
+      if (client[0].role !== 'client') {
+        throw new Error('Usuário não é um cliente');
+      }
+
+      // Verificar se o novo gerente existe
+      const newManager = await database.select().from(users).where(eq(users.id, input.toManagerId)).limit(1);
+      if (!newManager[0]) {
+        throw new Error('Gerente de destino não encontrado');
+      }
+
+      if (newManager[0].role !== 'manager' && newManager[0].role !== 'admin') {
+        throw new Error('Usuário de destino não é um gerente');
+      }
+
+      const fromManagerId = client[0].managerId;
+
+      // Registrar transferência no histórico
+      await database.insert(clientTransferHistory).values({
+        clientId: input.clientId,
+        fromManagerId,
+        toManagerId: input.toManagerId,
+        transferredBy: ctx.user.id,
+        reason: input.reason,
+        notes: input.notes,
+      });
+
+      // Atualizar managerId do cliente
+      await database.update(users).set({ managerId: input.toManagerId }).where(eq(users.id, input.clientId));
+
+      return { success: true, fromManagerId, toManagerId: input.toManagerId };
+    }),
+
+  // Listar histórico de transferências
+  transferHistory: adminProcedure
+    .input(z.object({ clientId: z.number().optional() }))
+    .query(async ({ input }) => {
+      const database = getDb();
+      if (input.clientId) {
+        return await database.select().from(clientTransferHistory).where(eq(clientTransferHistory.clientId, input.clientId));
+      }
+      return await database.select().from(clientTransferHistory).limit(100);
     }),
 
   // ===== SUBSCRIPTION PLANS =====

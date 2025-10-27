@@ -660,3 +660,27 @@ export const supportNotifications = mysqlTable("support_notifications", {
 export type SupportNotification = typeof supportNotifications.$inferSelect;
 export type InsertSupportNotification = typeof supportNotifications.$inferInsert;
 
+
+
+/**
+ * Client Transfer History - Tracks client transfers between managers
+ */
+export const clientTransferHistory = mysqlTable("client_transfer_history", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(),
+  fromManagerId: int("fromManagerId"),
+  toManagerId: int("toManagerId").notNull(),
+  transferredBy: int("transferredBy").notNull(),
+  reason: text("reason"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  clientIdIdx: index("clientId_idx").on(table.clientId),
+  fromManagerIdIdx: index("fromManagerId_idx").on(table.fromManagerId),
+  toManagerIdIdx: index("toManagerId_idx").on(table.toManagerId),
+  transferredByIdx: index("transferredBy_idx").on(table.transferredBy),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+export type ClientTransferHistory = typeof clientTransferHistory.$inferSelect;
+export type InsertClientTransferHistory = typeof clientTransferHistory.$inferInsert;
+

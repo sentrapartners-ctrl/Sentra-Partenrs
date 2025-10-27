@@ -26,13 +26,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye } from "lucide-react";
+import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { EditPlanDialog } from "@/components/EditPlanDialog";
 import { EditVPSDialog } from "@/components/EditVPSDialog";
 import { EditEADialog } from "@/components/EditEADialog";
 import { EditCryptoAddressDialog } from "@/components/EditCryptoAddressDialog";
 import { AccountReportDialog } from "@/components/AccountReportDialog";
+import { TransferClientDialog } from "@/components/TransferClientDialog";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -144,6 +145,7 @@ function UsersTab() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" });
   const [deletingUser, setDeletingUser] = useState<any>(null);
+  const [transferringClient, setTransferringClient] = useState<any>(null);
 
   const handleEdit = (user: any) => {
     setEditingUser(user);
@@ -216,6 +218,16 @@ function UsersTab() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge>{user.role}</Badge>
+                  {user.role === 'client' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setTransferringClient(user)}
+                      title="Transferir para outro gerente"
+                    >
+                      <ArrowRightLeft className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -332,6 +344,14 @@ function UsersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog: Transferir Cliente */}
+      <TransferClientDialog
+        client={transferringClient}
+        open={!!transferringClient}
+        onOpenChange={(open) => !open && setTransferringClient(null)}
+        onSuccess={refetch}
+      />
 
       {/* AlertDialog: Confirmar Exclusão */}
       <AlertDialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
