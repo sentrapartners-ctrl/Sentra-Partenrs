@@ -36,19 +36,43 @@ export default function MultiWalletLogin({ onSuccess }: MultiWalletLoginProps) {
         provider = window.ethereum;
         
       } else if (walletType === 'uniswap') {
-        // Uniswap Wallet - verifica se está instalado
-        // Uniswap Wallet também expõe window.ethereum, mas com isUniswapWallet = true
-        if (!window.ethereum) {
+        // Uniswap Wallet - detectar corretamente mesmo com múltiplas extensões
+        const getUniswapProvider = () => {
+          // 1. Verificar window.uniswapWallet (Uniswap Extension)
+          if ((window as any).uniswapWallet) {
+            console.log('✅ Uniswap Wallet encontrada em window.uniswapWallet');
+            return (window as any).uniswapWallet;
+          }
+          
+          // 2. Verificar em window.ethereum.providers (múltiplas wallets)
+          if (window.ethereum?.providers) {
+            console.log('🔍 Procurando Uniswap em window.ethereum.providers...');
+            const uniswap = window.ethereum.providers.find((p: any) => p.isUniswapWallet);
+            if (uniswap) {
+              console.log('✅ Uniswap Wallet encontrada em providers');
+              return uniswap;
+            }
+          }
+          
+          // 3. Verificar se window.ethereum é a Uniswap
+          if ((window.ethereum as any)?.isUniswapWallet) {
+            console.log('✅ Uniswap Wallet encontrada em window.ethereum');
+            return window.ethereum;
+          }
+          
+          console.log('❌ Uniswap Wallet não encontrada');
+          return null;
+        };
+        
+        provider = getUniswapProvider();
+        
+        if (!provider) {
           alert("Uniswap Wallet não encontrado. Por favor, instale a extensão Uniswap Wallet.");
           return;
         }
         
-        // Verificar se é Uniswap Wallet
-        const isUniswap = (window.ethereum as any).isUniswapWallet;
-        console.log('Uniswap Wallet detectado:', isUniswap);
-        console.log('Providers disponíveis:', window.ethereum);
-        
-        provider = window.ethereum;
+        console.log('Uniswap Wallet detectado:', provider.isUniswapWallet);
+        console.log('Provider:', provider);
         
       } else if (walletType === 'walletconnect') {
         // WalletConnect - redirecionar para mobile
