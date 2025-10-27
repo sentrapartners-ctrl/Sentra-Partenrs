@@ -6,9 +6,10 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+const { createTransport } = nodemailer;
 
 // Configurar transporter de email (usando Gmail como exemplo)
-const transporter = nodemailer.createTransporter({
+const transporter = createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'sentrapartners@gmail.com',
