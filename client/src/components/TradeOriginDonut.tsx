@@ -15,21 +15,18 @@ interface TradeOriginDonutProps {
 
 const COLORS = {
   robot: "#8b5cf6",
-  signal: "#ef4444",
   manual: "#6b7280",
   unknown: "#9ca3af",
 };
 
 const ICONS = {
   robot: Bot,
-  signal: Radio,
   manual: Hand,
   unknown: Hand,
 };
 
 const LABELS = {
-  robot: "Trading Robots",
-  signal: "Trading Signals",
+  robot: "Trading Robots (EA)",
   manual: "Manual Trading",
   unknown: "Desconhecido",
 };

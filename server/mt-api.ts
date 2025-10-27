@@ -172,7 +172,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
         userId: existingAccount.userId,
         balance: toCents(balance || 0),
         equity: toCents(equity || 0),
-        timestamp: new Date(timestamp * 1000),
+        timestamp: new Date(parseInt(timestamp) * 1000),
       });
     }
 

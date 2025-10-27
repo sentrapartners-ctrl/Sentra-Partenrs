@@ -5,10 +5,13 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal,
  */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
-  email: varchar("email", { length: 320 }).notNull().unique(),
-  password: varchar("password", { length: 255 }).notNull(), // bcrypt hash
+  email: varchar("email", { length: 320 }).unique(),
+  password: varchar("password", { length: 255 }), // bcrypt hash - optional for wallet-only users
   name: text("name"),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  walletAddress: varchar("walletAddress", { length: 128 }).unique(), // Web3 wallet address
+  authMethod: mysqlEnum("authMethod", ["email", "wallet", "both"]).default("email").notNull(),
+  role: mysqlEnum("role", ["client", "manager", "admin"]).default("client").notNull(),
+  managerId: int("managerId"), // ID do gerente responsável (null para admin e managers)
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -17,6 +20,208 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * Manager Assignments - tracks which manager is responsible for which clients
+ */
+export const managerAssignments = mysqlTable("manager_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  managerId: int("managerId").notNull(),
+  clientId: int("clientId").notNull(),
+  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+  assignedBy: int("assignedBy"), // admin who made the assignment
+  isActive: boolean("isActive").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  managerIdIdx: index("managerId_idx").on(table.managerId),
+  clientIdIdx: index("clientId_idx").on(table.clientId),
+  isActiveIdx: index("isActive_idx").on(table.isActive),
+}));
+
+export type ManagerAssignment = typeof managerAssignments.$inferSelect;
+export type InsertManagerAssignment = typeof managerAssignments.$inferInsert;
+
+/**
+ * Subscription Plans - defines available subscription tiers
+ */
+export const subscriptionPlans = mysqlTable("subscription_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  slug: varchar("slug", { length: 128 }).notNull().unique(),
+  description: text("description"),
+  priceMonthly: int("priceMonthly").notNull(), // stored in cents
+  priceQuarterly: int("priceQuarterly"), // stored in cents (3 months)
+  priceSemestral: int("priceSemestral"), // stored in cents (6 months)
+  priceYearly: int("priceYearly"), // stored in cents (12 months)
+  priceLifetime: int("priceLifetime"), // stored in cents (one-time payment)
+  features: text("features"), // JSON array of features
+  maxAccounts: int("maxAccounts").default(1),
+  copyTradingEnabled: boolean("copyTradingEnabled").default(false),
+  advancedAnalyticsEnabled: boolean("advancedAnalyticsEnabled").default(false),
+  freeVpsEnabled: boolean("freeVpsEnabled").default(false),
+  prioritySupport: boolean("prioritySupport").default(false),
+  isActive: boolean("isActive").default(true).notNull(),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+
+/**
+ * User Subscriptions - tracks active subscriptions
+ */
+export const userSubscriptions = mysqlTable("user_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  planId: int("planId").notNull(),
+  status: mysqlEnum("status", ["active", "cancelled", "expired", "pending"]).default("pending").notNull(),
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate").notNull(),
+  autoRenew: boolean("autoRenew").default(true),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  statusIdx: index("status_idx").on(table.status),
+  endDateIdx: index("endDate_idx").on(table.endDate),
+}));
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+
+/**
+ * VPS Products - available VPS configurations for sale
+ */
+export const vpsProducts = mysqlTable("vps_products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  slug: varchar("slug", { length: 256 }).notNull().unique(),
+  description: text("description"),
+  specifications: text("specifications"), // JSON: CPU, RAM, Storage, Bandwidth
+  price: int("price").notNull(), // stored in cents
+  billingCycle: mysqlEnum("billingCycle", ["monthly", "quarterly", "yearly"]).default("monthly").notNull(),
+  location: varchar("location", { length: 128 }),
+  provider: varchar("provider", { length: 128 }),
+  maxMt4Instances: int("maxMt4Instances").default(1),
+  maxMt5Instances: int("maxMt5Instances").default(1),
+  setupFee: int("setupFee").default(0), // stored in cents
+  isAvailable: boolean("isAvailable").default(true).notNull(),
+  stockQuantity: int("stockQuantity").default(0),
+  imageUrl: varchar("imageUrl", { length: 512 }),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  slugIdx: index("slug_idx").on(table.slug),
+  isAvailableIdx: index("isAvailable_idx").on(table.isAvailable),
+}));
+
+export type VpsProduct = typeof vpsProducts.$inferSelect;
+export type InsertVpsProduct = typeof vpsProducts.$inferInsert;
+
+/**
+ * Expert Advisor Products - EAs for sale
+ */
+export const eaProducts = mysqlTable("ea_products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  slug: varchar("slug", { length: 256 }).notNull().unique(),
+  description: text("description"),
+  longDescription: text("longDescription"),
+  platform: mysqlEnum("platform", ["MT4", "MT5", "BOTH"]).notNull(),
+  price: int("price").notNull(), // stored in cents
+  licenseType: mysqlEnum("licenseType", ["single", "unlimited", "rental"]).default("single").notNull(),
+  rentalPeriod: int("rentalPeriod").default(0), // days (0 = not rental)
+  features: text("features"), // JSON array
+  strategy: text("strategy"),
+  backtestResults: text("backtestResults"), // JSON
+  fileUrl: varchar("fileUrl", { length: 512 }), // S3 URL
+  version: varchar("version", { length: 32 }),
+  imageUrl: varchar("imageUrl", { length: 512 }),
+  demoUrl: varchar("demoUrl", { length: 512 }),
+  videoUrl: varchar("videoUrl", { length: 512 }),
+  isAvailable: boolean("isAvailable").default(true).notNull(),
+  isExclusive: boolean("isExclusive").default(false), // Exclusive/limited edition
+  downloads: int("downloads").default(0),
+  rating: int("rating").default(0), // average rating * 100
+  reviewCount: int("reviewCount").default(0),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  slugIdx: index("slug_idx").on(table.slug),
+  platformIdx: index("platform_idx").on(table.platform),
+  isAvailableIdx: index("isAvailable_idx").on(table.isAvailable),
+  isExclusiveIdx: index("isExclusive_idx").on(table.isExclusive),
+}));
+
+export type EaProduct = typeof eaProducts.$inferSelect;
+export type InsertEaProduct = typeof eaProducts.$inferInsert;
+
+/**
+ * User Purchases - tracks VPS and EA purchases
+ */
+export const userPurchases = mysqlTable("user_purchases", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  productType: mysqlEnum("productType", ["vps", "ea", "subscription"]).notNull(),
+  productId: int("productId").notNull(),
+  productName: varchar("productName", { length: 256 }).notNull(),
+  amount: int("amount").notNull(), // stored in cents
+  status: mysqlEnum("status", ["pending", "completed", "cancelled", "refunded", "confirming"]).default("pending").notNull(),
+  paymentMethod: mysqlEnum("paymentMethod", ["crypto_btc", "crypto_usdt", "crypto_matic", "crypto_eth", "pix", "card"]),
+  cryptoAddress: varchar("cryptoAddress", { length: 256 }), // Receiving address
+  cryptoTxHash: varchar("cryptoTxHash", { length: 256 }), // Transaction hash
+  cryptoAmount: varchar("cryptoAmount", { length: 64 }), // Amount in crypto
+  cryptoNetwork: varchar("cryptoNetwork", { length: 64 }), // BTC, ETH, Polygon, etc
+  transactionId: varchar("transactionId", { length: 256 }),
+  licenseKey: varchar("licenseKey", { length: 256 }),
+  expiresAt: timestamp("expiresAt"),
+  downloadUrl: varchar("downloadUrl", { length: 512 }),
+  downloadCount: int("downloadCount").default(0),
+  maxDownloads: int("maxDownloads").default(3),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  productTypeIdx: index("productType_idx").on(table.productType),
+  statusIdx: index("status_idx").on(table.status),
+  licenseKeyIdx: index("licenseKey_idx").on(table.licenseKey),
+}));
+
+export type UserPurchase = typeof userPurchases.$inferSelect;
+export type InsertUserPurchase = typeof userPurchases.$inferInsert;
+
+/**
+ * Product Reviews - user reviews for EAs
+ */
+export const productReviews = mysqlTable("product_reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  productType: mysqlEnum("productType", ["vps", "ea"]).notNull(),
+  productId: int("productId").notNull(),
+  rating: int("rating").notNull(), // 1-5 stars
+  title: varchar("title", { length: 256 }),
+  comment: text("comment"),
+  isVerifiedPurchase: boolean("isVerifiedPurchase").default(false),
+  isApproved: boolean("isApproved").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  productTypeIdx: index("productType_idx").on(table.productType),
+  productIdIdx: index("productId_idx").on(table.productId),
+  isApprovedIdx: index("isApproved_idx").on(table.isApproved),
+}));
+
+export type ProductReview = typeof productReviews.$inferSelect;
+export type InsertProductReview = typeof productReviews.$inferInsert;
 
 /**
  * Trading accounts table - stores MT4/MT5 account information
@@ -73,7 +278,7 @@ export const trades = mysqlTable("trades", {
   openTime: timestamp("openTime").notNull(),
   closeTime: timestamp("closeTime"),
   comment: text("comment"),
-  origin: mysqlEnum("origin", ["robot", "signal", "manual", "unknown"]).default("unknown").notNull(),
+  origin: mysqlEnum("origin", ["robot", "manual", "unknown"]).default("unknown").notNull(),
   status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -291,4 +496,97 @@ export const dailyJournal = mysqlTable("daily_journal", {
 
 export type DailyJournal = typeof dailyJournal.$inferSelect;
 export type InsertDailyJournal = typeof dailyJournal.$inferInsert;
+
+
+
+/**
+ * Crypto Payment Addresses - stores receiving addresses for payments
+ */
+export const cryptoPaymentAddresses = mysqlTable("crypto_payment_addresses", {
+  id: int("id").autoincrement().primaryKey(),
+  currency: mysqlEnum("currency", ["BTC", "USDT", "MATIC", "ETH"]).notNull(),
+  network: varchar("network", { length: 64 }).notNull(), // Bitcoin, Ethereum, Polygon
+  address: varchar("address", { length: 256 }).notNull().unique(),
+  label: varchar("label", { length: 128 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  currencyIdx: index("currency_idx").on(table.currency),
+  isActiveIdx: index("isActive_idx").on(table.isActive),
+}));
+
+export type CryptoPaymentAddress = typeof cryptoPaymentAddresses.$inferSelect;
+export type InsertCryptoPaymentAddress = typeof cryptoPaymentAddresses.$inferInsert;
+
+/**
+ * Crypto Exchange Rates - stores current exchange rates
+ */
+export const cryptoExchangeRates = mysqlTable("crypto_exchange_rates", {
+  id: int("id").autoincrement().primaryKey(),
+  currency: varchar("currency", { length: 16 }).notNull(),
+  usdRate: decimal("usdRate", { precision: 20, scale: 8 }).notNull(), // Price in USD
+  lastUpdated: timestamp("lastUpdated").defaultNow().notNull(),
+}, (table) => ({
+  currencyIdx: index("currency_idx").on(table.currency),
+  lastUpdatedIdx: index("lastUpdated_idx").on(table.lastUpdated),
+}));
+
+export type CryptoExchangeRate = typeof cryptoExchangeRates.$inferSelect;
+export type InsertCryptoExchangeRate = typeof cryptoExchangeRates.$inferInsert;
+
+/**
+ * Payment Transactions - detailed payment tracking
+ */
+export const paymentTransactions = mysqlTable("payment_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  purchaseId: int("purchaseId"), // Links to user_purchases
+  amount: int("amount").notNull(), // Amount in cents (USD)
+  paymentMethod: mysqlEnum("paymentMethod", ["crypto_btc", "crypto_usdt", "crypto_matic", "crypto_eth", "pix", "card"]).notNull(),
+  status: mysqlEnum("status", ["pending", "confirming", "completed", "failed", "expired"]).default("pending").notNull(),
+  
+  // Crypto specific fields
+  cryptoCurrency: varchar("cryptoCurrency", { length: 16 }),
+  cryptoAmount: varchar("cryptoAmount", { length: 64 }),
+  cryptoAddress: varchar("cryptoAddress", { length: 256 }), // Receiving address
+  cryptoTxHash: varchar("cryptoTxHash", { length: 256 }),
+  cryptoNetwork: varchar("cryptoNetwork", { length: 64 }),
+  confirmations: int("confirmations").default(0),
+  requiredConfirmations: int("requiredConfirmations").default(3),
+  
+  // General fields
+  expiresAt: timestamp("expiresAt"),
+  completedAt: timestamp("completedAt"),
+  metadata: text("metadata"), // JSON for additional data
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  purchaseIdIdx: index("purchaseId_idx").on(table.purchaseId),
+  statusIdx: index("status_idx").on(table.status),
+  cryptoTxHashIdx: index("cryptoTxHash_idx").on(table.cryptoTxHash),
+}));
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;
+
+/**
+ * Wallet Sessions - for Web3 authentication
+ */
+export const walletSessions = mysqlTable("wallet_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  walletAddress: varchar("walletAddress", { length: 128 }).notNull(),
+  nonce: varchar("nonce", { length: 256 }).notNull(), // For signature verification
+  signature: varchar("signature", { length: 512 }),
+  isVerified: boolean("isVerified").default(false).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  walletAddressIdx: index("walletAddress_idx").on(table.walletAddress),
+  expiresAtIdx: index("expiresAt_idx").on(table.expiresAt),
+}));
+
+export type WalletSession = typeof walletSessions.$inferSelect;
+export type InsertWalletSession = typeof walletSessions.$inferInsert;
 

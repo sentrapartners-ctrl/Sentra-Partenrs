@@ -8,6 +8,7 @@ import { RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
+import { AccountDetailsDialog } from "@/components/AccountDetailsDialog";
 
 export default function Accounts() {
   const { data: accounts, isLoading, refetch } = trpc.accounts.list.useQuery(
@@ -26,6 +27,7 @@ export default function Accounts() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [classification, setClassification] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
 
   const handleSaveClassification = (terminalId: string) => {
     updateClassification.mutate({ terminalId, classification });
@@ -128,7 +130,11 @@ export default function Accounts() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {accounts.map((account) => (
-              <Card key={account.id}>
+              <Card 
+                key={account.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => setSelectedAccount(account)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
@@ -284,7 +290,8 @@ export default function Accounts() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEditingId(account.id);
                             setClassification(account.classification || "");
                           }}
@@ -307,6 +314,13 @@ export default function Accounts() {
             ))}
           </div>
         )}
+
+        {/* Dialog de Detalhes da Conta */}
+        <AccountDetailsDialog
+          account={selectedAccount}
+          open={!!selectedAccount}
+          onOpenChange={(open) => !open && setSelectedAccount(null)}
+        />
       </div>
     </DashboardLayout>
   );

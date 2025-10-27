@@ -16,6 +16,9 @@ import Strategies from "./pages/Strategies";
 import Calendar from "./pages/Calendar";
 import Alerts from "./pages/Alerts";
 import Settings from "./pages/Settings";
+import Subscriptions from "./pages/Subscriptions";
+import MarketplaceVPS from "./pages/MarketplaceVPS";
+import MarketplaceEAs from "./pages/MarketplaceEAs";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -62,6 +65,9 @@ function Router() {
       <Route path="/calendar">{() => <ProtectedRoute component={Calendar} />}</Route>
       <Route path="/alerts">{() => <ProtectedRoute component={Alerts} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
+      <Route path="/subscriptions">{() => <ProtectedRoute component={Subscriptions} />}</Route>
+      <Route path="/marketplace/vps">{() => <ProtectedRoute component={MarketplaceVPS} />}</Route>
+      <Route path="/marketplace/eas">{() => <ProtectedRoute component={MarketplaceEAs} />}</Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

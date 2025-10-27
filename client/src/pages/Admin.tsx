@@ -26,21 +26,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff } from "lucide-react";
+import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { EditPlanDialog } from "@/components/EditPlanDialog";
+import { EditVPSDialog } from "@/components/EditVPSDialog";
+import { EditEADialog } from "@/components/EditEADialog";
+import { EditCryptoAddressDialog } from "@/components/EditCryptoAddressDialog";
 
 export default function Admin() {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<"users" | "accounts" | "system">("users");
+  const [selectedTab, setSelectedTab] = useState<"users" | "accounts" | "system" | "subscriptions" | "vps" | "eas" | "payments">("users");
 
-  // Verificar se é admin
-  if (user?.role !== "admin") {
+  // Verificar se é admin ou manager
+  if (user?.role !== "admin" && user?.role !== "manager") {
     return (
       <DashboardLayout>
         <div className="p-6">
           <Alert variant="destructive">
             <AlertDescription>
-              Acesso negado. Apenas administradores podem acessar esta página.
+              Acesso negado. Apenas administradores e gerentes podem acessar esta página.
             </AlertDescription>
           </Alert>
         </div>
@@ -84,12 +88,48 @@ export default function Admin() {
             <Settings className="h-4 w-4 mr-2" />
             Sistema
           </Button>
+          <Button
+            variant={selectedTab === "subscriptions" ? "default" : "ghost"}
+            onClick={() => setSelectedTab("subscriptions")}
+            className="rounded-b-none"
+          >
+            <CreditCard className="h-4 w-4 mr-2" />
+            Assinaturas
+          </Button>
+          <Button
+            variant={selectedTab === "vps" ? "default" : "ghost"}
+            onClick={() => setSelectedTab("vps")}
+            className="rounded-b-none"
+          >
+            <Server className="h-4 w-4 mr-2" />
+            VPS
+          </Button>
+          <Button
+            variant={selectedTab === "eas" ? "default" : "ghost"}
+            onClick={() => setSelectedTab("eas")}
+            className="rounded-b-none"
+          >
+            <Bot className="h-4 w-4 mr-2" />
+            EAs
+          </Button>
+          <Button
+            variant={selectedTab === "payments" ? "default" : "ghost"}
+            onClick={() => setSelectedTab("payments")}
+            className="rounded-b-none"
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Pagamentos
+          </Button>
         </div>
 
         {/* Content */}
         {selectedTab === "users" && <UsersTab />}
         {selectedTab === "accounts" && <AccountsTab />}
         {selectedTab === "system" && <SystemTab />}
+        {selectedTab === "subscriptions" && <SubscriptionsTab />}
+        {selectedTab === "vps" && <VPSTab />}
+        {selectedTab === "eas" && <EAsTab />}
+        {selectedTab === "payments" && <PaymentsTab />}
       </div>
     </DashboardLayout>
   );
@@ -101,49 +141,49 @@ function UsersTab() {
   const deleteUserMutation = trpc.admin.deleteUser.useMutation();
 
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" });
   const [deletingUser, setDeletingUser] = useState<any>(null);
-  const [newEmail, setNewEmail] = useState("");
 
-  const handleEditEmail = async () => {
-    if (!editingUser || !newEmail) return;
+  const handleEdit = (user: any) => {
+    setEditingUser(user);
+    setEditForm({ name: user.name || "", email: user.email, role: user.role });
+  };
 
+  const handleSave = async () => {
     try {
       await updateUserMutation.mutateAsync({
         userId: editingUser.id,
-        email: newEmail,
+        ...editForm,
       });
-      toast.success("Email atualizado com sucesso!");
+      toast.success("Usuário atualizado com sucesso");
       setEditingUser(null);
-      setNewEmail("");
       refetch();
     } catch (error) {
-      toast.error("Erro ao atualizar email");
-    }
-  };
-
-  const handleToggleActive = async (userId: number, isActive: boolean) => {
-    try {
-      await updateUserMutation.mutateAsync({
-        userId,
-        isActive: !isActive,
-      });
-      toast.success(isActive ? "Usuário desativado" : "Usuário ativado");
-      refetch();
-    } catch (error) {
-      toast.error("Erro ao alterar status");
+      toast.error("Erro ao atualizar usuário");
     }
   };
 
   const handleDelete = async () => {
-    if (!deletingUser) return;
-
     try {
       await deleteUserMutation.mutateAsync({ userId: deletingUser.id });
-      toast.success("Usuário excluído com sucesso!");
+      toast.success("Usuário excluído com sucesso");
       setDeletingUser(null);
       refetch();
     } catch (error) {
       toast.error("Erro ao excluir usuário");
+    }
+  };
+
+  const handleToggleActive = async (userId: number, currentStatus: boolean) => {
+    try {
+      await updateUserMutation.mutateAsync({
+        userId,
+        isActive: !currentStatus,
+      });
+      toast.success(currentStatus ? "Usuário desativado" : "Usuário ativado");
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao atualizar status");
     }
   };
 
@@ -172,40 +212,29 @@ function UsersTab() {
                 <div>
                   <div className="font-medium">{user.name || "Sem nome"}</div>
                   <div className="text-sm text-muted-foreground">{user.email}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Cadastrado em: {new Date(user.createdAt).toLocaleDateString("pt-BR")}
-                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                    {user.role}
-                  </Badge>
+                  <Badge>{user.role}</Badge>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      setEditingUser(user);
-                      setNewEmail(user.email);
-                    }}
+                    onClick={() => handleEdit(user)}
                   >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
+                    <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleToggleActive(user.id, user.isActive)}
                   >
-                    <PowerOff className="h-4 w-4 mr-1" />
-                    Desativar
+                    <PowerOff className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"
                     variant="destructive"
                     onClick={() => setDeletingUser(user)}
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Excluir
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -257,32 +286,48 @@ function UsersTab() {
         </Card>
       )}
 
-      {/* Dialog: Editar Email */}
+      {/* Dialog: Editar Usuário */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Email do Usuário</DialogTitle>
+            <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              Altere o email de {editingUser?.name || "usuário"}
+              Atualize as informações do usuário
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Novo Email</Label>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome</Label>
               <Input
-                id="email"
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="novo@email.com"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
               />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Função</Label>
+              <select
+                className="w-full p-2 border rounded"
+                value={editForm.role}
+                onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+              >
+                <option value="user">Usuário</option>
+                <option value="manager">Gerente</option>
+                <option value="admin">Administrador</option>
+              </select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingUser(null)}>
               Cancelar
             </Button>
-            <Button onClick={handleEditEmail}>Salvar</Button>
+            <Button onClick={handleSave}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -294,8 +339,7 @@ function UsersTab() {
             <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. O usuário{" "}
-              <strong>{deletingUser?.email}</strong> e todas as suas contas serão
-              permanentemente excluídos.
+              <strong>{deletingUser?.email}</strong> será permanentemente excluído.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -311,41 +355,38 @@ function UsersTab() {
 }
 
 function AccountsTab() {
-  const { data: allAccounts, isLoading, refetch } = trpc.admin.listAllAccounts.useQuery();
+  const { data: allAccounts, isLoading, refetch } = trpc.admin.listAccounts.useQuery();
   const { data: allUsers } = trpc.admin.listUsers.useQuery();
-  const updateAccountMutation = trpc.admin.updateAccount.useMutation();
   const deleteAccountMutation = trpc.admin.deleteAccount.useMutation();
+  const toggleAccountMutation = trpc.admin.toggleAccountActive.useMutation();
 
   const [deletingAccount, setDeletingAccount] = useState<any>(null);
 
   const getUserEmail = (userId: number) => {
-    const user = allUsers?.find((u) => u.id === userId);
-    return user?.email || "Email não encontrado";
-  };
-
-  const handleToggleActive = async (accountId: number, isActive: boolean) => {
-    try {
-      await updateAccountMutation.mutateAsync({
-        accountId,
-        isActive: !isActive,
-      });
-      toast.success(isActive ? "Conta desativada" : "Conta ativada");
-      refetch();
-    } catch (error) {
-      toast.error("Erro ao alterar status da conta");
-    }
+    return allUsers?.find((u) => u.id === userId)?.email || "Desconhecido";
   };
 
   const handleDelete = async () => {
-    if (!deletingAccount) return;
-
     try {
       await deleteAccountMutation.mutateAsync({ accountId: deletingAccount.id });
-      toast.success("Conta excluída com sucesso!");
+      toast.success("Conta excluída com sucesso");
       setDeletingAccount(null);
       refetch();
     } catch (error) {
       toast.error("Erro ao excluir conta");
+    }
+  };
+
+  const handleToggleActive = async (accountId: number, currentStatus: boolean) => {
+    try {
+      await toggleAccountMutation.mutateAsync({
+        accountId,
+        isActive: !currentStatus,
+      });
+      toast.success(currentStatus ? "Conta desativada" : "Conta ativada");
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao atualizar status");
     }
   };
 
@@ -362,7 +403,7 @@ function AccountsTab() {
       <Card>
         <CardHeader>
           <CardTitle>Contas Ativas</CardTitle>
-          <CardDescription>{activeAccounts.length} contas conectadas</CardDescription>
+          <CardDescription>{activeAccounts.length} contas ativas</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -378,26 +419,15 @@ function AccountsTab() {
                   <div className="text-sm text-muted-foreground">
                     Usuário: {getUserEmail(account.userId)}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Usuário ID: {account.userId} | {account.platform}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Balance: ${(account.balance / 100).toFixed(2)} | Equity: $
-                    {(account.equity / 100).toFixed(2)}
-                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={account.status === "connected" ? "default" : "secondary"}>
-                    {account.status}
-                  </Badge>
-                  <Badge variant="outline">{account.accountType}</Badge>
+                  <Badge>{account.status}</Badge>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleToggleActive(account.id, account.isActive)}
                   >
-                    <PowerOff className="h-4 w-4 mr-1" />
-                    Desativar
+                    <PowerOff className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"
@@ -533,6 +563,427 @@ function SystemTab() {
           <div className="text-2xl font-bold">{stats?.connectedAccounts || 0}</div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Tab: Gerenciar Planos de Assinatura
+function SubscriptionsTab() {
+  const [plans, setPlans] = useState([
+    { id: 1, name: "Básico", slug: "basico", price: 49, features: ["Dashboard", "2 contas"], active: true },
+    { id: 2, name: "Pro", slug: "pro", price: 99, features: ["Copy Trading", "5 contas"], active: true },
+    { id: 3, name: "Premium", slug: "premium", price: 199, features: ["VPS Grátis", "Ilimitado"], active: true },
+  ]);
+  const [editingPlan, setEditingPlan] = useState<any>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
+          <p className="text-muted-foreground">Gerencie os planos disponíveis</p>
+        </div>
+        <Button>
+          <CreditCard className="h-4 w-4 mr-2" />
+          Novo Plano
+        </Button>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {plans.map((plan) => (
+          <Card key={plan.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>{plan.name}</CardTitle>
+                <Badge variant={plan.active ? "default" : "secondary"}>
+                  {plan.active ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+              <CardDescription>R$ {plan.price.toFixed(2)}/mês</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Recursos:</p>
+                <ul className="text-sm space-y-1">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="text-muted-foreground">• {feature}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setEditingPlan(plan)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setEditingPlan(plan)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assinaturas Ativas</CardTitle>
+          <CardDescription>Usuários com assinaturas ativas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhuma assinatura ativa no momento
+          </div>
+        </CardContent>
+      </Card>
+
+      <EditPlanDialog
+        plan={editingPlan}
+        open={!!editingPlan}
+        onOpenChange={(open) => !open && setEditingPlan(null)}
+        onSave={(updatedPlan) => {
+          setPlans(plans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p)));
+        }}
+      />
+    </div>
+  );
+}
+
+// Tab: Gerenciar Produtos VPS
+function VPSTab() {
+  const [vpsProducts, setVpsProducts] = useState([
+    { id: 1, name: "VPS Starter", price: 29, ram: "1GB", cpu: "1 vCore", active: true },
+    { id: 2, name: "VPS Professional", price: 49, ram: "2GB", cpu: "2 vCores", active: true },
+    { id: 3, name: "VPS Premium", price: 0, ram: "2GB", cpu: "2 vCores", active: true, free: true },
+    { id: 4, name: "VPS Enterprise", price: 99, ram: "4GB", cpu: "4 vCores", active: true },
+  ]);
+  const [editingVPS, setEditingVPS] = useState<any>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Produtos VPS</h2>
+          <p className="text-muted-foreground">Gerencie os servidores VPS disponíveis</p>
+        </div>
+        <Button>
+          <Server className="h-4 w-4 mr-2" />
+          Nova VPS
+        </Button>
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {vpsProducts.map((vps) => (
+          <Card key={vps.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">{vps.name}</CardTitle>
+                {vps.free && <Badge className="bg-purple-500">Grátis</Badge>}
+              </div>
+              <CardDescription>
+                {vps.free ? "Incluído no Premium" : `R$ ${vps.price.toFixed(2)}/mês`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">CPU:</span>
+                  <span className="font-medium">{vps.cpu}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">RAM:</span>
+                  <span className="font-medium">{vps.ram}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge variant={vps.active ? "default" : "secondary"}>
+                    {vps.active ? "Ativo" : "Inativo"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setEditingVPS(vps)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setEditingVPS(vps)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>VPS Ativas</CardTitle>
+          <CardDescription>Servidores VPS atualmente em uso</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhuma VPS ativa no momento
+          </div>
+        </CardContent>
+      </Card>
+
+      <EditVPSDialog
+        vps={editingVPS}
+        open={!!editingVPS}
+        onOpenChange={(open) => !open && setEditingVPS(null)}
+        onSave={(updatedVPS) => {
+          setVpsProducts(vpsProducts.map((v) => (v.id === updatedVPS.id ? updatedVPS : v)));
+        }}
+      />
+    </div>
+  );
+}
+
+// Tab: Gerenciar Expert Advisors
+function EAsTab() {
+  const [eas, setEas] = useState([
+    { id: 1, name: "Scalper Pro EA", price: 299, platform: "MT4/MT5", downloads: 0, active: true },
+    { id: 2, name: "Trend Master EA", price: 399, platform: "MT4/MT5", downloads: 0, active: true },
+    { id: 3, name: "Grid Trading EA", price: 249, platform: "MT5", downloads: 0, active: true },
+    { id: 4, name: "News Trader EA", price: 349, platform: "MT4", downloads: 0, active: true },
+    { id: 5, name: "AI Predictor EA", price: 799, platform: "MT4/MT5", downloads: 0, active: true },
+  ]);
+  const [editingEA, setEditingEA] = useState<any>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Expert Advisors</h2>
+          <p className="text-muted-foreground">Gerencie os EAs disponíveis para venda</p>
+        </div>
+        <Button>
+          <Bot className="h-4 w-4 mr-2" />
+          Novo EA
+        </Button>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        {eas.map((ea) => (
+          <Card key={ea.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{ea.name}</CardTitle>
+                  <CardDescription className="mt-1">
+                    <Badge variant="outline">{ea.platform}</Badge>
+                  </CardDescription>
+                </div>
+                <Badge variant={ea.active ? "default" : "secondary"}>
+                  {ea.active ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Preço</p>
+                  <p className="font-bold text-lg">R$ {ea.price.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Downloads</p>
+                  <p className="font-bold text-lg">{ea.downloads}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setEditingEA(ea)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setEditingEA(ea)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vendas Recentes</CardTitle>
+          <CardDescription>Últimas vendas de Expert Advisors</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhuma venda registrada
+          </div>
+        </CardContent>
+      </Card>
+
+      <EditEADialog
+        ea={editingEA}
+        open={!!editingEA}
+        onOpenChange={(open) => !open && setEditingEA(null)}
+        onSave={(updatedEA) => {
+          setEas(eas.map((e) => (e.id === updatedEA.id ? updatedEA : e)));
+        }}
+      />
+    </div>
+  );
+}
+
+// Tab: Pagamentos Cripto
+function PaymentsTab() {
+  const [cryptoAddresses, setCryptoAddresses] = useState([
+    { id: 1, crypto: "Bitcoin", symbol: "BTC", address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", active: true },
+    { id: 2, crypto: "USDT (Ethereum)", symbol: "USDT", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb", active: true },
+    { id: 3, crypto: "USDT (Polygon)", symbol: "USDT", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb", active: true },
+    { id: 4, crypto: "Polygon", symbol: "MATIC", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb", active: true },
+    { id: 5, crypto: "Ethereum", symbol: "ETH", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb", active: true },
+  ]);
+  const [editingAddress, setEditingAddress] = useState<any>(null);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Pagamentos Cripto</h2>
+        <p className="text-muted-foreground">Gerencie endereços e transações de criptomoedas</p>
+      </div>
+
+      {/* Endereços de Recebimento */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Endereços de Recebimento</CardTitle>
+          <CardDescription>Carteiras configuradas para receber pagamentos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {cryptoAddresses.map((addr) => (
+              <div key={addr.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-medium">{addr.crypto}</div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {addr.address.slice(0, 20)}...{addr.address.slice(-10)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge>{addr.symbol}</Badge>
+                  <Badge variant={addr.active ? "default" : "secondary"}>
+                    {addr.active ? "Ativo" : "Inativo"}
+                  </Badge>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setEditingAddress(addr)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Transações Recentes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Transações Recentes</CardTitle>
+          <CardDescription>Últimos pagamentos recebidos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhuma transação registrada
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Estatísticas */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Recebido
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R$ 0,00</div>
+            <p className="text-xs text-muted-foreground mt-1">Todos os tempos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Este Mês
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R$ 0,00</div>
+            <p className="text-xs text-muted-foreground mt-1">0 transações</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Pendentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground mt-1">Aguardando confirmação</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Confirmadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground mt-1">Transações completas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <EditCryptoAddressDialog
+        cryptoAddress={editingAddress}
+        open={!!editingAddress}
+        onOpenChange={(open) => !open && setEditingAddress(null)}
+        onSave={(updatedAddress) => {
+          setCryptoAddresses(cryptoAddresses.map((a) => (a.id === updatedAddress.id ? updatedAddress : a)));
+        }}
+      />
     </div>
   );
 }

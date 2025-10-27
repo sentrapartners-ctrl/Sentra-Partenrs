@@ -3,9 +3,8 @@ import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
 
 interface MonthlyData {
   month: string;
-  start_balance: number;
-  end_balance: number;
-  growth_percent: number;
+  monthly_profit: number;
+  trade_count: number;
 }
 
 interface MonthlyGrowthTableProps {
@@ -26,12 +25,11 @@ export function MonthlyGrowthTable({ data, year }: MonthlyGrowthTableProps) {
 
   data.forEach((item) => {
     const monthIndex = parseInt(item.month.split('-')[1]) - 1;
-    const profit = (item.end_balance - item.start_balance) / 100; // Converter de cents
+    const profit = parseFloat(item.monthly_profit as any) / 100; // Converter de cents para dollars
     monthlyData[monthIndex] = {
-      growth: item.growth_percent,
+      growth: 0, // Será calculado no frontend se necessário
       profit: profit
     };
-    yearTotal += item.growth_percent;
     yearProfit += profit;
   });
 
@@ -71,24 +69,17 @@ export function MonthlyGrowthTable({ data, year }: MonthlyGrowthTableProps) {
 
                   {hasData ? (
                     <>
-                      {/* Percentual */}
+                      {/* Valor em dinheiro (principal) */}
                       <div
                         className={`text-sm font-bold mb-1 ${
                           isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                         }`}
                       >
                         {isPositive ? "+" : ""}
-                        {growth.toFixed(1)}%
+                        ${Math.abs(profit).toFixed(2)}
                       </div>
 
-                      {/* Valor em dinheiro */}
-                      <div
-                        className={`text-xs font-semibold ${
-                          isPositive ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
-                        }`}
-                      >
-                        ${Math.abs(profit).toFixed(0)}
-                      </div>
+
 
                       {/* Ícone */}
                       <div className="absolute top-1 right-1">
@@ -131,8 +122,8 @@ export function MonthlyGrowthTable({ data, year }: MonthlyGrowthTableProps) {
                 yearTotal >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
               }`}
             >
-              {yearTotal >= 0 ? "+" : ""}
-              {yearTotal.toFixed(2)}%
+              {yearProfit >= 0 ? "+" : ""}
+              ${yearProfit.toFixed(2)}
             </div>
           </div>
 
