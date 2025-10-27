@@ -12,8 +12,8 @@ export function ProfitLossDonut({ grossProfit, grossLoss }: ProfitLossDonutProps
   const netProfit = grossProfit + grossLoss; // grossLoss já é negativo
 
   const chartData = [
-    { name: "Gross Profit", value: grossProfit / 100, color: "#10b981" },
-    { name: "Gross Loss", value: Math.abs(grossLoss / 100), color: "#ef4444" },
+    { name: "Gross Profit", value: grossProfit, color: "#10b981" },
+    { name: "Gross Loss", value: Math.abs(grossLoss), color: "#ef4444" },
   ];
 
   return (
@@ -53,8 +53,8 @@ export function ProfitLossDonut({ grossProfit, grossLoss }: ProfitLossDonutProps
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
                 <div className="text-xs text-muted-foreground">Total</div>
-                <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  <CurrencyValue value={netProfit} />
+                <div className={`text-xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  ${netProfit.toFixed(2)}
                 </div>
               </div>
             </div>
@@ -68,7 +68,7 @@ export function ProfitLossDonut({ grossProfit, grossLoss }: ProfitLossDonutProps
                 <span className="text-xs font-medium text-muted-foreground">Gross Profit</span>
               </div>
               <div className="text-lg font-bold text-green-500">
-                <CurrencyValue value={grossProfit} />
+                ${grossProfit.toFixed(2)}
               </div>
             </div>
 
@@ -78,7 +78,7 @@ export function ProfitLossDonut({ grossProfit, grossLoss }: ProfitLossDonutProps
                 <span className="text-xs font-medium text-muted-foreground">Gross Loss</span>
               </div>
               <div className="text-lg font-bold text-red-500">
-                <CurrencyValue value={grossLoss} />
+                ${Math.abs(grossLoss).toFixed(2)}
               </div>
             </div>
           </div>

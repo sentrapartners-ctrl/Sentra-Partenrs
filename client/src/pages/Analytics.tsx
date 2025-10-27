@@ -500,10 +500,10 @@ export default function Analytics() {
               <ConsecutiveStatsCard
                 maxConsecutiveWins={consecutiveStats.maxConsecutiveWins || 0}
                 maxConsecutiveLosses={consecutiveStats.maxConsecutiveLosses || 0}
-                maxConsecutiveProfit={consecutiveStats.maxConsecutiveProfit || 0}
-                maxConsecutiveLoss={consecutiveStats.maxConsecutiveLoss || 0}
-                bestTrade={consecutiveStats.bestTrade || 0}
-                worstTrade={consecutiveStats.worstTrade || 0}
+                maxConsecutiveProfit={(consecutiveStats.maxConsecutiveProfit || 0) / 100}
+                maxConsecutiveLoss={(consecutiveStats.maxConsecutiveLoss || 0) / 100}
+                bestTrade={(consecutiveStats.bestTrade || 0) / 100}
+                worstTrade={(consecutiveStats.worstTrade || 0) / 100}
               />
             )}
           </div>
@@ -522,8 +522,8 @@ export default function Analytics() {
             {/* Gráfico Donut - Profit/Loss */}
             {analytics && (
               <ProfitLossDonut
-                grossProfit={analytics.totalProfit * 100}
-                grossLoss={analytics.totalLoss * 100}
+                grossProfit={analytics.totalProfit}
+                grossLoss={analytics.totalLoss}
               />
             )}
           </div>
