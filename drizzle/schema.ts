@@ -590,3 +590,73 @@ export const walletSessions = mysqlTable("wallet_sessions", {
 export type WalletSession = typeof walletSessions.$inferSelect;
 export type InsertWalletSession = typeof walletSessions.$inferInsert;
 
+
+
+/**
+ * Support Tickets - Customer support ticket system
+ */
+export const supportTickets = mysqlTable("support_tickets", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  subject: varchar("subject", { length: 256 }),
+  status: mysqlEnum("status", ["open", "in_progress", "waiting_user", "waiting_support", "resolved", "closed"]).default("open").notNull(),
+  priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
+  assignedTo: int("assignedTo"),
+  category: varchar("category", { length: 128 }),
+  lastMessageAt: timestamp("lastMessageAt"),
+  resolvedAt: timestamp("resolvedAt"),
+  closedAt: timestamp("closedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  statusIdx: index("status_idx").on(table.status),
+  assignedToIdx: index("assignedTo_idx").on(table.assignedTo),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = typeof supportTickets.$inferInsert;
+
+/**
+ * Support Messages - Messages within support tickets
+ */
+export const supportMessages = mysqlTable("support_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  ticketId: int("ticketId").notNull(),
+  senderId: int("senderId").notNull(),
+  senderType: mysqlEnum("senderType", ["user", "support", "system"]).default("user").notNull(),
+  message: text("message").notNull(),
+  attachments: text("attachments"), // JSON array of attachment URLs
+  isRead: boolean("isRead").default(false).notNull(),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  ticketIdIdx: index("ticketId_idx").on(table.ticketId),
+  senderIdIdx: index("senderId_idx").on(table.senderId),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+  isReadIdx: index("isRead_idx").on(table.isRead),
+}));
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertSupportMessage = typeof supportMessages.$inferInsert;
+
+/**
+ * Support Notifications - Notifications for support events
+ */
+export const supportNotifications = mysqlTable("support_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  ticketId: int("ticketId").notNull(),
+  type: mysqlEnum("type", ["new_message", "ticket_assigned", "ticket_resolved", "ticket_closed"]).notNull(),
+  message: text("message"),
+  isRead: boolean("isRead").default(false).notNull(),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  ticketIdIdx: index("ticketId_idx").on(table.ticketId),
+  isReadIdx: index("isRead_idx").on(table.isRead),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+export type SupportNotification = typeof supportNotifications.$inferSelect;
+export type InsertSupportNotification = typeof supportNotifications.$inferInsert;
+

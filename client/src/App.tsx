@@ -8,6 +8,7 @@ import { CurrencyProvider } from "./contexts/CurrencyContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import Accounts from "./pages/Accounts";
 import Trades from "./pages/Trades";
 import Analytics from "./pages/Analytics";
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/">{() => <ProtectedRoute component={Home} />}</Route>
       <Route path="/admin">{() => <ProtectedRoute component={Admin} />}</Route>
+      <Route path="/manager">{() => <ProtectedRoute component={ManagerDashboard} />}</Route>
       <Route path="/accounts">{() => <ProtectedRoute component={Accounts} />}</Route>
       <Route path="/trades">{() => <ProtectedRoute component={Trades} />}</Route>
       <Route path="/analytics">{() => <ProtectedRoute component={Analytics} />}</Route>

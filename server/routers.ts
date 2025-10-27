@@ -8,11 +8,13 @@ import { getForexFactoryEvents } from "./forex-calendar";
 import { registerUser, loginUser } from "./auth";
 import { analyticsRouter } from "./analytics-router";
 import { adminRouter } from "./admin-router";
+import { supportRouter } from "./support-router";
 
 export const appRouter = router({
   system: systemRouter,
   analytics: analyticsRouter,
   admin: adminRouter,
+  support: supportRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

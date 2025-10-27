@@ -534,50 +534,169 @@ function AccountsTab() {
 
 function SystemTab() {
   const { data: stats, isLoading } = trpc.admin.getSystemStats.useQuery();
+  const { data: allUsers } = trpc.admin.listUsers.useQuery();
+  const { data: allAccounts } = trpc.admin.listAccounts.useQuery();
 
   if (isLoading) {
     return <div>Carregando...</div>;
   }
 
+  const activeUsers = allUsers?.filter(u => u.isActive).length || 0;
+  const connectedAccounts = allAccounts?.filter(a => a.status === 'connected').length || 0;
+  const totalBalance = allAccounts?.reduce((sum, a) => sum + (a.balance || 0), 0) || 0;
+  const totalEquity = allAccounts?.reduce((sum, a) => sum + (a.equity || 0), 0) || 0;
+  const totalProfit = totalEquity - totalBalance;
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value / 100);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      {/* Estatísticas Gerais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+            <p className="text-xs text-muted-foreground">{activeUsers} ativos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Contas</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalAccounts || 0}</div>
+            <p className="text-xs text-muted-foreground">{connectedAccounts} conectadas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Trades</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalTrades || 0}</div>
+            <p className="text-xs text-muted-foreground">Histórico completo</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Contas Conectadas</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{connectedAccounts}</div>
+            <p className="text-xs text-muted-foreground">Online agora</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Estatísticas Financeiras */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Balance Total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{formatCurrency(totalBalance)}</div>
+            <p className="text-sm text-muted-foreground mt-2">Soma de todas as contas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Equity Total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{formatCurrency(totalEquity)}</div>
+            <p className="text-sm text-muted-foreground mt-2">Valor atual com posições</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lucro/Prejuízo Total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(totalProfit)}
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {totalProfit >= 0 ? 'Lucro' : 'Prejuízo'} acumulado
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Distribuição por Plataforma */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle>Distribuição por Plataforma</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+          <div className="space-y-4">
+            {['MT4', 'MT5', 'cTrader'].map((platform) => {
+              const count = allAccounts?.filter(a => a.platform === platform).length || 0;
+              const percentage = stats?.totalAccounts ? (count / stats.totalAccounts) * 100 : 0;
+              return (
+                <div key={platform}>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium">{platform}</span>
+                    <span className="text-sm text-muted-foreground">{count} contas ({percentage.toFixed(1)}%)</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
+      {/* Top 5 Contas por Balance */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Contas</CardTitle>
-          <Database className="h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle>Top 5 Contas por Balance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats?.totalAccounts || 0}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Trades</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats?.totalTrades || 0}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Contas Conectadas</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats?.connectedAccounts || 0}</div>
+          <div className="space-y-3">
+            {allAccounts
+              ?.sort((a, b) => (b.balance || 0) - (a.balance || 0))
+              .slice(0, 5)
+              .map((account, index) => (
+                <div key={account.id} className="flex items-center justify-between p-3 border rounded">
+                  <div className="flex items-center gap-3">
+                    <div className="text-lg font-bold text-muted-foreground">#{index + 1}</div>
+                    <div>
+                      <div className="font-medium">{account.broker} - {account.accountNumber}</div>
+                      <div className="text-sm text-muted-foreground">{account.platform}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{formatCurrency(account.balance || 0)}</div>
+                    <Badge variant={account.status === 'connected' ? 'default' : 'secondary'}>
+                      {account.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+          </div>
         </CardContent>
       </Card>
     </div>
