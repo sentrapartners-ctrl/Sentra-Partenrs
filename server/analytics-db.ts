@@ -357,46 +357,6 @@ export async function getTradesByOrigin(accountId: number) {
   `;
 
   const result = await db.execute(query);
-  
-  // Se não houver dados com origin válido, retornar dados de exemplo para demonstração
-  if (result.rows.length === 0) {
-    // Retornar distribuição baseada em todos os trades
-    const totalQuery = sql`
-      SELECT 
-        COUNT(*) as total_count,
-        SUM(profit) as total_profit,
-        SUM(CASE WHEN profit > 0 THEN 1 ELSE 0 END) as total_wins
-      FROM trades
-      WHERE accountId = ${accountId} AND status = 'closed'
-    `;
-    const totalResult = await db.execute(totalQuery);
-    const total = totalResult.rows[0] as any;
-    
-    if (total && total.total_count > 0) {
-      // Distribuir proporcionalmente (exemplo: 60% robot, 30% signal, 10% manual)
-      return [
-        {
-          origin: 'robot',
-          count: Math.floor(total.total_count * 0.6),
-          total_profit: Math.floor(total.total_profit * 0.6),
-          wins: Math.floor(total.total_wins * 0.6)
-        },
-        {
-          origin: 'signal',
-          count: Math.floor(total.total_count * 0.3),
-          total_profit: Math.floor(total.total_profit * 0.3),
-          wins: Math.floor(total.total_wins * 0.3)
-        },
-        {
-          origin: 'manual',
-          count: Math.floor(total.total_count * 0.1),
-          total_profit: Math.floor(total.total_profit * 0.1),
-          wins: Math.floor(total.total_wins * 0.1)
-        }
-      ];
-    }
-  }
-  
   return result.rows;
 }
 
