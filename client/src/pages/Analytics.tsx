@@ -1,4 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { MonthlyGrowthTable } from "@/components/MonthlyGrowthTable";
+import { DrawdownChart } from "@/components/DrawdownChart";
+import { RiskMetricsCard } from "@/components/RiskMetricsCard";
+import { ConsecutiveStatsCard } from "@/components/ConsecutiveStatsCard";
+import { TradeOriginDonut } from "@/components/TradeOriginDonut";
+import { ProfitLossDonut } from "@/components/ProfitLossDonut";
+import { WeeklyPerformanceChart } from "@/components/WeeklyPerformanceChart";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -56,6 +63,38 @@ export default function Analytics() {
       endDate: new Date(),
     },
     { enabled: isAuthenticated }
+  );
+
+  // Queries para novos dados de analytics
+  const currentYear = new Date().getFullYear();
+  const { data: monthlyGrowthData } = trpc.analytics.getMonthlyGrowth.useQuery(
+    { accountId: selectedAccount === "all" ? (accounts?.[0]?.id || 0) : selectedAccount, year: currentYear },
+    { enabled: isAuthenticated && selectedAccount !== "all" }
+  );
+
+  const { data: drawdownData } = trpc.analytics.getDrawdownHistory.useQuery(
+    { accountId: selectedAccount === "all" ? (accounts?.[0]?.id || 0) : selectedAccount },
+    { enabled: isAuthenticated && selectedAccount !== "all" }
+  );
+
+  const { data: riskMetrics } = trpc.analytics.getRiskMetrics.useQuery(
+    { accountId: selectedAccount === "all" ? (accounts?.[0]?.id || 0) : selectedAccount },
+    { enabled: isAuthenticated && selectedAccount !== "all" }
+  );
+
+  const { data: consecutiveStats } = trpc.analytics.getConsecutiveStats.useQuery(
+    { accountId: selectedAccount === "all" ? (accounts?.[0]?.id || 0) : selectedAccount },
+    { enabled: isAuthenticated && selectedAccount !== "all" }
+  );
+
+  const { data: weeklyPerformance } = trpc.analytics.getWeeklyPerformance.useQuery(
+    { accountId: selectedAccount === "all" ? (accounts?.[0]?.id || 0) : selectedAccount },
+    { enabled: isAuthenticated && selectedAccount !== "all" }
+  );
+
+  const { data: tradesByOrigin } = trpc.analytics.getTradesByOrigin.useQuery(
+    { accountId: selectedAccount === "all" ? (accounts?.[0]?.id || 0) : selectedAccount },
+    { enabled: isAuthenticated && selectedAccount !== "all" }
   );
 
   // Filtrar trades por período
@@ -431,6 +470,71 @@ export default function Analytics() {
             </CardContent>
           </Card>
         </div>
+
+        {/* NOVOS COMPONENTES - ALTA PRIORIDADE */}
+        
+        {/* Tabela de Crescimento Mensal */}
+        {selectedAccount !== "all" && monthlyGrowthData && monthlyGrowthData.length > 0 && (
+          <MonthlyGrowthTable data={monthlyGrowthData as any} year={currentYear} />
+        )}
+
+        {/* Gráfico de Drawdown vs Balance */}
+        {selectedAccount !== "all" && drawdownData && drawdownData.length > 0 && (
+          <DrawdownChart data={drawdownData as any} />
+        )}
+
+        {/* Grid de métricas de risco e estatísticas consecutivas */}
+        {selectedAccount !== "all" && (riskMetrics || consecutiveStats) && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Métricas de Risco Avançadas */}
+            {riskMetrics && (
+              <RiskMetricsCard
+                sharpRatio={riskMetrics.sharpRatio || 0}
+                profitFactor={riskMetrics.profitFactor || 0}
+                recoveryFactor={riskMetrics.recoveryFactor || 0}
+              />
+            )}
+
+            {/* Estatísticas de Consecutivos */}
+            {consecutiveStats && (
+              <ConsecutiveStatsCard
+                maxConsecutiveWins={consecutiveStats.maxConsecutiveWins || 0}
+                maxConsecutiveLosses={consecutiveStats.maxConsecutiveLosses || 0}
+                maxConsecutiveProfit={consecutiveStats.maxConsecutiveProfit || 0}
+                maxConsecutiveLoss={consecutiveStats.maxConsecutiveLoss || 0}
+                bestTrade={consecutiveStats.bestTrade || 0}
+                worstTrade={consecutiveStats.worstTrade || 0}
+              />
+            )}
+          </div>
+        )}
+
+        {/* NOVOS COMPONENTES - MÉDIA PRIORIDADE */}
+        
+        {/* Grid de gráficos Donut */}
+        {selectedAccount !== "all" && (tradesByOrigin || analytics) && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Gráfico Donut - Tipo de Operação */}
+            {tradesByOrigin && tradesByOrigin.length > 0 && (
+              <TradeOriginDonut data={tradesByOrigin as any} />
+            )}
+
+            {/* Gráfico Donut - Profit/Loss */}
+            {analytics && (
+              <ProfitLossDonut
+                grossProfit={analytics.totalProfit * 100}
+                grossLoss={analytics.totalLoss * 100}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Performance Semanal */}
+        {selectedAccount !== "all" && weeklyPerformance && weeklyPerformance.length > 0 && (
+          <WeeklyPerformanceChart data={weeklyPerformance as any} />
+        )}
+
+        {/* COMPONENTES EXISTENTES MANTIDOS */}
 
         {/* Análise por Símbolo */}
         <Card>

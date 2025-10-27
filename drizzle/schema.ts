@@ -73,6 +73,7 @@ export const trades = mysqlTable("trades", {
   openTime: timestamp("openTime").notNull(),
   closeTime: timestamp("closeTime"),
   comment: text("comment"),
+  origin: mysqlEnum("origin", ["robot", "signal", "manual", "unknown"]).default("unknown").notNull(),
   status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

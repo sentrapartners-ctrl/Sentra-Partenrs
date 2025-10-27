@@ -6,9 +6,11 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { getForexFactoryEvents } from "./forex-calendar";
 import { registerUser, loginUser } from "./auth";
+import { analyticsRouter } from "./analytics-router";
 
 export const appRouter = router({
   system: systemRouter,
+  analytics: analyticsRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
