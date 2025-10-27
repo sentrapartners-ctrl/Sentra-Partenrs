@@ -27,6 +27,10 @@ export const adminRouter = router({
     return await db.getAllAccounts();
   }),
 
+  listAccounts: adminProcedure.query(async () => {
+    return await db.getAllAccounts();
+  }),
+
   getSystemStats: adminProcedure.query(async () => {
     return await db.getSystemStats();
   }),
@@ -63,6 +67,13 @@ export const adminRouter = router({
     }))
     .mutation(async ({ input }) => {
       await db.updateAccount(input.accountId, input);
+      return { success: true };
+    }),
+
+  toggleAccountActive: adminProcedure
+    .input(z.object({ accountId: z.number(), isActive: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await db.updateAccount(input.accountId, { isActive: input.isActive });
       return { success: true };
     }),
 
