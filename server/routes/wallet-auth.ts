@@ -62,6 +62,8 @@ router.post("/wallet-login", async (req, res) => {
 
     // Se não existir, criar novo usuário
     if (user.length === 0) {
+      console.log("[Wallet Login] Criando novo usuário...");
+      
       const newUser = {
         walletAddress: walletAddress.toLowerCase(),
         authMethod: "wallet" as const,
@@ -70,10 +72,21 @@ router.post("/wallet-login", async (req, res) => {
         isActive: true,
       };
 
-      const result = await db.insert(users).values(newUser);
-      const insertId = Number(result[0].insertId);
-
-      user = await db.select().from(users).where(eq(users.id, insertId));
+      await db.insert(users).values(newUser);
+      
+      // Buscar o usuário recém-criado pelo endereço da wallet
+      user = await db
+        .select()
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
+        .limit(1);
+      
+      if (user.length === 0) {
+        throw new Error("Falha ao criar usuário");
+      }
+      
+      const insertId = user[0].id;
+      console.log("[Wallet Login] Usuário criado com ID:", insertId);
 
       // Atribuir gerente automaticamente (round-robin)
       const managers = await db
