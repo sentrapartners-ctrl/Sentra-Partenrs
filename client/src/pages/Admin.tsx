@@ -26,12 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign } from "lucide-react";
+import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { EditPlanDialog } from "@/components/EditPlanDialog";
 import { EditVPSDialog } from "@/components/EditVPSDialog";
 import { EditEADialog } from "@/components/EditEADialog";
 import { EditCryptoAddressDialog } from "@/components/EditCryptoAddressDialog";
+import { AccountReportDialog } from "@/components/AccountReportDialog";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -361,6 +362,7 @@ function AccountsTab() {
   const toggleAccountMutation = trpc.admin.toggleAccountActive.useMutation();
 
   const [deletingAccount, setDeletingAccount] = useState<any>(null);
+  const [viewingAccount, setViewingAccount] = useState<any>(null);
 
   const getUserEmail = (userId: number) => {
     return allUsers?.find((u) => u.id === userId)?.email || "Desconhecido";
@@ -422,6 +424,14 @@ function AccountsTab() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge>{account.status}</Badge>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setViewingAccount(account)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ver Relatório
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -489,6 +499,13 @@ function AccountsTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog: Ver Relatório */}
+      <AccountReportDialog
+        account={viewingAccount}
+        open={!!viewingAccount}
+        onOpenChange={(open) => !open && setViewingAccount(null)}
+      />
 
       {/* AlertDialog: Confirmar Exclusão */}
       <AlertDialog open={!!deletingAccount} onOpenChange={() => setDeletingAccount(null)}>
