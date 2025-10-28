@@ -73,9 +73,9 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     
-    // Iniciar monitoramento de pagamentos cripto
-    startCryptoPaymentMonitoring();
-    console.log("💰 Monitoramento de pagamentos cripto iniciado");
+    // TEMPORARIAMENTE DESABILITADO: Aguardando correção do schema do banco
+    // startCryptoPaymentMonitoring();
+    // console.log("💰 Monitoramento de pagamentos cripto iniciado");
   });
 }
 
