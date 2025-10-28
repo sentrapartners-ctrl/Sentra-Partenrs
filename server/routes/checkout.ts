@@ -36,26 +36,28 @@ router.post("/create-payment", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Create payment with NOWPayments
-    const payment = await nowPaymentsService.createPayment({
+    // Create invoice with NOWPayments (hosted payment page)
+    const invoice = await nowPaymentsService.createInvoice({
       price_amount,
       price_currency,
-      pay_currency: "btc", // Default to BTC, user can choose on NOWPayments page
       order_id: `order_${Date.now()}`,
       order_description,
       ipn_callback_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/api/checkout/webhook`,
+      success_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/`,
+      cancel_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/start`,
     });
 
-    console.log("[Payment Created]", {
-      paymentId: payment.payment_id,
+    console.log("[Invoice Created]", {
+      invoiceId: invoice.id,
       description: order_description,
       amount: price_amount,
+      url: invoice.invoice_url,
     });
 
     return res.json({
       success: true,
-      payment_id: payment.payment_id,
-      payment_url: payment.invoice_url || payment.pay_address,
+      invoice_id: invoice.id,
+      payment_url: invoice.invoice_url,
     });
   } catch (error: any) {
     console.error("[Create Payment Error]", error);
@@ -80,30 +82,31 @@ router.post("/create", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Create payment with NOWPayments
-    const payment = await nowPaymentsService.createPayment({
+    // Create invoice with NOWPayments (hosted payment page)
+    const invoice = await nowPaymentsService.createInvoice({
       price_amount: productPrice,
       price_currency: "usd",
-      pay_currency: "btc", // Default to BTC, user can choose on NOWPayments page
       order_id: `order_${Date.now()}`,
       order_description: `${productName} - ${customerEmail}`,
       ipn_callback_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/api/checkout/webhook`,
+      success_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/`,
+      cancel_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/subscriptions`,
     });
 
-    // Log payment for manual processing
-    console.log("[Payment Created]", {
-      paymentId: payment.payment_id,
+    // Log invoice for manual processing
+    console.log("[Invoice Created]", {
+      invoiceId: invoice.id,
       productName,
       customerEmail,
       customerData,
       amount: productPrice,
+      url: invoice.invoice_url,
     });
 
     return res.json({
       success: true,
-      paymentId: payment.payment_id,
-      paymentUrl: payment.pay_address, // URL for customer to pay
-      invoiceUrl: payment.invoice_url, // NOWPayments invoice page
+      invoiceId: invoice.id,
+      paymentUrl: invoice.invoice_url, // NOWPayments invoice page
     });
   } catch (error: any) {
     console.error("[Checkout Error]", error);
