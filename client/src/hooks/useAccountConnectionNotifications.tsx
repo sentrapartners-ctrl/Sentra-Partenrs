@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export function useAccountConnectionNotifications() {
-  const { toast } = useToast();
   const previousAccountsRef = useRef<Set<string>>(new Set());
   
   const { data: dashboardData } = trpc.dashboard.summary.useQuery(
@@ -25,22 +24,12 @@ export function useAccountConnectionNotifications() {
 
       // Se é uma conta nova (não estava na lista anterior)
       if (!previousAccountsRef.current.has(accountKey)) {
+        const balance = ((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toFixed(2);
+        const equity = ((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toFixed(2);
+        
         // Mostra notificação
-        toast({
-          title: '🎉 Conta Conectada!',
-          description: (
-            <div className="space-y-1">
-              <div className="font-semibold">#{account.accountNumber}</div>
-              <div className="text-sm text-muted-foreground">{account.broker}</div>
-              <div className="text-sm text-muted-foreground">{account.server}</div>
-              <div className="text-sm font-medium mt-2">
-                Balance: ${((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toFixed(2)}
-              </div>
-              <div className="text-sm">
-                Equity: ${((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toFixed(2)}
-              </div>
-            </div>
-          ),
+        toast.success('🎉 Conta Conectada!', {
+          description: `#${account.accountNumber} - ${account.broker}\n${account.server}\nBalance: $${balance} | Equity: $${equity}`,
           duration: 15000, // 15 segundos
         });
       }
@@ -48,6 +37,6 @@ export function useAccountConnectionNotifications() {
 
     // Atualiza a referência para a próxima verificação
     previousAccountsRef.current = currentAccounts;
-  }, [dashboardData, toast]);
+  }, [dashboardData]);
 }
 
