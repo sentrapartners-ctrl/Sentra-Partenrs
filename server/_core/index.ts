@@ -14,7 +14,7 @@ import eaLicenseRouter from "../routes/ea-license";
 import checkoutRouter from "../routes/checkout";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
-import { runMigrations } from "../scripts/runMigrations";
+// import { runMigrations } from "../scripts/runMigrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -80,12 +80,7 @@ async function startServer() {
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
     
-    // Run migrations on startup
-    try {
-      await runMigrations();
-    } catch (error) {
-      console.error("Failed to run migrations:", error);
-    }
+    // Migrations removed - no longer needed
     
     // TEMPORARIAMENTE DESABILITADO: Aguardando correção do schema do banco
     // startCryptoPaymentMonitoring();
