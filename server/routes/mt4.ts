@@ -120,8 +120,17 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     const divisor = isCentAccount ? 10000 : 100;
 
     // Atualizar dados da conta
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        error: "Database not available",
+      });
+    }
+    
+    const { tradingAccounts } = await import("../../drizzle/schema");
     await db
-      .update(db.schema.accounts)
+      .update(tradingAccounts)
       .set({
         balance: Math.round(balance * divisor),
         equity: Math.round(equity * divisor),
@@ -130,7 +139,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
         marginLevel: margin_level || null,
         lastUpdate: new Date(),
       })
-      .where(eq(db.schema.accounts.id, account.id));
+      .where(eq(tradingAccounts.id, account.id));
 
     console.log("[MT4] ✅ Heartbeat processado");
 
