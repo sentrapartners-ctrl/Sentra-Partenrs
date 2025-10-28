@@ -100,7 +100,7 @@ export function Web3WalletButton() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex justify-center">
       <w3m-button />
     </div>
   )
