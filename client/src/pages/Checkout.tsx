@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,10 @@ import { Loader2, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import axios from "axios";
 
 export default function Checkout() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
   
+  // Parse query params from location
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const productId = searchParams.get("product");
   const category = searchParams.get("category");
   const price = searchParams.get("price");

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Download, Mail, Loader2 } from "lucide-react";
 import axios from "axios";
 
 export default function CheckoutSuccess() {
-  const [searchParams] = useSearchParams();
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const orderId = searchParams.get("order");
   
   const [loading, setLoading] = useState(true);
