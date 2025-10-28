@@ -48,8 +48,8 @@ async function startServer() {
   app.use(cookieParser());
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  // MT4/MT5 API endpoints
-  app.use("/api/mt", mtApiRouter);
+  // MT4/MT5 API endpoints (LEGACY - mantido para compatibilidade)
+  // app.use("/api/mt", mtApiRouter);
   // News API endpoints (public)
   app.use("/api", newsApiRouter);
   // EA License validation endpoints
@@ -60,6 +60,8 @@ async function startServer() {
   app.use("/api/subscriptions", subscriptionsRouter);
   // MT4 Connector endpoints
   app.use("/api/mt4", mt4Router);
+  // Alias para compatibilidade com EAs antigos
+  app.use("/api/mt", mt4Router);
   // app.use("/api/mt", mt4ConnectorRouter);
   // Wallet authentication endpoints
 

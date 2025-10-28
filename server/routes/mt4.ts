@@ -36,7 +36,14 @@ router.post("/trade", async (req: Request, res: Response) => {
     });
 
     // Buscar conta pelo número
-    const db = getDb();
+    const db = await getDb();
+    if (!db) {
+      console.log("[MT4] Database not available");
+      return res.status(500).json({
+        success: false,
+        error: "Database not available",
+      });
+    }
     const accounts = await db.query.accounts.findMany({
       where: (accounts, { eq }) => eq(accounts.accountNumber, account_number.toString()),
     });
@@ -126,7 +133,14 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     });
 
     // Buscar conta pelo número
-    const db = getDb();
+    const db = await getDb();
+    if (!db) {
+      console.log("[MT4] Database not available");
+      return res.status(500).json({
+        success: false,
+        error: "Database not available",
+      });
+    }
     const accounts = await db.query.accounts.findMany({
       where: (accounts, { eq }) => eq(accounts.accountNumber, account_number.toString()),
     });

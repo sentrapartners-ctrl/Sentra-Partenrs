@@ -69,40 +69,44 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       timestamp,
       platform,
       account_type, // "CENT" ou "STANDARD" enviado pelo EA
-      user_email // Obrigatório para multi-usuário
+      user_email, // Formato antigo
+      email // Formato novo (compatibilidade)
     } = req.body;
+    
+    // Aceita tanto 'email' quanto 'user_email'
+    const userEmail = email || user_email;
 
     // Suporta tanto formato antigo (terminal_id + account) quanto novo (user_email + account_number)
     const accountNum = account_number || account;
-    const terminalId = terminal_id || `${user_email}_${account_number}`; // Gera terminal_id único
+    const terminalId = terminal_id || `${userEmail}_${account_number}`; // Gera terminal_id único
 
-    if (!user_email || !accountNum) {
-      console.log("[MT API] Missing required fields. user_email:", user_email, "account:", accountNum);
+    if (!userEmail || !accountNum) {
+      console.log("[MT API] Missing required fields. email:", userEmail, "account:", accountNum);
       return res.status(400).json({ 
-        error: "Missing required fields: user_email and account_number are required", 
+        error: "Missing required fields: email (or user_email) and account_number are required", 
         received: req.body 
       });
     }
 
     // Busca usuário pelo email se fornecido
     let userId: number | null = null;
-    if (user_email) {
+    if (userEmail) {
       const { getUserByEmail } = await import('./auth');
-      const user = await getUserByEmail(user_email);
+      const user = await getUserByEmail(userEmail);
       if (user) {
         userId = user.id;
         console.log("[MT API] Account associated with user:", user.email);
       } else {
-        console.log("[MT API] User not found for email:", user_email);
+        console.log("[MT API] User not found for email:", userEmail);
         return res.status(404).json({ 
           error: "User not found. Please register first.",
-          email: user_email 
+          email: userEmail 
         });
       }
     } else {
-      console.log("[MT API] No user_email provided. Account will not be associated.");
+      console.log("[MT API] No email provided. Account will not be associated.");
       return res.status(400).json({ 
-        error: "user_email is required to associate account",
+        error: "email (or user_email) is required to associate account",
         hint: "Add UserEmail parameter to your EA" 
       });
     }
@@ -365,28 +369,31 @@ router.post("/trades", async (req: Request, res: Response) => {
     console.log("[MT API] Body:", JSON.stringify(req.body, null, 2));
     console.log("[MT API] ===================================");
     
-    const { user_email, account_number, trades } = req.body;
+    const { user_email, email, account_number, trades } = req.body;
+    
+    // Aceita tanto 'email' quanto 'user_email'
+    const userEmail = email || user_email;
 
-    if (!user_email || !account_number) {
+    if (!userEmail || !account_number) {
       console.log("[MT API] Missing required fields");
       return res.status(400).json({ 
-        error: "Missing required fields: user_email and account_number are required" 
+        error: "Missing required fields: email (or user_email) and account_number are required" 
       });
     }
 
     // Busca usuário pelo email
     const { getUserByEmail } = await import('./auth');
-    const user = await getUserByEmail(user_email);
+    const user = await getUserByEmail(userEmail);
     if (!user) {
-      console.log("[MT API] User not found for email:", user_email);
+      console.log("[MT API] User not found for email:", userEmail);
       return res.status(404).json({ 
         error: "User not found",
-        email: user_email 
+        email: userEmail 
       });
     }
 
     // Busca conta pelo terminal_id
-    const terminalId = `${user_email}_${account_number}`;
+    const terminalId = `${userEmail}_${account_number}`;
     const account = await db.getAccountByTerminalId(terminalId);
     
     if (!account) {
