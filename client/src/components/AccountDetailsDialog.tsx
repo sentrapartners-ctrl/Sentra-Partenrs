@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
 import { TrendingUp, TrendingDown, Activity, BarChart3, DollarSign, Percent } from "lucide-react";
-import { useQuery } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
 
 interface AccountDetailsDialogProps {
   account: any;
@@ -14,8 +14,8 @@ interface AccountDetailsDialogProps {
 
 export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDetailsDialogProps) {
   // Buscar dados de performance reais
-  const { data: performance, isLoading } = useQuery(
-    ["accounts.performance", { accountId: account?.id }],
+  const { data: performance, isLoading } = trpc.accounts.performance.useQuery(
+    { accountId: account?.id },
     {
       enabled: !!account?.id && open,
     }
