@@ -4,22 +4,8 @@ import express from "express";
 
 const router = Router();
 
-// Middleware para debug do body raw
-router.use(express.text({ type: 'application/json' }));
-router.use((req, res, next) => {
-  if (typeof req.body === 'string') {
-    try {
-      // Remove qualquer caractere nulo ou inválido
-      const cleanBody = req.body.replace(/\0/g, '').trim();
-      console.log('[MT API] Raw body:', cleanBody);
-      req.body = JSON.parse(cleanBody);
-    } catch (e) {
-      console.error('[MT API] JSON parse error:', e);
-      console.error('[MT API] Body that failed:', req.body);
-    }
-  }
-  next();
-});
+// O parsing de JSON é feito pelo middleware global express.json() no index.ts
+// Não precisa de parsing manual aqui
 
 // Helper para converter valores de cents para formato decimal
 const fromCents = (value: number) => value / 100;
