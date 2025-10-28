@@ -4,6 +4,8 @@ import { payments, products, eaOrders } from "../../drizzle/schema-payments";
 import { nowPaymentsService } from "../services/nowpayments";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { generateEACode, saveEACode, compileEA } from "../services/eaGenerator";
+import { sendEADeliveryEmail } from "../services/emailService";
 
 const router = Router();
 
@@ -237,25 +239,69 @@ async function generateAndDeliverEA(payment: any, product: any, customerData: an
     expiryDate,
   });
 
-  // TODO: Generate EA source code (will implement next)
-  // TODO: Compile EA (will implement next)
-  // TODO: Upload to S3 or storage
-  // TODO: Send email with download link
+  try {
+    // Generate EA source code
+    const sourceCode = await generateEACode({
+      accountNumber,
+      expiryDate,
+      eaType,
+      platform,
+    });
 
-  // For now, mark as delivered
-  await db.update(payments)
-    .set({
-      delivered: true,
-      deliveredAt: new Date(),
-      deliveryData: JSON.stringify({
-        eaOrderId: eaOrder.insertId,
-        accountNumber,
-        eaType,
-        platform,
-        expiryDate: expiryDate.toISOString(),
-      }),
-    })
-    .where(eq(payments.id, payment.id));
+    // Save source code
+    const sourcePath = await saveEACode(sourceCode, {
+      accountNumber,
+      expiryDate,
+      eaType,
+      platform,
+    });
+
+    // Compile EA (simulated for now)
+    const compiledPath = await compileEA(sourcePath, platform);
+
+    // Update EA order with generated files
+    await db.update(eaOrders)
+      .set({
+        sourceCode,
+        compiledFile: compiledPath,
+        generated: true,
+        generatedAt: new Date(),
+        compiled: true,
+        compiledAt: new Date(),
+      })
+      .where(eq(eaOrders.id, eaOrder.insertId));
+
+    // Send email with EA
+    await sendEADeliveryEmail({
+      to: payment.customerEmail,
+      eaName: product.name,
+      accountNumber,
+      expiryDate,
+      attachmentPath: compiledPath,
+    });
+
+    // Mark as delivered
+    await db.update(payments)
+      .set({
+        delivered: true,
+        deliveredAt: new Date(),
+        deliveryData: JSON.stringify({
+          eaOrderId: eaOrder.insertId,
+          accountNumber,
+          eaType,
+          platform,
+          expiryDate: expiryDate.toISOString(),
+          compiledFile: compiledPath,
+        }),
+      })
+      .where(eq(payments.id, payment.id));
+
+    console.log(`[Checkout] EA generated and delivered: ${payment.orderId}`);
+  } catch (error: any) {
+    console.error("[Checkout] Error generating EA:", error);
+    // TODO: Send alert to admin
+    throw error;
+  }
 }
 
 export default router;
