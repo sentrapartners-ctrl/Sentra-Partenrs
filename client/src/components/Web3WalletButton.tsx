@@ -39,7 +39,7 @@ export function Web3WalletButton() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            address,
+            walletAddress: address,
             signature,
             message,
           }),
