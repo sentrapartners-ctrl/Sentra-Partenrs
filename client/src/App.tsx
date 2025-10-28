@@ -27,6 +27,7 @@ import ExpertAdvisors from "./pages/ExpertAdvisors";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import CheckoutCancel from "./pages/CheckoutCancel";
+import LandingPage from "./pages/LandingPage";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -63,6 +64,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 function Router() {
   return (
     <Switch>
+      <Route path="/start" component={LandingPage} />
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />

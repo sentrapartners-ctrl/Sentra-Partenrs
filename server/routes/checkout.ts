@@ -1,8 +1,24 @@
 import { Router, Request, Response } from "express";
 import { nowPaymentsService } from "../services/nowpayments";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import { db } from "../db";
+import { users, userPurchases } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 const router = Router();
+
+/**
+ * Gera senha aleatória segura
+ */
+function generateRandomPassword(length: number = 12): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 
 /**
  * POST /api/checkout/create
@@ -90,10 +106,50 @@ router.post("/webhook", async (req: Request, res: Response) => {
       description: order_description,
     });
 
-    // If payment is confirmed, you'll see it in logs
-    // Then you can manually send the EA to the customer
+    // If payment is confirmed, create user automatically
     if (payment_status === "finished") {
-      console.log("✅ [PAYMENT CONFIRMED] Send EA to customer:", order_description);
+      console.log("✅ [PAYMENT CONFIRMED]:", order_description);
+      
+      // Extract customer data from order_description or metadata
+      // Format: "ProductName - email@example.com"
+      const emailMatch = order_description.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+      const customerEmail = emailMatch ? emailMatch[1] : null;
+      
+      if (customerEmail) {
+        try {
+          // Check if user already exists
+          const existingUser = await db.select().from(users).where(eq(users.email, customerEmail)).limit(1);
+          
+          if (existingUser.length === 0) {
+            // Generate random password
+            const randomPassword = generateRandomPassword();
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+            
+            // Create user
+            const [newUser] = await db.insert(users).values({
+              email: customerEmail,
+              password: hashedPassword,
+              name: customerEmail.split('@')[0], // Use email prefix as name
+              authMethod: "email",
+              role: "client",
+              isActive: true,
+            });
+            
+            console.log("✅ [USER CREATED]", {
+              userId: newUser.insertId,
+              email: customerEmail,
+              password: randomPassword, // LOG PASSWORD FOR MANUAL SENDING
+            });
+            
+            // TODO: Send email with credentials
+            // For now, password is logged above
+          } else {
+            console.log("ℹ️ [USER EXISTS]", customerEmail);
+          }
+        } catch (error: any) {
+          console.error("❌ [USER CREATION ERROR]", error.message);
+        }
+      }
     }
 
     return res.json({ success: true });
