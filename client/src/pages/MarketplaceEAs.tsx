@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bot, TrendingUp, Grid3x3, Newspaper, Brain, Star, Download, Infinity, X } from "lucide-react";
+import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -58,8 +59,8 @@ const eaProducts: EAProduct[] = [
     id: "1",
     name: "Scalper Pro EA",
     slug: "scalper-pro-ea",
-    monthlyPrice: 99.00,
-    lifetimePrice: 299.00,
+    monthlyPrice: 24.99,
+    lifetimePrice: 74.99,
     description: "Expert Advisor de scalping para operações rápidas",
     platform: "MT4 e MT5",
     strategy: "Scalping baseado em indicadores técnicos e análise de volume",
@@ -85,8 +86,8 @@ const eaProducts: EAProduct[] = [
     id: "2",
     name: "Trend Master EA",
     slug: "trend-master-ea",
-    monthlyPrice: 129.00,
-    lifetimePrice: 399.00,
+    monthlyPrice: 32.99,
+    lifetimePrice: 99.99,
     description: "Robô seguidor de tendências de longo prazo",
     platform: "MT4 e MT5",
     strategy: "Seguidor de tendência com confirmação por múltiplos indicadores",
@@ -212,17 +213,22 @@ export default function MarketplaceEAs() {
     setSelectedEA(ea);
   };
 
+  const [, setLocation] = useLocation();
+
   const handleConfirmPurchase = () => {
     const license = licenseOptions.find(l => l.duration === selectedLicense)!;
     const price = calculatePrice(selectedEA!, license);
     
-    console.log("Compra confirmada:", {
-      ea: selectedEA?.name,
-      license: license.label,
-      price: price
+    // Redirect to checkout
+    const params = new URLSearchParams({
+      product: selectedEA!.id,
+      category: "ea",
+      price: price.toFixed(2),
+      name: selectedEA!.name,
+      duration: license.months?.toString() || "lifetime",
     });
     
-    // TODO: Redirecionar para checkout
+    setLocation(`/checkout?${params.toString()}`);
     setSelectedEA(null);
   };
 
@@ -306,12 +312,12 @@ export default function MarketplaceEAs() {
                   <div className="flex items-baseline justify-between">
                     <div>
                       <div className="text-xs text-muted-foreground">A partir de</div>
-                      <div className="text-2xl font-bold">R$ {ea.monthlyPrice.toFixed(2)}</div>
+                      <div className="text-2xl font-bold">${ea.monthlyPrice.toFixed(2)}</div>
                       <div className="text-xs text-muted-foreground">/mês</div>
                     </div>
                     <div className="text-right">
                       <div className="text-xs text-muted-foreground">Vitalícia</div>
-                      <div className="text-lg font-bold text-green-600">R$ {ea.lifetimePrice.toFixed(2)}</div>
+                      <div className="text-lg font-bold text-green-600">${ea.lifetimePrice.toFixed(2)}</div>
                     </div>
                   </div>
                 </div>

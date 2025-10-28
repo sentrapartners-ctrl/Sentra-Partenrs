@@ -24,6 +24,9 @@ import MarketplaceVPS from "./pages/MarketplaceVPS";
 import MarketplaceEAs from "./pages/MarketplaceEAs";
 import EALicenses from "./pages/EALicenses";
 import ExpertAdvisors from "./pages/ExpertAdvisors";
+import Checkout from "./pages/Checkout";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import CheckoutCancel from "./pages/CheckoutCancel";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -79,6 +82,9 @@ function Router() {
       <Route path="/marketplace/eas">{() => <ProtectedRoute component={MarketplaceEAs} />}</Route>
       <Route path="/ea-licenses">{() => <ProtectedRoute component={EALicenses} />}</Route>
       <Route path="/expert-advisors">{() => <ProtectedRoute component={ExpertAdvisors} />}</Route>
+      <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
+      <Route path="/checkout/success" component={CheckoutSuccess} />
+      <Route path="/checkout/cancel" component={CheckoutCancel} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

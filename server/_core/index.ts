@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import mtApiRouter from "../mt-api";
 import newsApiRouter from "../news-api";
 import eaLicenseRouter from "../routes/ea-license";
+import checkoutRouter from "../routes/checkout";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
 
@@ -49,6 +50,8 @@ async function startServer() {
   app.use("/api", newsApiRouter);
   // EA License validation endpoints
   app.use("/api/ea-license", eaLicenseRouter);
+  // Checkout and payment endpoints
+  app.use("/api/checkout", checkoutRouter);
   // Wallet authentication endpoints
 
   // tRPC API
