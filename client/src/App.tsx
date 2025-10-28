@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
+import AdminSupport from "./pages/AdminSupport";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import Accounts from "./pages/Accounts";
 import Trades from "./pages/Trades";
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/">{() => <ProtectedRoute component={Home} />}</Route>
       <Route path="/admin">{() => <ProtectedRoute component={Admin} />}</Route>
+      <Route path="/admin/support">{() => <ProtectedRoute component={AdminSupport} />}</Route>
       <Route path="/manager">{() => <ProtectedRoute component={ManagerDashboard} />}</Route>
       <Route path="/accounts">{() => <ProtectedRoute component={Accounts} />}</Route>
       <Route path="/trades">{() => <ProtectedRoute component={Trades} />}</Route>
