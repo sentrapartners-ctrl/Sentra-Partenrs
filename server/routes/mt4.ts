@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { getDb } from "../db";
+import { getDb, getAccountByNumber, createOrUpdateTrade } from "../db";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
@@ -36,47 +36,21 @@ router.post("/trade", async (req: Request, res: Response) => {
     });
 
     // Buscar conta pelo número
-    const db = await getDb();
-    if (!db) {
-      console.log("[MT4] Database not available");
-      return res.status(500).json({
-        success: false,
-        error: "Database not available",
-      });
-    }
-    const accounts = await db.query.accounts.findMany({
-      where: (accounts, { eq }) => eq(accounts.accountNumber, account_number.toString()),
-    });
-
-    if (accounts.length === 0) {
+    const account = await getAccountByNumber(account_number.toString());
+    
+    if (!account) {
       console.log("[MT4] Conta não encontrada:", account_number);
       return res.status(404).json({
         success: false,
-        error: "Conta não encontrada",
+        error: "Conta não encontrada. Envie heartbeat primeiro.",
       });
     }
 
-    const account = accounts[0];
-
-    // Verificar se trade já existe
-    const existingTrades = await db.query.trades.findMany({
-      where: (trades, { eq }) => eq(trades.ticket, ticket),
-    });
-
-    if (existingTrades.length > 0) {
-      console.log("[MT4] Trade já existe:", ticket);
-      return res.json({
-        success: true,
-        message: "Trade já existe",
-      });
-    }
-
-    // Converter valores
+    // Verificar se trade já existe e inserir usando createOrUpdateTrade
     const isCentAccount = account.isCentAccount || false;
     const divisor = isCentAccount ? 10000 : 100;
 
-    // Inserir trade
-    await db.insert(db.schema.trades).values({
+    await createOrUpdateTrade({
       accountId: account.id,
       ticket: ticket,
       symbol: symbol,
@@ -133,27 +107,15 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     });
 
     // Buscar conta pelo número
-    const db = await getDb();
-    if (!db) {
-      console.log("[MT4] Database not available");
-      return res.status(500).json({
-        success: false,
-        error: "Database not available",
-      });
-    }
-    const accounts = await db.query.accounts.findMany({
-      where: (accounts, { eq }) => eq(accounts.accountNumber, account_number.toString()),
-    });
-
-    if (accounts.length === 0) {
+    const account = await getAccountByNumber(account_number.toString());
+    
+    if (!account) {
       console.log("[MT4] Conta não encontrada:", account_number);
       return res.status(404).json({
         success: false,
-        error: "Conta não encontrada",
+        error: "Conta não encontrada. Envie heartbeat primeiro.",
       });
     }
-
-    const account = accounts[0];
     const isCentAccount = account.isCentAccount || false;
     const divisor = isCentAccount ? 10000 : 100;
 

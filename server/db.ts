@@ -217,6 +217,15 @@ export async function getAccountByTerminalId(terminalId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getAccountByNumber(accountNumber: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(tradingAccounts)
+    .where(eq(tradingAccounts.accountNumber, accountNumber))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getUserAccounts(userId: number) {
   const db = await getDb();
   if (!db) return [];
