@@ -4,16 +4,28 @@ import { eq } from "drizzle-orm";
 
 const router = express.Router();
 
+// Helper para descriptografar Base64
+const decodeBase64 = (encoded: string): string => {
+  try {
+    return Buffer.from(encoded, 'base64').toString('utf-8');
+  } catch (e) {
+    return encoded; // Se não for Base64, retorna original
+  }
+};
+
 // Rota para receber trades do MT4
 router.post("/trade", async (req: Request, res: Response) => {
   try {
     const {
       email,
+      user_email, // Novo formato (pode estar criptografado)
       account_number,
       ticket,
+      trade_id, // Novo formato
       symbol,
       type,
       lots,
+      volume, // Novo formato
       open_price,
       open_time,
       close_price,
@@ -25,12 +37,18 @@ router.post("/trade", async (req: Request, res: Response) => {
       swap,
       comment,
       magic_number,
+      status, // Novo formato
     } = req.body;
 
+    // Aceita tanto email quanto user_email (descriptografa se necessário)
+    const userEmail = user_email ? decodeBase64(user_email) : email;
+    const tradeTicket = trade_id || ticket;
+    const tradeVolume = volume || lots;
+
     console.log("[MT4] Trade recebido:", {
-      email,
+      email: userEmail,
       account_number,
-      ticket,
+      ticket: tradeTicket,
       symbol,
       profit,
     });
@@ -50,16 +68,38 @@ router.post("/trade", async (req: Request, res: Response) => {
     const isCentAccount = account.isCentAccount || false;
     const divisor = isCentAccount ? 10000 : 100;
 
+    // Converte timestamps (aceita tanto Unix timestamp quanto null)
+    const parseTimestamp = (ts: any): Date | null => {
+      if (!ts || ts === 0 || ts === "0") return null;
+      if (typeof ts === 'number') return new Date(ts * 1000);
+      if (typeof ts === 'string') {
+        const num = parseInt(ts);
+        if (!isNaN(num) && num > 0) return new Date(num * 1000);
+      }
+      return null;
+    };
+
+    const openTimeDate = parseTimestamp(open_time) || new Date();
+    const closeTimeDate = parseTimestamp(close_time);
+
+    // Detecta tipo (aceita tanto string quanto número)
+    let tradeType = "buy";
+    if (typeof type === 'string') {
+      tradeType = type.toLowerCase() === 'sell' ? 'sell' : 'buy';
+    } else if (typeof type === 'number') {
+      tradeType = type === 0 ? 'buy' : 'sell';
+    }
+
     await createOrUpdateTrade({
       accountId: account.id,
-      ticket: ticket,
-      symbol: symbol,
-      type: type === 0 ? "buy" : "sell",
-      volume: Math.round(lots * 100), // Converter para inteiro (lotes * 100)
-      openPrice: Math.round(open_price * 100000), // 5 casas decimais
-      openTime: new Date(open_time),
-      closePrice: close_price ? Math.round(close_price * 100000) : null,
-      closeTime: close_time ? new Date(close_time) : null,
+      ticket: tradeTicket ? tradeTicket.toString() : undefined,
+      symbol: symbol || "UNKNOWN",
+      type: tradeType,
+      volume: tradeVolume ? Math.round(parseFloat(tradeVolume) * 100) : 0,
+      openPrice: open_price ? Math.round(parseFloat(open_price) * 100000) : 0,
+      openTime: openTimeDate,
+      closePrice: close_price ? Math.round(parseFloat(close_price) * 100000) : null,
+      closeTime: closeTimeDate,
       stopLoss: stop_loss ? Math.round(stop_loss * 100000) : null,
       takeProfit: take_profit ? Math.round(take_profit * 100000) : null,
       profit: Math.round(profit * divisor), // Armazenar em cents
@@ -69,7 +109,7 @@ router.post("/trade", async (req: Request, res: Response) => {
       magicNumber: magic_number || 0,
     });
 
-    console.log("[MT4] ✅ Trade salvo:", ticket);
+    console.log("[MT4] ✅ Trade salvo:", tradeTicket);
 
     res.json({
       success: true,
@@ -89,6 +129,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
   try {
     const {
       email,
+      user_email, // Novo formato (pode estar criptografado)
       account_number,
       balance,
       equity,
@@ -98,8 +139,11 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       open_positions,
     } = req.body;
 
+    // Aceita tanto email quanto user_email (descriptografa se necessário)
+    const userEmail = user_email ? decodeBase64(user_email) : email;
+
     console.log("[MT4] Heartbeat recebido:", {
-      email,
+      email: userEmail,
       account_number,
       balance,
       equity,
