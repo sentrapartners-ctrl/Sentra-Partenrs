@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { Activity, DollarSign, TrendingUp, TrendingDown, Wallet, BarChart3 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { PeriodFilter, Period, getPeriodDates } from "@/components/PeriodFilter";
+// PeriodFilter removido - não é usado na Home
 import { CurrencyValue, InlineCurrencyValue } from "@/components/CurrencyValue";
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
-  const [period, setPeriod] = useState<Period>("30d"); const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
+  
+  const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
     undefined,
     { enabled: isAuthenticated, refetchInterval: 5000 }
   );
@@ -74,7 +75,6 @@ export default function Home() {
             Visão geral das suas contas de trading
           </p>
         </div>
-        <PeriodFilter value={period} onChange={setPeriod} />
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
