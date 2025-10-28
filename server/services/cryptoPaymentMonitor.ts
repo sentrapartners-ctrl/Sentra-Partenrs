@@ -52,8 +52,11 @@ export class CryptoPaymentMonitor {
    * Inicia o monitoramento automático
    * Verifica a cada 30 segundos por novos pagamentos
    */
-  start() {
+  async start() {
     console.log("🚀 Iniciando monitoramento de pagamentos cripto...");
+    
+    // Inicializar banco de dados
+    await this.initDb();
     
     // Verificação inicial
     this.checkForNewPayments();
@@ -80,6 +83,11 @@ export class CryptoPaymentMonitor {
    */
   private async checkForNewPayments() {
     try {
+      // Garantir que o banco está inicializado
+      if (!this.db) {
+        await this.initDb();
+      }
+      
       // Buscar todos os endereços ativos
       const activeAddresses = await this.db
         .select()
