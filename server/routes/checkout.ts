@@ -5,7 +5,7 @@ import { nowPaymentsService } from "../services/nowpayments";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 import { generateEACode, saveEACode, compileEA } from "../services/eaGenerator";
-import { sendEADeliveryEmail } from "../services/emailService";
+// import { sendEADeliveryEmail } from "../services/emailService";
 
 const router = Router();
 
@@ -272,13 +272,14 @@ async function generateAndDeliverEA(payment: any, product: any, customerData: an
       .where(eq(eaOrders.id, eaOrder.insertId));
 
     // Send email with EA
-    await sendEADeliveryEmail({
-      to: payment.customerEmail,
-      eaName: product.name,
-      accountNumber,
-      expiryDate,
-      attachmentPath: compiledPath,
-    });
+    console.log(`[EA Generated] Account: ${accountNumber}, Path: ${compiledPath}`);
+    //     await sendEADeliveryEmail({
+    //       to: payment.customerEmail,
+    //       eaName: product.name,
+    //       accountNumber,
+    //       expiryDate,
+    //       attachmentPath: compiledPath,
+    //     });
 
     // Mark as delivered
     await db.update(payments)
