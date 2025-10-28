@@ -122,6 +122,9 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       console.log("[MT API] Platform from EA:", detectedPlatform);
     }
     
+    // Detecta se é uma nova conexão (primeira vez ou reconexão após desconexão)
+    const isNewConnection = !existingAccount || existingAccount.status !== "connected";
+    
     if (!existingAccount) {
       // Primeira vez que vemos este terminal - cria associado ao usuário
       const accountId = await db.createOrUpdateAccount({
@@ -168,7 +171,20 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       });
     }
 
-    res.json({ success: true, message: "Heartbeat received" });
+    // Se é nova conexão, retorna flag para frontend mostrar notificação
+    res.json({ 
+      success: true, 
+      message: "Heartbeat received",
+      isNewConnection: isNewConnection,
+      accountInfo: isNewConnection ? {
+        accountNumber: accountNum.toString(),
+        broker: broker || "Unknown",
+        server: server || "",
+        platform: detectedPlatform,
+        balance: balance || 0,
+        equity: equity || 0
+      } : undefined
+    });
   } catch (error) {
     console.error("[MT API] Heartbeat error:", error);
     res.status(500).json({ error: "Internal server error" });

@@ -7,7 +7,11 @@ import { Activity, DollarSign, TrendingUp, TrendingDown, Wallet, BarChart3 } fro
 import { useEffect, useState, useMemo } from "react";
 // PeriodFilter removido - não é usado na Home
 import { CurrencyValue, InlineCurrencyValue } from "@/components/CurrencyValue";
+import { useAccountConnectionNotifications } from "@/hooks/useAccountConnectionNotifications";
+
 export default function Home() {
+  // Hook para notificações de conexão de contas
+  useAccountConnectionNotifications();
   const { isAuthenticated, loading } = useAuth();
   
   const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
