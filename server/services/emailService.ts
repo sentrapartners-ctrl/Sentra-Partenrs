@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import * as nodemailer from "nodemailer";
 
 // Configure email transporter
 const transporter = nodemailer.createTransporter({
