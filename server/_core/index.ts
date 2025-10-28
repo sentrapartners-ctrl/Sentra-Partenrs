@@ -13,6 +13,7 @@ import newsApiRouter from "../news-api";
 import eaLicenseRouter from "../routes/ea-license";
 import checkoutRouter from "../routes/checkout";
 import subscriptionsRouter from "../routes/subscriptions";
+import mt4ConnectorRouter from "../routes/mt4-connector";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
 // import { runMigrations } from "../scripts/runMigrations";
@@ -56,6 +57,8 @@ async function startServer() {
   app.use("/api/checkout", checkoutRouter);
   // Subscription management endpoints
   app.use("/api/subscriptions", subscriptionsRouter);
+  // MT4 Connector endpoints
+  app.use("/api/mt", mt4ConnectorRouter);
   // Wallet authentication endpoints
 
   // tRPC API
