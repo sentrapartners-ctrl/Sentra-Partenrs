@@ -215,20 +215,36 @@ export default function MarketplaceEAs() {
 
   const [, setLocation] = useLocation();
 
-  const handleConfirmPurchase = () => {
+  const handleConfirmPurchase = async () => {
     const license = licenseOptions.find(l => l.duration === selectedLicense)!;
     const price = calculatePrice(selectedEA!, license);
     
-    // Redirect to checkout
-    const params = new URLSearchParams({
-      product: selectedEA!.id,
-      category: "ea",
-      price: price.toFixed(2),
-      name: selectedEA!.name,
-      duration: license.months?.toString() || "lifetime",
-    });
+    try {
+      const response = await fetch("/api/checkout/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          price_amount: price,
+          price_currency: "usd",
+          order_description: `${selectedEA!.name} - ${license.label}`,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.payment_url) {
+          window.location.href = data.payment_url;
+        }
+      } else {
+        throw new Error("Erro ao criar pagamento");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro ao processar pagamento. Tente novamente.");
+    }
     
-    setLocation(`/checkout?${params.toString()}`);
     setSelectedEA(null);
   };
 

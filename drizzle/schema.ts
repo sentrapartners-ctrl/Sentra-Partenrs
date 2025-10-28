@@ -78,10 +78,13 @@ export const userSubscriptions = mysqlTable("user_subscriptions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   planId: int("planId").notNull(),
+  price: int("price").notNull(), // preço pago em cents
   status: mysqlEnum("status", ["active", "cancelled", "expired", "pending"]).default("pending").notNull(),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate").notNull(),
   autoRenew: boolean("autoRenew").default(true),
+  pendingPlanId: int("pendingPlanId"), // plano agendado para próxima renovação (downgrade)
+  pendingPrice: int("pendingPrice"), // preço do plano agendado
   cancelledAt: timestamp("cancelledAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
