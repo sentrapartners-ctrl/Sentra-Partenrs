@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, CreditCard, ShoppingCart, Server, Bot } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, CreditCard, ShoppingCart, Server, Bot, Moon, Sun } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { CurrencySelector } from "./CurrencySelector";
+import { useTheme } from "@/contexts/ThemeContext";
 import { SupportChat } from "./SupportChat";
 
 const menuItems = [
@@ -50,6 +51,27 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
+
+// Componente de toggle do tema
+function ThemeToggleButton() {
+  const { theme, toggleTheme } = useTheme();
+  
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleTheme}
+      className="h-9 w-9 rounded-lg"
+      title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+    >
+      {theme === "dark" ? (
+        <Sun className="h-4 w-4" />
+      ) : (
+        <Moon className="h-4 w-4" />
+      )}
+    </Button>
+  );
+}
 
 // Build: 2025-10-24-v5
 export default function DashboardLayout({
@@ -258,7 +280,8 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3 space-y-2">
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-2">
+              <ThemeToggleButton />
               <CurrencySelector />
             </div>
             <DropdownMenu>
@@ -315,6 +338,7 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <ThemeToggleButton />
               <CurrencySelector />
             </div>
           </div>

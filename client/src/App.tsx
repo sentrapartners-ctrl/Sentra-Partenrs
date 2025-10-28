@@ -96,7 +96,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light" switchable={false}>
+      <ThemeProvider defaultTheme="dark" switchable={true}>
         <CurrencyProvider>
           <TooltipProvider>
             <Toaster />
