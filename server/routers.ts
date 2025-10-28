@@ -244,12 +244,20 @@ export const appRouter = router({
         endDate: z.date().optional(),
       }))
       .query(async ({ ctx, input }) => {
+        // Filtro por data + conta específica
+        if (input.startDate && input.endDate && input.accountId) {
+          const allTrades = await db.getTradesByDateRange(ctx.user.id, input.startDate, input.endDate);
+          return allTrades.filter(t => t.accountId === input.accountId);
+        }
+        // Filtro apenas por data (todas as contas)
         if (input.startDate && input.endDate) {
           return await db.getTradesByDateRange(ctx.user.id, input.startDate, input.endDate);
         }
+        // Filtro apenas por conta (sem data)
         if (input.accountId) {
           return await db.getAccountTrades(input.accountId, input.limit);
         }
+        // Sem filtro (todas as contas, sem data)
         return await db.getUserTrades(ctx.user.id, input.limit);
       }),
 

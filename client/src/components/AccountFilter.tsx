@@ -21,7 +21,7 @@ export function AccountFilter({ value, onChange }: AccountFilterProps) {
         <SelectItem value="all">Todas as contas</SelectItem>
         {accounts?.map((account) => (
           <SelectItem key={account.id} value={account.id.toString()}>
-            {account.terminalId} - {account.broker}
+            {account.accountNumber} - {account.broker}
           </SelectItem>
         ))}
       </SelectContent>
