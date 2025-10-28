@@ -5,22 +5,26 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Sentra Partners"
 #property link      "https://sentrapartners.com"
-#property version   "1.00"
+#property version   "2.00"
 #property strict
 
 //--- Input parameters
 input string ServerURL = "https://sentrapartners.com/api/mt/get-signals";
-input string AccountToken = "";  // Token da conta (obtido no painel web)
+input string LicenseCheckURL = "https://sentrapartners.com/api/ea-license/validate";
+input string AccountToken = "";  // Token da conta Slave
 input int MasterAccountNumber = 0;  // Número da conta Master a copiar
-input double LotMultiplier = 1.0;   // Multiplicador de lote (1.0 = mesmo tamanho)
-input int MaxSlippage = 3;          // Slippage máximo em pontos
-input int CheckInterval = 1;        // Intervalo de verificação em segundos
-input bool EnableLogging = true;    // Habilitar logs detalhados
-input int MagicNumber = 77777;      // Magic number para identificar trades copiados
+input double LotMultiplier = 1.0;  // Multiplicador de lote (1.0 = mesmo tamanho)
+input int MaxSlippage = 3;  // Slippage máximo em pontos
+input int CheckInterval = 1;  // Intervalo de verificação em segundos
+input bool EnableLogging = true;  // Habilitar logs detalhados
+input int MagicNumber = 77777;  // Magic number para identificar trades copiados
 
 //--- Global variables
 datetime lastCheckTime = 0;
-string lastSignalsHash = "";
+datetime lastLicenseCheck = 0;
+bool licenseValid = false;
+string licenseExpiryDate = "";
+int licenseDaysRemaining = 0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -40,11 +44,23 @@ int OnInit()
    }
    
    Print("===========================================");
-   Print("Sentra Partners - Slave EA Iniciado");
+   Print("Sentra Partners - Slave EA v2.0");
    Print("Conta: ", AccountNumber());
    Print("Copiando de: ", MasterAccountNumber);
-   Print("Multiplicador de lote: ", LotMultiplier);
    Print("===========================================");
+   
+   // Verificar licença
+   if(!CheckLicense())
+   {
+      Alert("ERRO: Licença inválida ou expirada!");
+      return(INIT_FAILED);
+   }
+   
+   Print("Licença válida até: ", licenseExpiryDate);
+   Print("Dias restantes: ", licenseDaysRemaining);
+   
+   if(licenseDaysRemaining <= 7)
+      Alert("AVISO: Sua licença expira em ", licenseDaysRemaining, " dias!");
    
    return(INIT_SUCCEEDED);
 }
@@ -54,7 +70,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-   Print("Sentra Partners - Slave EA Encerrado. Razão: ", reason);
+   Print("Sentra Partners - Slave EA Encerrado");
 }
 
 //+------------------------------------------------------------------+
@@ -62,250 +78,184 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+   // Verificar licença a cada 1 hora
+   if(TimeCurrent() - lastLicenseCheck > 3600)
+   {
+      if(!CheckLicense())
+      {
+         Alert("ERRO: Licença expirada! EA será desativado.");
+         ExpertRemove();
+         return;
+      }
+   }
+   
    // Verificar intervalo
    if(TimeCurrent() - lastCheckTime < CheckInterval)
       return;
    
    lastCheckTime = TimeCurrent();
-   
-   // Buscar sinais do servidor
-   CheckAndCopySignals();
+   GetAndCopySignals();
 }
 
 //+------------------------------------------------------------------+
-//| Verificar e copiar sinais do Master                             |
+//| Verificar licença                                                |
 //+------------------------------------------------------------------+
-void CheckAndCopySignals()
+bool CheckLicense()
 {
-   string url = ServerURL + "?accountNumber=" + IntegerToString(AccountNumber()) + 
-                "&accountToken=" + AccountToken +
-                "&masterAccount=" + IntegerToString(MasterAccountNumber);
+   string postData = "{\"accountNumber\":" + IntegerToString(AccountNumber()) + ",\"eaType\":\"slave\"}";
+   
+   string headers = "Content-Type: application/json\r\n";
+   char post[];
+   char result[];
+   string resultHeaders;
+   
+   ArrayResize(post, StringToCharArray(postData, post, 0, WHOLE_ARRAY) - 1);
+   
+   int res = WebRequest("POST", LicenseCheckURL, headers, 10000, post, result, resultHeaders);
+   
+   if(res == -1 || res != 200)
+      return false;
+   
+   string response = CharArrayToString(result);
+   bool valid = StringFind(response, "\"valid\":true") >= 0;
+   
+   if(valid)
+   {
+      // Extrair dias restantes
+      int daysPos = StringFind(response, "\"daysRemaining\":");
+      if(daysPos >= 0)
+      {
+         int start = daysPos + 16;
+         int end = StringFind(response, ",", start);
+         if(end < 0) end = StringFind(response, "}", start);
+         licenseDaysRemaining = StringToInteger(StringSubstr(response, start, end - start));
+      }
+      
+      lastLicenseCheck = TimeCurrent();
+      licenseValid = true;
+   }
+   
+   return valid;
+}
+
+//+------------------------------------------------------------------+
+//| Buscar e copiar sinais                                          |
+//+------------------------------------------------------------------+
+void GetAndCopySignals()
+{
+   if(!licenseValid)
+      return;
+   
+   string url = ServerURL + "?accountNumber=" + IntegerToString(AccountNumber());
+   url += "&accountToken=" + AccountToken;
+   url += "&masterAccount=" + IntegerToString(MasterAccountNumber);
    
    char result[];
-   string headers = "";
    string resultHeaders;
-   int timeout = 5000;
    
-   int res = WebRequest(
-      "GET",
-      url,
-      headers,
-      timeout,
-      NULL,
-      result,
-      resultHeaders
-   );
-   
-   if(res == -1)
-   {
-      int error = GetLastError();
-      if(error == 4060)
-      {
-         Print("ERRO: URL não está na lista de permitidas!");
-         Print("Adicione '", ServerURL, "' nas configurações do MT4/MT5");
-      }
-      else
-      {
-         Print("Erro ao buscar sinais: ", error);
-      }
-      return;
-   }
+   int res = WebRequest("GET", url, "", 5000, result, resultHeaders);
    
    if(res != 200)
-   {
-      Print("Erro HTTP: ", res);
       return;
-   }
    
    string response = CharArrayToString(result);
    
-   // Verificar se houve mudança nos sinais
-   string signalsHash = GetStringHash(response);
-   if(signalsHash == lastSignalsHash)
-      return;
-   
-   lastSignalsHash = signalsHash;
-   
-   if(EnableLogging)
-      Print("Novos sinais recebidos: ", response);
-   
-   // Processar sinais
-   ProcessSignals(response);
-}
-
-//+------------------------------------------------------------------+
-//| Processar sinais recebidos                                      |
-//+------------------------------------------------------------------+
-void ProcessSignals(string jsonResponse)
-{
-   // Parse simples do JSON
-   // Formato esperado: {"trades":[{...},{...}]}
-   
-   int tradesStart = StringFind(jsonResponse, "[");
-   int tradesEnd = StringFind(jsonResponse, "]", tradesStart);
-   
-   if(tradesStart == -1 || tradesEnd == -1)
-   {
-      Print("Formato de resposta inválido");
-      return;
-   }
-   
-   string tradesArray = StringSubstr(jsonResponse, tradesStart + 1, tradesEnd - tradesStart - 1);
-   
-   // Se não há trades, fechar todos os trades copiados
-   if(StringLen(tradesArray) < 10)
+   if(StringFind(response, "\"trades\":[]") >= 0)
    {
       CloseAllCopiedTrades();
       return;
    }
    
-   // Dividir trades individuais
-   string trades[];
-   int count = SplitString(tradesArray, "},", trades);
-   
-   // Processar cada trade
-   for(int i = 0; i < count; i++)
-   {
-      ProcessSingleTrade(trades[i]);
-   }
-   
-   // Fechar trades que não existem mais no Master
-   CloseOrphanTrades(tradesArray);
-}
-
-//+------------------------------------------------------------------+
-//| Processar um trade individual                                   |
-//+------------------------------------------------------------------+
-void ProcessSingleTrade(string tradeJson)
-{
-   // Parse dos campos do trade
-   int masterTicket = GetJsonInt(tradeJson, "ticket");
-   string symbol = GetJsonString(tradeJson, "symbol");
-   int type = GetJsonInt(tradeJson, "type");
-   double lots = GetJsonDouble(tradeJson, "lots") * LotMultiplier;
-   double openPrice = GetJsonDouble(tradeJson, "openPrice");
-   double stopLoss = GetJsonDouble(tradeJson, "stopLoss");
-   double takeProfit = GetJsonDouble(tradeJson, "takeProfit");
-   
    if(EnableLogging)
-      Print("Processando trade: ", symbol, " ", lots, " lotes");
+      Print("Sinais recebidos");
    
-   // Verificar se já existe um trade copiado
-   int existingTicket = FindCopiedTrade(masterTicket);
-   
-   if(existingTicket > 0)
-   {
-      // Atualizar SL/TP se necessário
-      UpdateTrade(existingTicket, stopLoss, takeProfit);
-   }
-   else
-   {
-      // Abrir novo trade
-      OpenCopiedTrade(masterTicket, symbol, type, lots, stopLoss, takeProfit);
-   }
+   ProcessSignals(response);
 }
 
 //+------------------------------------------------------------------+
-//| Abrir trade copiado                                             |
+//| Processar sinais                                                 |
 //+------------------------------------------------------------------+
-void OpenCopiedTrade(int masterTicket, string symbol, int type, double lots, double sl, double tp)
+void ProcessSignals(string json)
 {
-   double price;
-   color arrowColor;
+   int pos = 0;
    
-   // Normalizar lotes
-   double minLot = MarketInfo(symbol, MODE_MINLOT);
-   double maxLot = MarketInfo(symbol, MODE_MAXLOT);
-   double lotStep = MarketInfo(symbol, MODE_LOTSTEP);
-   
-   lots = MathMax(minLot, MathMin(maxLot, lots));
-   lots = NormalizeDouble(lots / lotStep, 0) * lotStep;
-   
-   if(type == OP_BUY || type == OP_BUYLIMIT || type == OP_BUYSTOP)
+   while(true)
    {
-      price = MarketInfo(symbol, MODE_ASK);
-      arrowColor = clrBlue;
+      pos = StringFind(json, "{\"ticket\":", pos);
+      if(pos < 0) break;
+      
+      int endPos = StringFind(json, "}", pos);
+      if(endPos < 0) break;
+      
+      string tradeJson = StringSubstr(json, pos, endPos - pos + 1);
+      
+      int ticket = ExtractInt(tradeJson, "\"ticket\":");
+      string symbol = ExtractString(tradeJson, "\"symbol\":\"");
+      int type = ExtractInt(tradeJson, "\"type\":");
+      double lots = ExtractDouble(tradeJson, "\"lots\":");
+      double sl = ExtractDouble(tradeJson, "\"stopLoss\":");
+      double tp = ExtractDouble(tradeJson, "\"takeProfit\":");
+      
+      lots = NormalizeDouble(lots * LotMultiplier, 2);
+      
+      int existing = FindCopiedTrade(ticket);
+      
+      if(existing > 0)
+         UpdateTrade(existing, sl, tp);
+      else
+         CopyTrade(ticket, symbol, type, lots, sl, tp);
+      
+      pos = endPos + 1;
    }
-   else
-   {
-      price = MarketInfo(symbol, MODE_BID);
-      arrowColor = clrRed;
-   }
+   
+   CloseOrphanTrades(json);
+}
+
+//+------------------------------------------------------------------+
+//| Copiar trade                                                     |
+//+------------------------------------------------------------------+
+void CopyTrade(int masterTicket, string symbol, int type, double lots, double sl, double tp)
+{
+   if(lots < MarketInfo(symbol, MODE_MINLOT))
+      lots = MarketInfo(symbol, MODE_MINLOT);
+   
+   double price = (type == OP_BUY) ? MarketInfo(symbol, MODE_ASK) : MarketInfo(symbol, MODE_BID);
    
    string comment = "Copy:" + IntegerToString(masterTicket);
    
-   int ticket = OrderSend(
-      symbol,
-      type,
-      lots,
-      price,
-      MaxSlippage,
-      sl,
-      tp,
-      comment,
-      MagicNumber,
-      0,
-      arrowColor
-   );
+   int ticket = OrderSend(symbol, type, lots, price, MaxSlippage, sl, tp, comment, MagicNumber, 0, clrGreen);
    
-   if(ticket > 0)
-   {
-      Print("Trade copiado com sucesso! Ticket: ", ticket, " (Master: ", masterTicket, ")");
-   }
-   else
-   {
-      Print("Erro ao copiar trade: ", GetLastError());
-   }
+   if(ticket > 0 && EnableLogging)
+      Print("Trade copiado! Ticket: ", ticket);
 }
 
 //+------------------------------------------------------------------+
-//| Atualizar SL/TP de trade existente                              |
+//| Atualizar trade                                                  |
 //+------------------------------------------------------------------+
 void UpdateTrade(int ticket, double newSL, double newTP)
 {
    if(!OrderSelect(ticket, SELECT_BY_TICKET))
       return;
    
-   double currentSL = OrderStopLoss();
-   double currentTP = OrderTakeProfit();
-   
-   // Verificar se precisa atualizar
-   if(MathAbs(currentSL - newSL) < 0.00001 && MathAbs(currentTP - newTP) < 0.00001)
+   if(MathAbs(OrderStopLoss() - newSL) < 0.00001 && MathAbs(OrderTakeProfit() - newTP) < 0.00001)
       return;
    
-   bool result = OrderModify(
-      ticket,
-      OrderOpenPrice(),
-      newSL,
-      newTP,
-      0,
-      clrNONE
-   );
-   
-   if(result)
-   {
-      if(EnableLogging)
-         Print("Trade ", ticket, " atualizado: SL=", newSL, " TP=", newTP);
-   }
-   else
-   {
-      Print("Erro ao atualizar trade ", ticket, ": ", GetLastError());
-   }
+   OrderModify(ticket, OrderOpenPrice(), newSL, newTP, 0, clrBlue);
 }
 
 //+------------------------------------------------------------------+
-//| Encontrar trade copiado pelo ticket do Master                   |
+//| Encontrar trade copiado                                         |
 //+------------------------------------------------------------------+
 int FindCopiedTrade(int masterTicket)
 {
-   string searchComment = "Copy:" + IntegerToString(masterTicket);
+   string search = "Copy:" + IntegerToString(masterTicket);
    
    for(int i = 0; i < OrdersTotal(); i++)
    {
       if(!OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
          continue;
       
-      if(OrderMagicNumber() == MagicNumber && StringFind(OrderComment(), searchComment) >= 0)
+      if(OrderMagicNumber() == MagicNumber && StringFind(OrderComment(), search) >= 0)
          return OrderTicket();
    }
    
@@ -313,9 +263,9 @@ int FindCopiedTrade(int masterTicket)
 }
 
 //+------------------------------------------------------------------+
-//| Fechar trades órfãos (que não existem mais no Master)           |
+//| Fechar trades órfãos                                            |
 //+------------------------------------------------------------------+
-void CloseOrphanTrades(string activeTradesJson)
+void CloseOrphanTrades(string masterJson)
 {
    for(int i = OrdersTotal() - 1; i >= 0; i--)
    {
@@ -325,22 +275,14 @@ void CloseOrphanTrades(string activeTradesJson)
       if(OrderMagicNumber() != MagicNumber)
          continue;
       
-      // Extrair ticket do Master do comentário
       string comment = OrderComment();
-      int pos = StringFind(comment, "Copy:");
-      if(pos < 0)
-         continue;
+      int copyPos = StringFind(comment, "Copy:");
+      if(copyPos < 0) continue;
       
-      string masterTicketStr = StringSubstr(comment, pos + 5);
-      int masterTicket = StringToInteger(masterTicketStr);
+      int masterTicket = StringToInteger(StringSubstr(comment, copyPos + 5));
       
-      // Verificar se este ticket ainda existe nos sinais
-      string searchStr = "\"ticket\":" + IntegerToString(masterTicket);
-      if(StringFind(activeTradesJson, searchStr) < 0)
-      {
-         // Trade não existe mais no Master, fechar
+      if(StringFind(masterJson, "\"ticket\":" + IntegerToString(masterTicket)) < 0)
          CloseTrade(OrderTicket());
-      }
    }
 }
 
@@ -360,122 +302,54 @@ void CloseAllCopiedTrades()
 }
 
 //+------------------------------------------------------------------+
-//| Fechar um trade                                                  |
+//| Fechar trade                                                     |
 //+------------------------------------------------------------------+
 void CloseTrade(int ticket)
 {
    if(!OrderSelect(ticket, SELECT_BY_TICKET))
       return;
    
-   double closePrice;
-   color arrowColor;
+   double price = (OrderType() == OP_BUY) ? MarketInfo(OrderSymbol(), MODE_BID) : MarketInfo(OrderSymbol(), MODE_ASK);
    
-   if(OrderType() == OP_BUY)
-   {
-      closePrice = MarketInfo(OrderSymbol(), MODE_BID);
-      arrowColor = clrRed;
-   }
-   else
-   {
-      closePrice = MarketInfo(OrderSymbol(), MODE_ASK);
-      arrowColor = clrBlue;
-   }
-   
-   bool result = OrderClose(ticket, OrderLots(), closePrice, MaxSlippage, arrowColor);
-   
-   if(result)
-   {
-      Print("Trade ", ticket, " fechado (não existe mais no Master)");
-   }
-   else
-   {
-      Print("Erro ao fechar trade ", ticket, ": ", GetLastError());
-   }
+   OrderClose(ticket, OrderLots(), price, MaxSlippage, clrRed);
 }
 
 //+------------------------------------------------------------------+
-//| Funções auxiliares para parse de JSON                           |
+//| Funções auxiliares                                               |
 //+------------------------------------------------------------------+
-int GetJsonInt(string json, string key)
+int ExtractInt(string json, string key)
 {
-   string searchKey = "\"" + key + "\":";
-   int pos = StringFind(json, searchKey);
+   int pos = StringFind(json, key);
    if(pos < 0) return 0;
    
-   int start = pos + StringLen(searchKey);
+   int start = pos + StringLen(key);
    int end = StringFind(json, ",", start);
    if(end < 0) end = StringFind(json, "}", start);
    
-   string value = StringSubstr(json, start, end - start);
-   return StringToInteger(value);
+   return StringToInteger(StringSubstr(json, start, end - start));
 }
 
-double GetJsonDouble(string json, string key)
+double ExtractDouble(string json, string key)
 {
-   string searchKey = "\"" + key + "\":";
-   int pos = StringFind(json, searchKey);
-   if(pos < 0) return 0.0;
+   int pos = StringFind(json, key);
+   if(pos < 0) return 0;
    
-   int start = pos + StringLen(searchKey);
+   int start = pos + StringLen(key);
    int end = StringFind(json, ",", start);
    if(end < 0) end = StringFind(json, "}", start);
    
-   string value = StringSubstr(json, start, end - start);
-   return StringToDouble(value);
+   return StringToDouble(StringSubstr(json, start, end - start));
 }
 
-string GetJsonString(string json, string key)
+string ExtractString(string json, string key)
 {
-   string searchKey = "\"" + key + "\":\"";
-   int pos = StringFind(json, searchKey);
+   int pos = StringFind(json, key);
    if(pos < 0) return "";
    
-   int start = pos + StringLen(searchKey);
+   int start = pos + StringLen(key);
    int end = StringFind(json, "\"", start);
    
    return StringSubstr(json, start, end - start);
-}
-
-int SplitString(string str, string separator, string &result[])
-{
-   int count = 0;
-   int pos = 0;
-   int sepLen = StringLen(separator);
-   
-   while(pos < StringLen(str))
-   {
-      int nextPos = StringFind(str, separator, pos);
-      if(nextPos < 0)
-      {
-         ArrayResize(result, count + 1);
-         result[count] = StringSubstr(str, pos);
-         count++;
-         break;
-      }
-      
-      ArrayResize(result, count + 1);
-      result[count] = StringSubstr(str, pos, nextPos - pos);
-      count++;
-      pos = nextPos + sepLen;
-   }
-   
-   return count;
-}
-
-string GetStringHash(string str)
-{
-   // Hash simples baseado no comprimento e alguns caracteres
-   int len = StringLen(str);
-   int hash = len;
-   
-   if(len > 10)
-   {
-      hash += StringGetChar(str, 0) * 1000;
-      hash += StringGetChar(str, len / 2) * 100;
-      hash += StringGetChar(str, len - 1) * 10;
-   }
-   
-   return IntegerToString(hash);
 }
 //+------------------------------------------------------------------+
 

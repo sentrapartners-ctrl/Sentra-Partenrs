@@ -684,3 +684,55 @@ export const clientTransferHistory = mysqlTable("client_transfer_history", {
 export type ClientTransferHistory = typeof clientTransferHistory.$inferSelect;
 export type InsertClientTransferHistory = typeof clientTransferHistory.$inferInsert;
 
+
+
+/**
+ * EA Licenses - Manages licenses for Expert Advisors
+ */
+export const eaLicenses = mysqlTable("ea_licenses", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // Usuário dono da licença
+  accountNumber: varchar("accountNumber", { length: 64 }).notNull(), // Número da conta MT4/MT5
+  eaType: mysqlEnum("eaType", ["master", "slave", "both"]).default("both").notNull(), // Tipo de EA permitido
+  expiryDate: timestamp("expiryDate").notNull(), // Data de expiração
+  isActive: boolean("isActive").default(true).notNull(), // Licença ativa
+  maxSlaves: int("maxSlaves").default(0), // Número máximo de slaves (0 = ilimitado)
+  notes: text("notes"), // Notas administrativas
+  createdBy: int("createdBy"), // Admin que criou a licença
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastUsedAt: timestamp("lastUsedAt"), // Última vez que a licença foi validada
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  accountNumberIdx: index("accountNumber_idx").on(table.accountNumber),
+  expiryDateIdx: index("expiryDate_idx").on(table.expiryDate),
+  isActiveIdx: index("isActive_idx").on(table.isActive),
+  // Unique constraint: uma licença por conta
+  accountNumberUnique: index("accountNumber_unique").on(table.accountNumber),
+}));
+
+export type EALicense = typeof eaLicenses.$inferSelect;
+export type InsertEALicense = typeof eaLicenses.$inferInsert;
+
+/**
+ * EA License Usage Log - Tracks EA license validation attempts
+ */
+export const eaLicenseUsageLogs = mysqlTable("ea_license_usage_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  licenseId: int("licenseId").notNull(),
+  accountNumber: varchar("accountNumber", { length: 64 }).notNull(),
+  eaType: mysqlEnum("eaType", ["master", "slave"]).notNull(),
+  validationResult: mysqlEnum("validationResult", ["success", "expired", "invalid", "inactive"]).notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }), // IPv4 ou IPv6
+  terminalInfo: text("terminalInfo"), // Informações do terminal MT4/MT5
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  licenseIdIdx: index("licenseId_idx").on(table.licenseId),
+  accountNumberIdx: index("accountNumber_idx").on(table.accountNumber),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+  validationResultIdx: index("validationResult_idx").on(table.validationResult),
+}));
+
+export type EALicenseUsageLog = typeof eaLicenseUsageLogs.$inferSelect;
+export type InsertEALicenseUsageLog = typeof eaLicenseUsageLogs.$inferInsert;
+

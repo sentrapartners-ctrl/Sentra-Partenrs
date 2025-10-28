@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import mtApiRouter from "../mt-api";
 import newsApiRouter from "../news-api";
+import eaLicenseRouter from "../routes/ea-license";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
 
@@ -46,6 +47,8 @@ async function startServer() {
   app.use("/api/mt", mtApiRouter);
   // News API endpoints (public)
   app.use("/api", newsApiRouter);
+  // EA License validation endpoints
+  app.use("/api/ea-license", eaLicenseRouter);
   // Wallet authentication endpoints
 
   // tRPC API
