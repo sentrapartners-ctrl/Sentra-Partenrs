@@ -37,6 +37,7 @@ export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d");
   const [selectedAccount, setSelectedAccount] = useState<number | "all">("all");
+  const periodDates = getPeriodDates(period);
 
   // Aplica conversão baseada em isCentAccount
   const getActualProfit = (trade: any) => {
