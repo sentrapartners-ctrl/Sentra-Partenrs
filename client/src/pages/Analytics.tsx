@@ -53,8 +53,6 @@ export default function Analytics() {
     { 
       limit: 1000,
       accountId: selectedAccount === "all" ? undefined : selectedAccount,
-      startDate: periodDates.start,
-      endDate: periodDates.end,
     },
     { enabled: isAuthenticated }
   );
@@ -100,11 +98,15 @@ export default function Analytics() {
     { enabled: isAuthenticated && selectedAccount !== "all" }
   );
 
-  // Trades já vêm filtrados por período da query
+  // Filtrar trades por período
   const trades = useMemo(() => {
     if (!allTrades) return [];
-    return allTrades.filter((trade) => !!trade.closeTime);
-  }, [allTrades]);
+    return allTrades.filter((trade) => {
+      if (!trade.closeTime) return false;
+      const tradeDate = new Date(trade.closeTime);
+      return tradeDate >= periodDates.start && tradeDate <= periodDates.end;
+    });
+  }, [allTrades, periodDates]);
 
   // Calcula estatísticas localmente
   const analytics = useMemo(() => {
