@@ -134,10 +134,12 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       .set({
         balance: Math.round(balance * divisor),
         equity: Math.round(equity * divisor),
-        margin: margin ? Math.round(margin * divisor) : null,
-        freeMargin: free_margin ? Math.round(free_margin * divisor) : null,
-        marginLevel: margin_level || null,
-        lastUpdate: new Date(),
+        marginUsed: margin ? Math.round(margin * divisor) : 0,
+        marginFree: free_margin ? Math.round(free_margin * divisor) : 0,
+        marginLevel: margin_level ? Math.round(margin_level * 100) : 0,
+        openPositions: open_positions || 0,
+        lastHeartbeat: new Date(),
+        status: "connected" as const,
       })
       .where(eq(tradingAccounts.id, account.id));
 
