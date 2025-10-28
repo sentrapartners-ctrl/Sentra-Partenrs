@@ -18,7 +18,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export function AdminSupport() {
+function AdminSupport() {
   const [selectedTicket, setSelectedTicket] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -309,4 +309,6 @@ export function AdminSupport() {
     </div>
   );
 }
+
+export default AdminSupport;
 
