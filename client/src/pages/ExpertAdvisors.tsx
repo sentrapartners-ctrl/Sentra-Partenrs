@@ -137,7 +137,7 @@ export default function ExpertAdvisors() {
       userId: formUserId ? parseInt(formUserId) : undefined,
       accountNumber: formAccountNumber,
       eaType: formEAType,
-      expiresAt: new Date(formExpiresAt),
+      expiryDate: new Date(formExpiresAt).toISOString(),
       maxSlaves: formMaxSlaves,
       notes: formNotes || undefined,
     });
