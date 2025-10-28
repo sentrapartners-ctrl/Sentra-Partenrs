@@ -10,7 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import mtApiRouter from "../mt-api";
 import newsApiRouter from "../news-api";
-import walletAuthRouter from "../routes/wallet-auth";
+
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -47,7 +47,7 @@ async function startServer() {
   // News API endpoints (public)
   app.use("/api", newsApiRouter);
   // Wallet authentication endpoints
-  app.use("/api/auth", walletAuthRouter);
+
   // tRPC API
   app.use(
     "/api/trpc",
