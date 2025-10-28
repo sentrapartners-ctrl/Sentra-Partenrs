@@ -92,6 +92,7 @@ router.post("/trade", async (req: Request, res: Response) => {
 
     await createOrUpdateTrade({
       accountId: account.id,
+      userId: account.userId,
       ticket: tradeTicket ? tradeTicket.toString() : undefined,
       symbol: symbol || "UNKNOWN",
       type: tradeType,
