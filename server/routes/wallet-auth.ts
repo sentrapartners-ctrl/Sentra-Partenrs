@@ -1,8 +1,5 @@
 import { Router } from "express";
 import { ethers } from "ethers";
-import { getDb } from "../db";
-import { users, walletSessions } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -21,7 +18,8 @@ function verifySignature(message: string, signature: string, expectedAddress: st
 
 /**
  * POST /api/auth/wallet-login
- * Login via wallet Web3 (MetaMask)
+ * Login via wallet Web3 (MetaMask/Uniswap Wallet)
+ * VERSÃO SIMPLIFICADA SEM BANCO DE DADOS
  */
 router.post("/wallet-login", async (req, res) => {
   try {
@@ -38,113 +36,38 @@ router.post("/wallet-login", async (req, res) => {
     console.log("[Wallet Login] Verificando assinatura...");
     const isValid = verifySignature(message, signature, walletAddress);
     console.log("[Wallet Login] Assinatura válida:", isValid);
+    
     if (!isValid) {
       return res.status(401).json({
         message: "Assinatura inválida",
       });
     }
 
-    console.log("[Wallet Login] Obtendo conexão com banco de dados...");
-    const db = await getDb();
-    console.log("[Wallet Login] Conexão obtida");
-    
-    if (!db) {
-      throw new Error("Banco de dados não disponível");
-    }
-
-    // Buscar usuário pelo endereço da wallet
-    console.log("[Wallet Login] Buscando usuário com endereço:", walletAddress.toLowerCase());
-    let user = await db
-      .select()
-      .from(users)
-      .where(eq(users.walletAddress, walletAddress.toLowerCase()))
-      .limit(1);
-
-    // Se não existir, criar novo usuário
-    if (user.length === 0) {
-      console.log("[Wallet Login] Criando novo usuário...");
-      
-      const newUser = {
-        walletAddress: walletAddress.toLowerCase(),
-        authMethod: "wallet" as const,
-        role: "client" as const,
-        name: `User ${walletAddress.slice(0, 6)}...`,
-        isActive: true,
-      };
-
-      await db.insert(users).values(newUser);
-      
-      // Buscar o usuário recém-criado pelo endereço da wallet
-      user = await db
-        .select()
-        .from(users)
-        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
-        .limit(1);
-      
-      if (user.length === 0) {
-        throw new Error("Falha ao criar usuário");
-      }
-      
-      const insertId = user[0].id;
-      console.log("[Wallet Login] Usuário criado com ID:", insertId);
-
-      // Atribuir gerente automaticamente (round-robin)
-      const managers = await db
-        .select()
-        .from(users)
-        .where(eq(users.role, "manager"));
-
-      if (managers.length > 0) {
-        // Contar clientes de cada gerente para distribuir igualmente
-        const clientCounts = await Promise.all(
-          managers.map(async (manager) => {
-            const count = await db
-              .select()
-              .from(users)
-              .where(eq(users.managerId, manager.id));
-            return { managerId: manager.id, count: count.length };
-          })
-        );
-
-        // Encontrar gerente com menos clientes
-        const managerWithLeastClients = clientCounts.reduce((prev, current) =>
-          prev.count < current.count ? prev : current
-        );
-
-        // Atribuir gerente
-        await db
-          .update(users)
-          .set({ managerId: managerWithLeastClients.managerId })
-          .where(eq(users.id, insertId));
-
-        console.log(
-          `✅ Cliente ${insertId} atribuído ao gerente ${managerWithLeastClients.managerId}`
-        );
-      }
-    }
-
-    // Criar sessão de wallet
-    await db.insert(walletSessions).values({
+    // Criar usuário temporário na sessão (sem banco de dados)
+    const tempUser = {
+      id: Date.now(), // ID temporário baseado em timestamp
+      name: `User ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
       walletAddress: walletAddress.toLowerCase(),
-      nonce: message, // A mensagem assinada serve como nonce
-      signature,
-      isVerified: true, // Já verificamos a assinatura acima
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
-    });
+      role: "client" as const,
+      authMethod: "wallet" as const,
+    };
 
     // Criar sessão no Express
     if (req.session) {
-      req.session.userId = user[0].id;
+      req.session.userId = tempUser.id;
+      // Armazenar dados do usuário na sessão
+      (req.session as any).user = tempUser;
       req.session.save();
+      console.log("[Wallet Login] Sessão criada para usuário:", tempUser.id);
     }
 
     res.json({
       message: "Login realizado com sucesso",
       user: {
-        id: user[0].id,
-        name: user[0].name,
-        walletAddress: user[0].walletAddress,
-        role: user[0].role,
+        id: tempUser.id,
+        name: tempUser.name,
+        walletAddress: tempUser.walletAddress,
+        role: tempUser.role,
       },
     });
   } catch (error: any) {
