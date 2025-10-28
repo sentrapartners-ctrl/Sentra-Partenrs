@@ -162,6 +162,76 @@ export const appRouter = router({
         }
         return await db.getAccountTransactions(input.accountId);
       }),
+
+    performance: protectedProcedure
+      .input(z.object({ accountId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const accounts = await db.getUserAccounts(ctx.user.id);
+        const account = accounts.find(a => a.id === input.accountId);
+        if (!account || account.userId !== ctx.user.id) {
+          throw new Error("Account not found or unauthorized");
+        }
+
+        // Buscar trades da conta
+        const trades = await db.getAccountTrades(input.accountId, 1000);
+        const closedTrades = trades.filter(t => t.closeTime);
+
+        // Calcular métricas
+        const winningTrades = closedTrades.filter(t => (t.profit || 0) > 0);
+        const losingTrades = closedTrades.filter(t => (t.profit || 0) < 0);
+        const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
+        const avgProfit = winningTrades.length > 0 ? winningTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / winningTrades.length : 0;
+        const avgLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / losingTrades.length : 0;
+        const totalProfit = closedTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+
+        // Calcular rendimento mensal (últimos 6 meses)
+        const now = new Date();
+        const monthlyReturns = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+          const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+          
+          const monthTrades = closedTrades.filter(t => {
+            const closeTime = new Date(t.closeTime!);
+            return closeTime >= monthStart && closeTime <= monthEnd;
+          });
+
+          const monthProfit = monthTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+          const monthReturn = account.balance ? (monthProfit / account.balance) * 100 : 0;
+
+          monthlyReturns.push({
+            month: monthDate.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+            return: Number(monthReturn.toFixed(2)),
+            profit: Number(monthProfit.toFixed(2)),
+          });
+        }
+
+        // Trades recentes (últimos 5)
+        const recentTrades = closedTrades.slice(0, 5).map(t => ({
+          id: t.id,
+          symbol: t.symbol,
+          type: t.type,
+          profit: t.profit || 0,
+          pips: t.pips || 0,
+          closeTime: t.closeTime,
+        }));
+
+        const totalReturn = monthlyReturns.reduce((sum, m) => sum + m.return, 0);
+
+        return {
+          winRate: Number(winRate.toFixed(2)),
+          avgProfit: Number(avgProfit.toFixed(2)),
+          avgLoss: Number(avgLoss.toFixed(2)),
+          totalProfit: Number(totalProfit.toFixed(2)),
+          totalReturn: Number(totalReturn.toFixed(2)),
+          monthlyReturns,
+          recentTrades,
+          totalTrades: closedTrades.length,
+          winningTrades: winningTrades.length,
+          losingTrades: losingTrades.length,
+        };
+      }),
   }),
 
   // ===== TRADES =====

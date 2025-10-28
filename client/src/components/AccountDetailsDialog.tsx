@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
 import { TrendingUp, TrendingDown, Activity, BarChart3, DollarSign, Percent } from "lucide-react";
+import { useQuery } from "@/lib/trpc";
 
 interface AccountDetailsDialogProps {
   account: any;
@@ -12,45 +13,34 @@ interface AccountDetailsDialogProps {
 }
 
 export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDetailsDialogProps) {
+  // Buscar dados de performance reais
+  const { data: performance, isLoading } = useQuery(
+    ["accounts.performance", { accountId: account?.id }],
+    {
+      enabled: !!account?.id && open,
+    }
+  );
+
   if (!account) return null;
 
-  // Calcular métricas
+  // Calcular métricas básicas
   const balance = (account.balance || 0) / (account.isCentAccount ? 10000 : 100);
   const equity = (account.equity || 0) / (account.isCentAccount ? 10000 : 100);
   const marginFree = (account.marginFree || 0) / (account.isCentAccount ? 10000 : 100);
   const drawdownPercent = account.balance ? ((equity - balance) / balance * 100) : 0;
 
-  // Dados simulados de rendimento mensal (últimos 6 meses)
-  // TODO: Buscar dados reais do backend
-  const monthlyReturns = [
-    { month: "Mai", return: 5.2, profit: 520 },
-    { month: "Jun", return: -2.1, profit: -210 },
-    { month: "Jul", return: 8.5, profit: 850 },
-    { month: "Ago", return: 3.7, profit: 370 },
-    { month: "Set", return: 6.1, profit: 610 },
-    { month: "Out", return: 4.3, profit: 430 },
-  ];
-
-  const totalReturn = monthlyReturns.reduce((acc, m) => acc + m.return, 0);
-  const totalProfit = monthlyReturns.reduce((acc, m) => acc + m.profit, 0);
-
-  // Dados simulados de trades recentes
-  // TODO: Buscar dados reais do backend
-  const recentTrades = [
-    { id: 1, symbol: "EURUSD", type: "BUY", profit: 125.50, pips: 45, closeTime: "2024-10-27 14:30" },
-    { id: 2, symbol: "GBPUSD", type: "SELL", profit: -85.20, pips: -32, closeTime: "2024-10-27 13:15" },
-    { id: 3, symbol: "USDJPY", type: "BUY", profit: 210.75, pips: 68, closeTime: "2024-10-27 11:45" },
-    { id: 4, symbol: "AUDUSD", type: "SELL", profit: 95.30, pips: 28, closeTime: "2024-10-27 10:20" },
-    { id: 5, symbol: "EURJPY", type: "BUY", profit: -45.60, pips: -15, closeTime: "2024-10-27 09:10" },
-  ];
-
-  const winRate = 60; // TODO: Calcular win rate real
-  const avgProfit = 150.25; // TODO: Calcular lucro médio real
-  const avgLoss = -65.40; // TODO: Calcular perda média real
+  // Usar dados reais ou valores padrão
+  const monthlyReturns = performance?.monthlyReturns || [];
+  const recentTrades = performance?.recentTrades || [];
+  const totalReturn = performance?.totalReturn || 0;
+  const totalProfit = performance?.totalProfit || 0;
+  const winRate = performance?.winRate || 0;
+  const avgProfit = performance?.avgProfit || 0;
+  const avgLoss = performance?.avgLoss || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] w-[1400px] max-h-[98vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -140,8 +130,8 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-500">
-                    {winRate}%
+                  <div className="text-2xl font-bold text-blue-500">
+                    {winRate.toFixed(0)}%
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Últimos 30 dias
@@ -153,177 +143,209 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
             {/* Informações da Conta */}
             <Card>
               <CardHeader>
-                <CardTitle>Informações da Conta</CardTitle>
+                <CardTitle className="text-lg">Informações da Conta</CardTitle>
               </CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Broker:</span>
-                    <span className="text-sm font-medium">{account.broker || "N/A"}</span>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Broker:</p>
+                    <p className="font-medium">{account.broker || "Não definido"}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Servidor:</span>
-                    <span className="text-sm font-medium">{account.server || "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Alavancagem:</span>
-                    <span className="text-sm font-medium">1:{account.leverage || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Tipo de Conta:</span>
-                    <span className="text-sm font-medium">{account.isCentAccount ? "Cent" : "Standard"}</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Margem Livre:</span>
-                    <span className="text-sm font-medium">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Margem Livre:</p>
+                    <p className="font-medium">
                       <InlineCurrencyValue value={marginFree} />
-                    </span>
+                    </p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Margem Usada:</span>
-                    <span className="text-sm font-medium">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Margem Usada:</p>
+                    <p className="font-medium">
                       <InlineCurrencyValue value={(account.marginUsed || 0) / (account.isCentAccount ? 10000 : 100)} />
-                    </span>
+                    </p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Posições Abertas:</span>
-                    <span className="text-sm font-medium">{account.openPositions || 0}</span>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Servidor:</p>
+                    <p className="font-medium">{account.server || "Não definido"}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Terminal ID:</span>
-                    <span className="text-sm font-medium font-mono">{account.terminalId}</span>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Alavancagem:</p>
+                    <p className="font-medium">1:{account.leverage || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Posições Abertas:</p>
+                    <p className="font-medium">{account.openPositions || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tipo de Conta:</p>
+                    <p className="font-medium">{account.accountType}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Terminal ID:</p>
+                    <p className="font-medium text-xs">{account.terminalId || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Classificação:</p>
+                    <p className="font-medium">{account.classification || "Não definida"}</p>
                   </div>
                 </div>
+                {account.lastUpdate && (
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Última atualização: {new Date(account.lastUpdate).toLocaleString('pt-BR')}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Tab: Performance */}
           <TabsContent value="performance" className="space-y-4">
-            {/* Resumo de Performance */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Retorno Total (6 meses)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <InlineCurrencyValue value={totalProfit} />
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Lucro Médio
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-500">
-                    <InlineCurrencyValue value={avgProfit} />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Por trade vencedor
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Perda Média
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-500">
-                    <InlineCurrencyValue value={avgLoss} />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Por trade perdedor
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Gráfico de Rendimento Mensal */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Rendimento Mensal
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {monthlyReturns.map((month, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{month.month}</span>
-                        <div className="flex items-center gap-4">
-                          <span className={month.return >= 0 ? 'text-green-500' : 'text-red-500'}>
-                            {month.return >= 0 ? '+' : ''}{month.return.toFixed(2)}%
-                          </span>
-                          <span className={`font-medium ${month.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            <InlineCurrencyValue value={month.profit} />
-                          </span>
-                        </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <>
+                {/* Métricas de Performance */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Retorno Total (6 meses)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-3xl font-bold ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${month.return >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                          style={{ width: `${Math.min(Math.abs(month.return) * 10, 100)}%` }}
-                        />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        <InlineCurrencyValue value={totalProfit} /> • {performance?.totalTrades || 0} trades
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Lucro Médio
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-green-500">
+                        +<InlineCurrencyValue value={avgProfit} />
                       </div>
-                    </div>
-                  ))}
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Por trade vencedor
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Perda Média
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-red-500">
+                        <InlineCurrencyValue value={avgLoss} />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Por trade perdedor
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Rendimento Mensal */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Rendimento Mensal
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {monthlyReturns.length > 0 ? (
+                      <div className="space-y-3">
+                        {monthlyReturns.map((month: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1">
+                              <span className="text-sm font-medium w-12">{month.month}</span>
+                              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                                <div
+                                  className={`h-full ${month.return >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                                  style={{ width: `${Math.min(Math.abs(month.return) * 10, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="text-right ml-4">
+                              <p className={`text-sm font-medium ${month.return >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {month.return >= 0 ? '+' : ''}{month.return}%
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                +<InlineCurrencyValue value={month.profit} />
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-8">
+                        Nenhum dado de rendimento disponível
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
 
           {/* Tab: Trades Recentes */}
           <TabsContent value="trades" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Últimos 5 Trades</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {recentTrades.map((trade) => (
-                    <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${trade.profit >= 0 ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <div>
-                          <div className="font-medium">{trade.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{trade.closeTime}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant={trade.type === "BUY" ? "default" : "secondary"}>
-                          {trade.type}
-                        </Badge>
-                        <div className="text-right">
-                          <div className={`font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            <InlineCurrencyValue value={trade.profit} />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Últimos 5 Trades</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {recentTrades.length > 0 ? (
+                    <div className="space-y-3">
+                      {recentTrades.map((trade: any) => (
+                        <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <Badge className={trade.type === "BUY" ? "bg-green-500" : "bg-red-500"}>
+                              {trade.type}
+                            </Badge>
+                            <div>
+                              <p className="font-medium">{trade.symbol}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(trade.closeTime).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {trade.pips >= 0 ? '+' : ''}{trade.pips} pips
+                          <div className="text-right">
+                            <p className={`font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={trade.profit} />
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {trade.pips >= 0 ? '+' : ''}{trade.pips} pips
+                            </p>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhum trade recente disponível
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
