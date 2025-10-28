@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { getDb } from "./db";
 import * as db from "./db";
-import { subscriptionPlans, eaProducts, vpsProducts, clientTransferHistory, users } from "../drizzle/schema";
+import { subscriptionPlans, eaProducts, vpsProducts, clientTransferHistory, users, supportTickets, supportMessages } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -18,6 +18,39 @@ const adminProcedure = protectedProcedure.use(async (opts) => {
 });
 
 export const adminRouter = router({
+  // ===== SUPPORT MANAGEMENT =====
+  getAllTickets: adminProcedure.query(async () => {
+    const database = getDb();
+    return await database.select().from(supportTickets).orderBy(supportTickets.createdAt);
+  }),
+
+  updateTicketStatus: adminProcedure
+    .input(z.object({
+      ticketId: z.number(),
+      status: z.enum(['open', 'in_progress', 'waiting_user', 'waiting_support', 'resolved', 'closed']),
+    }))
+    .mutation(async ({ input }) => {
+      const database = getDb();
+      await database.update(supportTickets)
+        .set({ status: input.status })
+        .where(eq(supportTickets.id, input.ticketId));
+      return { success: true };
+    }),
+
+  assignTicket: adminProcedure
+    .input(z.object({
+      ticketId: z.number(),
+      adminId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      const database = getDb();
+      await database.update(supportTickets)
+        .set({ assignedTo: input.adminId })
+        .where(eq(supportTickets.id, input.ticketId));
+      return { success: true };
+    }),
+
+
   // ===== USER MANAGEMENT =====
   listUsers: adminProcedure.query(async () => {
     return await db.getAllUsers();

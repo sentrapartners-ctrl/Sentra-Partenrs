@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Paperclip, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -13,6 +13,8 @@ export function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: tickets } = trpc.support.myTickets.useQuery(undefined, {
@@ -41,28 +43,41 @@ export function SupportChat() {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() && selectedFiles.length === 0) return;
 
     try {
+      // Upload de arquivos
+      let attachmentUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        const { uploadFiles } = await import('../lib/uploadFile');
+        attachmentUrls = await uploadFiles(selectedFiles);
+      }
+
+      const messageText = message.trim() || (selectedFiles.length > 0 ? '📎 Arquivo(s) enviado(s)' : '');
+
       if (!activeTicket) {
         // Criar novo ticket
         const result = await createTicketMutation.mutateAsync({
           subject: "Suporte",
-          message: message.trim(),
+          message: messageText,
+          attachments: attachmentUrls.length > 0 ? JSON.stringify(attachmentUrls) : undefined,
         });
         toast.success("Conversa iniciada!");
       } else {
         // Enviar mensagem no ticket existente
         await sendMessageMutation.mutateAsync({
           ticketId: activeTicket.id,
-          message: message.trim(),
+          message: messageText,
+          attachments: attachmentUrls.length > 0 ? JSON.stringify(attachmentUrls) : undefined,
         });
       }
       
       setMessage("");
+      setSelectedFiles([]);
       refetchMessages();
     } catch (error) {
       toast.error("Erro ao enviar mensagem");
+      console.error(error);
     }
   };
 
@@ -165,7 +180,49 @@ export function SupportChat() {
               </CardContent>
 
               <div className="p-4 border-t">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setSelectedFiles(prev => [...prev, ...files]);
+                  }}
+                />
+                {selectedFiles.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {selectedFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 text-sm"
+                      >
+                        {file.type.startsWith('image/') ? (
+                          <ImageIcon className="h-4 w-4" />
+                        ) : (
+                          <Paperclip className="h-4 w-4" />
+                        )}
+                        <span className="max-w-[150px] truncate">{file.name}</span>
+                        <button
+                          onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== index))}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
                   <Input
                     placeholder="Digite sua mensagem..."
                     value={message}
