@@ -10,6 +10,7 @@ import { analyticsRouter } from "./analytics-router";
 import { adminRouter } from "./admin-router";
 import { supportRouter } from "./support-router";
 import { passwordResetRouter } from "./password-reset-router";
+import { eaLicenseRouter } from "./ea-license-router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -17,6 +18,7 @@ export const appRouter = router({
   admin: adminRouter,
   support: supportRouter,
   passwordReset: passwordResetRouter,
+  eaLicense: eaLicenseRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

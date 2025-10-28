@@ -22,6 +22,7 @@ import Settings from "./pages/Settings";
 import Subscriptions from "./pages/Subscriptions";
 import MarketplaceVPS from "./pages/MarketplaceVPS";
 import MarketplaceEAs from "./pages/MarketplaceEAs";
+import EALicenses from "./pages/EALicenses";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -75,6 +76,7 @@ function Router() {
       <Route path="/subscriptions">{() => <ProtectedRoute component={Subscriptions} />}</Route>
       <Route path="/marketplace/vps">{() => <ProtectedRoute component={MarketplaceVPS} />}</Route>
       <Route path="/marketplace/eas">{() => <ProtectedRoute component={MarketplaceEAs} />}</Route>
+      <Route path="/ea-licenses">{() => <ProtectedRoute component={EALicenses} />}</Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
