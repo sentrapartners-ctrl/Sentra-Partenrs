@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Zap } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { toast } from "sonner";
 
 interface Plan {
   id: string;
@@ -73,6 +74,39 @@ const plans: Plan[] = [
 ];
 
 export default function Subscriptions() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubscribe = async (plan: Plan) => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/checkout/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          price_amount: plan.price,
+          price_currency: "usd",
+          order_description: `Sentra Partners - Assinatura ${plan.name}`,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.payment_url) {
+          window.location.href = data.payment_url;
+        }
+      } else {
+        throw new Error("Erro ao criar pagamento");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      toast.error("Erro ao processar. Tente novamente.");
+      setIsLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
@@ -135,8 +169,10 @@ export default function Subscriptions() {
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
                   size="lg"
+                  onClick={() => handleSubscribe(plan)}
+                  disabled={isLoading}
                 >
-                  Assinar Agora
+                  {isLoading ? "Processando..." : "Assinar Agora"}
                 </Button>
               </CardFooter>
             </Card>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Server, Cpu, HardDrive, Network, Zap, Gift } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { toast } from "sonner";
 
 interface VPSProduct {
   id: string;
@@ -110,11 +111,44 @@ const vpsProducts: VPSProduct[] = [
 
 export default function MarketplaceVPS() {
   const [selectedVPS, setSelectedVPS] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handlePurchase = (vpsId: string) => {
-    setSelectedVPS(vpsId);
-    // TODO: Redirecionar para checkout
-    console.log("VPS selecionada:", vpsId);
+  const handlePurchase = async (vps: VPSProduct) => {
+    if (vps.isFree) {
+      toast.info("Esta VPS está incluída no plano Premium. Assine o plano Premium para ter acesso!");
+      return;
+    }
+
+    setIsLoading(true);
+    setSelectedVPS(vps.id);
+
+    try {
+      const response = await fetch("/api/checkout/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          price_amount: vps.price,
+          price_currency: "usd",
+          order_description: `Sentra Partners - ${vps.name}`,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.payment_url) {
+          window.location.href = data.payment_url;
+        }
+      } else {
+        throw new Error("Erro ao criar pagamento");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      toast.error("Erro ao processar. Tente novamente.");
+      setIsLoading(false);
+      setSelectedVPS(null);
+    }
   };
 
   return (
@@ -227,10 +261,10 @@ export default function MarketplaceVPS() {
                 <Button 
                   className="w-full"
                   variant={vps.recommended ? "default" : "outline"}
-                  onClick={() => handlePurchase(vps.id)}
-                  disabled={vps.isFree}
+                  onClick={() => handlePurchase(vps)}
+                  disabled={isLoading || vps.isFree}
                 >
-                  {vps.isFree ? "Requer Plano Premium" : "Comprar Agora"}
+                  {vps.isFree ? "Requer Plano Premium" : isLoading && selectedVPS === vps.id ? "Processando..." : "Comprar Agora"}
                 </Button>
               </CardFooter>
             </Card>
