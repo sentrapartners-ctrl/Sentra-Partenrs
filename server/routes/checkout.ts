@@ -21,6 +21,49 @@ function generateRandomPassword(length: number = 12): string {
 }
 
 /**
+ * POST /api/checkout/create-payment
+ * Create payment for landing page (simplified)
+ */
+router.post("/create-payment", async (req: Request, res: Response) => {
+  try {
+    const {
+      price_amount,
+      price_currency,
+      order_description,
+    } = req.body;
+
+    if (!price_amount || !price_currency || !order_description) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Create payment with NOWPayments
+    const payment = await nowPaymentsService.createPayment({
+      price_amount,
+      price_currency,
+      pay_currency: "btc", // Default to BTC, user can choose on NOWPayments page
+      order_id: `order_${Date.now()}`,
+      order_description,
+      ipn_callback_url: `${process.env.BASE_URL || "https://sentrapartners.com"}/api/checkout/webhook`,
+    });
+
+    console.log("[Payment Created]", {
+      paymentId: payment.payment_id,
+      description: order_description,
+      amount: price_amount,
+    });
+
+    return res.json({
+      success: true,
+      payment_id: payment.payment_id,
+      payment_url: payment.invoice_url || payment.pay_address,
+    });
+  } catch (error: any) {
+    console.error("[Create Payment Error]", error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * POST /api/checkout/create
  * Create a new payment/invoice
  */
