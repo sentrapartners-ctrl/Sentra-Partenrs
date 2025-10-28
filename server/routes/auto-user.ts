@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db } from "../db";
+import { getDb } from "../db";
 import { users, userPurchases } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
@@ -33,6 +33,8 @@ router.post("/create-user-from-payment", async (req, res) => {
     }
 
     // Verificar se usuário já existe
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
     const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
     
     if (existingUser.length > 0) {
