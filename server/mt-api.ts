@@ -484,3 +484,116 @@ router.get("/status", (req: Request, res: Response) => {
 
 export default router;
 
+
+
+/**
+ * POST /api/mt/copy-signal
+ * Recebe sinais de uma conta Master para copiar
+ */
+router.post("/copy-signal", async (req: Request, res: Response) => {
+  try {
+    console.log("[MT API] ===== COPY SIGNAL RECEIVED =====");
+    console.log("[MT API] Body:", JSON.stringify(req.body, null, 2));
+    
+    const { accountNumber, accountToken, timestamp, trades } = req.body;
+    
+    if (!accountNumber || !accountToken) {
+      return res.status(400).json({ 
+        error: "Missing required fields: accountNumber and accountToken" 
+      });
+    }
+    
+    // Verificar se a conta existe e o token está correto
+    const account = await db.getAccountByNumber(accountNumber.toString());
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+    
+    // TODO: Implementar verificação de token
+    // Por enquanto, aceita qualquer token para simplificar
+    
+    if (!Array.isArray(trades)) {
+      return res.status(400).json({ error: "Expected array of trades" });
+    }
+    
+    // Armazenar sinais em memória (ou cache Redis no futuro)
+    // Por enquanto, vamos usar uma variável global simples
+    if (!global.copySignals) {
+      global.copySignals = {};
+    }
+    
+    global.copySignals[accountNumber] = {
+      timestamp: new Date(timestamp || Date.now()),
+      trades: trades,
+      lastUpdate: Date.now()
+    };
+    
+    console.log(`[MT API] Stored ${trades.length} signals from account ${accountNumber}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Received ${trades.length} signals`,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error("[MT API] Copy signal error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/mt/get-signals
+ * Retorna sinais de uma conta Master para contas Slave copiarem
+ */
+router.get("/get-signals", async (req: Request, res: Response) => {
+  try {
+    const { accountNumber, accountToken, masterAccount } = req.query;
+    
+    if (!accountNumber || !accountToken || !masterAccount) {
+      return res.status(400).json({ 
+        error: "Missing required parameters: accountNumber, accountToken, and masterAccount" 
+      });
+    }
+    
+    // Verificar se a conta slave existe
+    const slaveAccount = await db.getAccountByNumber(accountNumber.toString());
+    if (!slaveAccount) {
+      return res.status(404).json({ error: "Slave account not found" });
+    }
+    
+    // TODO: Implementar verificação de token e permissões de copy trading
+    
+    // Buscar sinais da conta Master
+    if (!global.copySignals || !global.copySignals[masterAccount]) {
+      return res.json({ 
+        trades: [],
+        message: "No signals available from master account"
+      });
+    }
+    
+    const signals = global.copySignals[masterAccount];
+    
+    // Verificar se os sinais não estão muito antigos (máximo 30 segundos)
+    const signalAge = Date.now() - signals.lastUpdate;
+    if (signalAge > 30000) {
+      console.log(`[MT API] Signals from account ${masterAccount} are too old (${signalAge}ms)`);
+      return res.json({ 
+        trades: [],
+        message: "Signals are outdated"
+      });
+    }
+    
+    console.log(`[MT API] Sending ${signals.trades.length} signals to slave account ${accountNumber}`);
+    
+    res.json({ 
+      trades: signals.trades,
+      timestamp: signals.timestamp,
+      masterAccount: masterAccount
+    });
+  } catch (error) {
+    console.error("[MT API] Get signals error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
