@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { getDb, getAccountByNumber, createOrUpdateTrade } from "../db";
+import { getDb, getAccountByNumber, createOrUpdateTrade, createOrUpdateAccount } from "../db";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
@@ -119,29 +119,18 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     const isCentAccount = account.isCentAccount || false;
     const divisor = isCentAccount ? 10000 : 100;
 
-    // Atualizar dados da conta
-    const db = await getDb();
-    if (!db) {
-      return res.status(500).json({
-        success: false,
-        error: "Database not available",
-      });
-    }
-    
-    const { tradingAccounts } = await import("../../drizzle/schema");
-    await db
-      .update(tradingAccounts)
-      .set({
-        balance: Math.round(balance * divisor),
-        equity: Math.round(equity * divisor),
-        marginUsed: margin ? Math.round(margin * divisor) : 0,
-        marginFree: free_margin ? Math.round(free_margin * divisor) : 0,
-        marginLevel: margin_level ? Math.round(margin_level * 100) : 0,
-        openPositions: open_positions || 0,
-        lastHeartbeat: new Date(),
-        status: "connected" as const,
-      })
-      .where(eq(tradingAccounts.id, account.id));
+    // Atualizar dados da conta usando createOrUpdateAccount
+    await createOrUpdateAccount({
+      ...account,
+      balance: Math.round(balance * divisor),
+      equity: Math.round(equity * divisor),
+      marginUsed: margin ? Math.round(margin * divisor) : 0,
+      marginFree: free_margin ? Math.round(free_margin * divisor) : 0,
+      marginLevel: margin_level ? Math.round(margin_level * 100) : 0,
+      openPositions: open_positions || 0,
+      lastHeartbeat: new Date(),
+      status: "connected" as const,
+    });
 
     console.log("[MT4] ✅ Heartbeat processado");
 
