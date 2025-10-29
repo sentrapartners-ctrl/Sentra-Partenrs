@@ -13,7 +13,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -98,11 +99,21 @@ function AdminSupport() {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Chat de Suporte</h1>
-        <p className="text-muted-foreground">
-          Gerencie tickets e converse com clientes
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Chat de Suporte</h1>
+          <p className="text-muted-foreground">
+            Gerencie tickets e converse com clientes
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
