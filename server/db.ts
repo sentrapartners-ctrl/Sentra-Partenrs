@@ -31,7 +31,10 @@ import {
   CopyTradingConfig,
   alerts,
   InsertAlert,
-  Alert
+  Alert,
+  apiKeys,
+  InsertApiKey,
+  ApiKey
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1053,3 +1056,73 @@ export async function saveDailyJournal(
   return { success: true };
 }
 
+
+// ===== API KEYS =====
+
+export async function createApiKey(data: InsertApiKey) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(apiKeys).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function getApiKeyByKey(key: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(apiKeys)
+    .where(eq(apiKeys.key, key))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+export async function getUserApiKeys(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(apiKeys)
+    .where(eq(apiKeys.userId, userId))
+    .orderBy(desc(apiKeys.createdAt));
+}
+
+export async function updateApiKeyLastUsed(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(apiKeys)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(apiKeys.id, id));
+}
+
+export async function toggleApiKeyStatus(id: number, isActive: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(apiKeys)
+    .set({ isActive })
+    .where(eq(apiKeys.id, id));
+}
+
+export async function deleteApiKey(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.delete(apiKeys)
+    .where(eq(apiKeys.id, id));
+}
+
+export async function getAccountByNumber(accountNumber: string, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(tradingAccounts)
+    .where(and(
+      eq(tradingAccounts.accountNumber, accountNumber),
+      eq(tradingAccounts.userId, userId)
+    ))
+    .limit(1);
+  
+  return result[0] || null;
+}

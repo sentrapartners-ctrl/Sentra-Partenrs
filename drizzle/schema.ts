@@ -816,3 +816,24 @@ export const eaOrders = mysqlTable("ea_orders", {
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
 });
 
+
+/**
+ * API Keys - for MT4/MT5 Expert Advisor integration
+ */
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 256 }).notNull(), // User-friendly name
+  key: varchar("key", { length: 64 }).notNull().unique(), // The actual API key
+  isActive: boolean("isActive").default(true).notNull(),
+  lastUsedAt: timestamp("lastUsedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  keyIdx: index("key_idx").on(table.key),
+  isActiveIdx: index("isActive_idx").on(table.isActive),
+}));
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;

@@ -11,6 +11,17 @@ import { adminRouter } from "./admin-router";
 import { supportRouter } from "./support-router";
 import { passwordResetRouter } from "./password-reset-router";
 import { eaLicenseRouter } from "./ea-license-router";
+import { mt4Router } from "./mt4-router";
+
+// Função para gerar API Key única
+function generateApiKey(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let key = 'sk_';
+  for (let i = 0; i < 48; i++) {
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -19,6 +30,7 @@ export const appRouter = router({
   support: supportRouter,
   passwordReset: passwordResetRouter,
   eaLicense: eaLicenseRouter,
+  mt4: mt4Router,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -498,6 +510,48 @@ export const appRouter = router({
       await db.markAllAlertsAsRead(ctx.user.id);
       return { success: true };
     }),
+  }),
+
+  // ===== API KEYS =====
+  apiKeys: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getUserApiKeys(ctx.user.id);
+    }),
+
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(256),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Gerar API Key única
+        const key = generateApiKey();
+        
+        const id = await db.createApiKey({
+          userId: ctx.user.id,
+          name: input.name,
+          key,
+          isActive: true,
+        });
+        
+        return { id, key };
+      }),
+
+    toggle: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        isActive: z.boolean(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.toggleApiKeyStatus(input.id, input.isActive);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteApiKey(input.id);
+        return { success: true };
+      }),
   }),
 
   // ===== USER SETTINGS =====
