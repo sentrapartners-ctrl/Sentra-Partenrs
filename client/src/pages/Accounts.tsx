@@ -581,18 +581,20 @@ void CheckAndCopySignals()
                 onClick={() => setSelectedAccount(account)}
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <CardTitle className="text-base md:text-lg truncate">
                         {account.accountNumber}
                       </CardTitle>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                         {getPlatformBadge(account.platform)}
-                        <Badge variant="outline">{account.accountType}</Badge>
+                        <Badge variant="outline" className="text-[10px] md:text-xs">{account.accountType}</Badge>
                         {getLicenseBadge(account.accountNumber)}
                       </div>
                     </div>
-                    {getStatusIcon(account.status)}
+                    <div className="flex-shrink-0">
+                      {getStatusIcon(account.status)}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -619,14 +621,16 @@ void CheckAndCopySignals()
                   )}
 
                   {/* Balance */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Balanço:</span>
-                    <div className="text-right text-sm font-bold">
-                      <InlineCurrencyValue 
-                        value={account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)}
-                      />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0">Balanço:</span>
+                    <div className="text-right text-xs md:text-sm font-bold min-w-0">
+                      <div className="truncate">
+                        <InlineCurrencyValue 
+                          value={account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)}
+                        />
+                      </div>
                       {account.isCentAccount && (
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-[9px] md:text-[10px] text-muted-foreground truncate">
                           {(account.balance || 0).toLocaleString('pt-BR')} cents
                         </div>
                       )}
@@ -634,14 +638,16 @@ void CheckAndCopySignals()
                   </div>
 
                   {/* Equity */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Equity:</span>
-                    <div className="text-right text-sm font-bold">
-                      <InlineCurrencyValue 
-                        value={account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)}
-                      />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0">Equity:</span>
+                    <div className="text-right text-xs md:text-sm font-bold min-w-0">
+                      <div className="truncate">
+                        <InlineCurrencyValue 
+                          value={account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)}
+                        />
+                      </div>
                       {account.isCentAccount && (
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-[9px] md:text-[10px] text-muted-foreground truncate">
                           {(account.equity || 0).toLocaleString('pt-BR')} cents
                         </div>
                       )}

@@ -236,7 +236,7 @@ export default function Strategies() {
                 <div className="grid grid-cols-7 gap-1">
                   {days.map((day, index) => {
                     if (!day) {
-                      return <div key={`empty-${index}`} className="h-20" />;
+                      return <div key={`empty-${index}`} className="h-16 md:h-20" />;
                     }
 
                     const dateStr = day.toISOString().split('T')[0];
@@ -250,25 +250,25 @@ export default function Strategies() {
                         key={day.toISOString()}
                         onClick={() => handleDateClick(day)}
                         className={`
-                          h-20 p-2 rounded border transition-all hover:bg-accent cursor-pointer
-                          ${isToday ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2' : 'border-border'}
+                          h-16 md:h-20 p-1 md:p-2 rounded border transition-all hover:bg-accent cursor-pointer
+                          ${isToday ? 'border-blue-500 ring-1 md:ring-2 ring-blue-500 ring-offset-1 md:ring-offset-2' : 'border-border'}
                           ${day.getMonth() !== currentDate.getMonth() ? 'opacity-40' : ''}
                           ${hasProfit && profit > 0 ? 'bg-green-50 dark:bg-green-950/20' : ''}
                           ${hasProfit && profit < 0 ? 'bg-red-50 dark:bg-red-950/20' : ''}
                         `}
                       >
-                        <div className="flex flex-col h-full">
-                          <span className={`text-sm font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                        <div className="flex flex-col h-full justify-between">
+                          <span className={`text-xs md:text-sm font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                             {day.getDate()}
                           </span>
                           {hasProfit && (
-                            <div className={`text-xs font-semibold mt-auto ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              {profit > 0 ? '++' : ''}<InlineCurrencyValue value={profit} />
+                            <div className={`text-[10px] md:text-xs font-semibold leading-tight ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {profit > 0 ? '+++' : ''}<InlineCurrencyValue value={profit} />
                             </div>
                           )}
                           {hasJournal && (
-                            <div className="flex justify-center mt-1">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <div className="flex justify-center">
+                              <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-blue-500" />
                             </div>
                           )}
                         </div>

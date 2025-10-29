@@ -118,69 +118,77 @@ export default function Trades() {
                 {trades.map((trade) => (
                   <div
                     key={trade.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="p-3 md:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          {trade.type === "BUY" ? (
-                            <ArrowUpIcon className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <ArrowDownIcon className="h-4 w-4 text-red-500" />
-                          )}
-                          <span className="font-bold">{trade.symbol}</span>
-                          <Badge
-                            variant={
-                              trade.type === "BUY" ? "default" : "destructive"
-                            }
-                          >
-                            {trade.type}
-                          </Badge>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          Ticket: {trade.ticket}
-                        </span>
-                        {(trade as any).accountNumber && (
-                          <span className="text-xs text-muted-foreground font-medium">
-                            {(trade as any).broker} - {(trade as any).accountNumber}
-                          </span>
+                    {/* Header com símbolo e status */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {trade.type === "BUY" ? (
+                          <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <ArrowDownIcon className="h-4 w-4 text-red-500" />
                         )}
+                        <span className="font-bold text-base md:text-lg">{trade.symbol}</span>
+                        <Badge
+                          variant={trade.type === "BUY" ? "default" : "destructive"}
+                          className="text-[10px] md:text-xs"
+                        >
+                          {trade.type}
+                        </Badge>
                       </div>
+                      <Badge variant={trade.status === "open" ? "default" : "secondary"} className="text-[10px] md:text-xs">
+                        {trade.status === "open" ? "Aberto" : "Fechado"}
+                      </Badge>
+                    </div>
 
+                    {/* Info básica */}
+                    <div className="space-y-1 mb-3">
+                      <span className="text-xs text-muted-foreground block">
+                        Ticket: {trade.ticket}
+                      </span>
+                      {(trade as any).accountNumber && (
+                        <span className="text-xs text-muted-foreground font-medium block truncate">
+                          {(trade as any).broker} - {(trade as any).accountNumber}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Grid de dados - 2 colunas no mobile, mais no desktop */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                       <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           Volume
                         </span>
-                        <span className="font-medium">
+                        <span className="font-medium text-xs md:text-sm">
                           {((trade.volume || 0) / 100).toFixed(2)} lotes
                         </span>
                       </div>
 
                       <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           Preço Abertura
                         </span>
-                        <span className="font-medium">
+                        <span className="font-medium text-xs md:text-sm">
                           {((trade.openPrice || 0) / 100000).toFixed(5)}
                         </span>
                       </div>
 
                       {trade.status === "closed" && (
                         <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-[10px] md:text-xs text-muted-foreground">
                             Preço Fechamento
                           </span>
-                          <span className="font-medium">
+                          <span className="font-medium text-xs md:text-sm">
                             {((trade.closePrice || 0) / 100000).toFixed(5)}
                           </span>
                         </div>
                       )}
 
                       <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           Lucro/Prejuízo
                         </span>
-                        <span className="font-bold">
+                        <span className="font-bold text-xs md:text-sm">
                           <InlineCurrencyValue 
                             value={(trade as any).isCentAccount ? ((trade.profit || 0) / 100) : (trade.profit || 0)}
                             colored={true}
@@ -189,29 +197,35 @@ export default function Trades() {
                       </div>
 
                       <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           Data Abertura
                         </span>
-                        <span className="text-sm">
-                          {new Date(trade.openTime).toLocaleString("pt-BR")}
+                        <span className="text-[10px] md:text-xs">
+                          {new Date(trade.openTime).toLocaleString("pt-BR", {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </span>
                       </div>
 
                       {trade.status === "closed" && trade.closeTime && (
                         <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-[10px] md:text-xs text-muted-foreground">
                             Data Fechamento
                           </span>
-                          <span className="text-sm">
-                            {new Date(trade.closeTime).toLocaleString("pt-BR")}
+                          <span className="text-[10px] md:text-xs">
+                            {new Date(trade.closeTime).toLocaleString("pt-BR", {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
                           </span>
                         </div>
                       )}
                     </div>
-
-                    <Badge variant={trade.status === "open" ? "default" : "secondary"}>
-                      {trade.status === "open" ? "Aberto" : "Fechado"}
-                    </Badge>
                   </div>
                 ))}
               </div>
