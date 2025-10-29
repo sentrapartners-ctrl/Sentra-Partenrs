@@ -182,7 +182,7 @@ export default function Trades() {
                         </span>
                         <span className="font-bold">
                           <InlineCurrencyValue 
-                            value={(trade.profit || 0) / ((trade as any).isCentAccount ? 10000 : 100)}
+                            value={trade.profit || 0}
                             colored={true}
                           />
                         </span>
