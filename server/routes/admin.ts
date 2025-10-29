@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { getDb } from "../db";
 import { trades } from "../../drizzle/schema";
 import { sql } from "drizzle-orm";
+import { populateBalanceHistory } from "../scripts/populate-balance-history";
 
 const router = express.Router();
 
@@ -96,6 +97,31 @@ router.post("/run-migration", async (req: Request, res: Response) => {
     res.status(500).json({ 
       error: "Failed to apply migration", 
       details: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/admin/populate-balance-history
+ * Popula a tabela balance_history baseado nos trades existentes
+ */
+router.post("/populate-balance-history", async (req: Request, res: Response) => {
+  try {
+    console.log("[ADMIN] Iniciando população de balance_history...");
+    
+    await populateBalanceHistory();
+    
+    console.log("[ADMIN] ✅ Balance history populado com sucesso!");
+
+    res.json({
+      success: true,
+      message: "Balance history populado com sucesso",
+    });
+  } catch (error: any) {
+    console.error("[ADMIN] Erro ao popular balance history:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
