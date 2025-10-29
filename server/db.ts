@@ -209,19 +209,33 @@ export async function createOrUpdateAccount(account: InsertTradingAccount) {
   const accountWithCentFlag = {
     ...account,
     isCentAccount: isCent,
+    terminalId: account.terminalId || `${account.userId}_${account.accountNumber}`,
   };
 
-  const existing = await db.select().from(tradingAccounts)
-    .where(eq(tradingAccounts.terminalId, account.terminalId))
-    .limit(1);
+  // Busca por terminalId OU por accountNumber + userId
+  let existing;
+  if (account.terminalId) {
+    existing = await db.select().from(tradingAccounts)
+      .where(eq(tradingAccounts.terminalId, account.terminalId))
+      .limit(1);
+  } else {
+    existing = await db.select().from(tradingAccounts)
+      .where(
+        and(
+          eq(tradingAccounts.accountNumber, account.accountNumber),
+          eq(tradingAccounts.userId, account.userId)
+        )
+      )
+      .limit(1);
+  }
 
-  if (existing.length > 0) {
+  if (existing && existing.length > 0) {
     await db.update(tradingAccounts)
       .set({
         ...accountWithCentFlag,
         updatedAt: new Date(),
       })
-      .where(eq(tradingAccounts.terminalId, account.terminalId));
+      .where(eq(tradingAccounts.id, existing[0].id));
     return existing[0].id;
   } else {
     const result = await db.insert(tradingAccounts).values(accountWithCentFlag);
