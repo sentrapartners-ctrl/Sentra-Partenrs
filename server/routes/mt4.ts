@@ -6,7 +6,7 @@ const router = express.Router();
 
 /**
  * POST /api/mt/heartbeat
- * Recebe dados da conta MT4/MT5
+ * Recebe dados da conta MT4/MT5 (JSON ou form-urlencoded)
  */
 router.post("/heartbeat", async (req: Request, res: Response) => {
   try {
@@ -23,6 +23,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       margin_free,
       open_positions,
       platform = "MT4",
+      account_type,
     } = req.body;
 
     if (!user_email || !account_number) {
@@ -38,6 +39,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       broker,
       balance,
       equity,
+      account_type,
     });
 
     // Buscar usuário
@@ -50,13 +52,20 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       });
     }
 
-    // Detectar tipo de conta (CENT se tiver "cent" no nome do servidor)
-    const isCentAccount = server && (
-      server.toLowerCase().includes('cent') ||
-      server.toLowerCase().includes('micro')
-    );
+    // Detectar tipo de conta
+    let isCentAccount = false;
+    let accountTypeStr = "STANDARD";
     
-    const accountType = isCentAccount ? "CENT" : "STANDARD";
+    if (account_type) {
+      // Se veio explicitamente do EA
+      isCentAccount = account_type === "CENT";
+      accountTypeStr = account_type;
+    } else if (server) {
+      // Detecta pelo nome do servidor
+      isCentAccount = server.toLowerCase().includes('cent') || server.toLowerCase().includes('micro');
+      accountTypeStr = isCentAccount ? "CENT" : "STANDARD";
+    }
+    
     const divisor = isCentAccount ? 10000 : 100;
 
     const balanceInt = Math.round(parseFloat(balance) * divisor);
@@ -70,7 +79,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       broker: broker || "Unknown",
       server: server || "",
       platform: platform as "MT4" | "MT5",
-      accountType: accountType as "DEMO" | "REAL" | "CENT",
+      accountType: accountTypeStr as "DEMO" | "REAL" | "CENT",
       isCentAccount,
       balance: balanceInt,
       equity: equityInt,
@@ -116,8 +125,117 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/mt/trade
+ * Recebe um trade individual (form-urlencoded)
+ */
+router.post("/trade", async (req: Request, res: Response) => {
+  try {
+    const {
+      user_email,
+      account_number,
+      trade_id,
+      ticket,
+      symbol,
+      type,
+      volume,
+      open_price,
+      close_price,
+      stop_loss,
+      take_profit,
+      profit,
+      commission,
+      swap,
+      status,
+      open_time,
+      close_time,
+    } = req.body;
+
+    const tradeTicket = trade_id || ticket;
+
+    if (!user_email || !account_number || !tradeTicket) {
+      return res.status(400).json({
+        success: false,
+        error: "Parâmetros obrigatórios: user_email, account_number, trade_id/ticket",
+      });
+    }
+
+    // Buscar usuário
+    const user = await getUserByEmail(user_email);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Usuário não encontrado",
+      });
+    }
+
+    // Buscar conta
+    const account = await getAccountByNumberAndUser(account_number.toString(), user.id);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: "Conta não encontrada. Envie heartbeat primeiro.",
+      });
+    }
+
+    const isCentAccount = account.isCentAccount || false;
+    const divisor = isCentAccount ? 10000 : 100;
+
+    // Converte timestamps (Unix timestamp)
+    const parseTimestamp = (ts: any): Date | null => {
+      if (!ts || ts === 0 || ts === "0") return null;
+      const num = parseInt(ts);
+      if (!isNaN(num) && num > 0) return new Date(num * 1000);
+      return null;
+    };
+
+    const openTimeDate = parseTimestamp(open_time) || new Date();
+    const closeTimeDate = parseTimestamp(close_time);
+
+    // Detecta tipo
+    let tradeType = "buy";
+    if (typeof type === 'string') {
+      tradeType = type.toUpperCase() === 'SELL' ? 'sell' : 'buy';
+    }
+
+    // Determina status
+    let tradeStatus = status || (closeTimeDate ? "closed" : "open");
+
+    await createOrUpdateTrade({
+      accountId: account.id,
+      userId: user.id,
+      ticket: tradeTicket.toString(),
+      symbol: symbol || "UNKNOWN",
+      type: tradeType,
+      volume: volume ? Math.round(parseFloat(volume) * 100) : 0,
+      openPrice: open_price ? Math.round(parseFloat(open_price) * 100000) : 0,
+      openTime: openTimeDate,
+      closePrice: close_price ? Math.round(parseFloat(close_price) * 100000) : null,
+      closeTime: closeTimeDate,
+      stopLoss: stop_loss ? Math.round(parseFloat(stop_loss) * 100000) : null,
+      takeProfit: take_profit ? Math.round(parseFloat(take_profit) * 100000) : null,
+      profit: Math.round(parseFloat(profit) * divisor),
+      commission: commission ? Math.round(parseFloat(commission) * divisor) : 0,
+      swap: swap ? Math.round(parseFloat(swap) * divisor) : 0,
+      comment: "",
+      magicNumber: 0,
+    });
+
+    res.json({
+      success: true,
+      message: "Trade sincronizado",
+    });
+  } catch (error: any) {
+    console.error("[MT4] Erro ao salvar trade:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/mt/positions
- * Recebe array de posições abertas
+ * Recebe array de posições abertas (JSON)
  */
 router.post("/positions", async (req: Request, res: Response) => {
   try {
@@ -203,7 +321,7 @@ router.post("/positions", async (req: Request, res: Response) => {
 
 /**
  * POST /api/mt/trades
- * Recebe array de trades históricos
+ * Recebe array de trades históricos (JSON)
  */
 router.post("/trades", async (req: Request, res: Response) => {
   try {
