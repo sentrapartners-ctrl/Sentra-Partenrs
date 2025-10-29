@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Settings as SettingsIcon, Save, RefreshCw } from "lucide-react";
 
 export default function SyncSettings() {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -41,11 +40,7 @@ export default function SyncSettings() {
       setSettings(newSettings);
     } catch (error) {
       console.error('Error fetching settings:', error);
-      toast({
-        title: "Erro ao carregar configurações",
-        description: "Não foi possível carregar as configurações do sistema.",
-        variant: "destructive",
-      });
+      toast.error("Não foi possível carregar as configurações do sistema.");
     } finally {
       setLoading(false);
     }
@@ -62,17 +57,10 @@ export default function SyncSettings() {
 
       if (!response.ok) throw new Error('Failed to save settings');
 
-      toast({
-        title: "Configurações salvas!",
-        description: "As configurações foram atualizadas com sucesso.",
-      });
+      toast.success("Configurações salvas com sucesso!");
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar as configurações.",
-        variant: "destructive",
-      });
+      toast.error("Não foi possível salvar as configurações.");
     } finally {
       setSaving(false);
     }
