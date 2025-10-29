@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import { db } from '../db';
+import { getDb } from '../db';
 
 const router = Router();
+const db = getDb();
 
 // GET /api/settings - Obter todas as configurações
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await db.execute(
+    const [rows] = await (await db).execute(
       'SELECT `key`, value, description, updated_at FROM system_settings ORDER BY `key`'
     );
     
@@ -31,7 +32,7 @@ router.get('/', async (req, res) => {
 router.get('/:key', async (req, res) => {
   try {
     const { key } = req.params;
-    const [rows] = await db.execute(
+    const [rows] = await (await db).execute(
       'SELECT value FROM system_settings WHERE `key` = ?',
       [key]
     );
