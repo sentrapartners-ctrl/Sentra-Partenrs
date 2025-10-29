@@ -273,18 +273,12 @@ async function applyTradeConversion(trades: Trade[]): Promise<Trade[]> {
   
   const accountMap = new Map(accounts.map(acc => [acc.id, acc]));
   
-  // Converte valores baseado no tipo de conta
+  // Retorna trades sem conversão - frontend fará a divisão por 100
   return trades.map(trade => {
     const account = accountMap.get(trade.accountId);
-    const isCentAccount = account?.isCentAccount || false;
-    const divisor = isCentAccount ? 10000 : 100;
-    
     return {
       ...trade,
-      profit: trade.profit ? trade.profit / divisor : trade.profit,
-      commission: trade.commission ? trade.commission / divisor : trade.commission,
-      swap: trade.swap ? trade.swap / divisor : trade.swap,
-      isCentAccount,
+      isCentAccount: account?.isCentAccount || false,
     };
   });
 }
