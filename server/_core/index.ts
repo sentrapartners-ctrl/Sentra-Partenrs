@@ -15,6 +15,7 @@ import checkoutRouter from "../routes/checkout";
 import subscriptionsRouter from "../routes/subscriptions";
 import mt4Router from "../routes/mt4";
 import uploadRouter from "../routes/upload";
+import settingsRouter from "../routes/settings";
 // import mt4ConnectorRouter from "../routes/mt4-connector";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
@@ -65,6 +66,8 @@ async function startServer() {
   app.use("/api/mt4", mt4Router);
   // Upload endpoints
   app.use("/api/upload", uploadRouter);
+  // System settings endpoints
+  app.use("/api/settings", settingsRouter);
   // Alias para compatibilidade com EAs antigos
   app.use("/api/mt", mt4Router);
   // app.use("/api/mt", mt4ConnectorRouter);

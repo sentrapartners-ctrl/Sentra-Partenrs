@@ -20,6 +20,7 @@ import Strategies from "./pages/Strategies";
 import Calendar from "./pages/Calendar";
 import Alerts from "./pages/Alerts";
 import Settings from "./pages/Settings";
+import SyncSettings from "./pages/SyncSettings";
 import Subscriptions from "./pages/Subscriptions";
 import MarketplaceVPS from "./pages/MarketplaceVPS";
 import MarketplaceEAs from "./pages/MarketplaceEAs";
@@ -82,6 +83,7 @@ function Router() {
       <Route path="/calendar">{() => <ProtectedRoute component={Calendar} />}</Route>
       <Route path="/alerts">{() => <ProtectedRoute component={Alerts} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
+      <Route path="/sync-settings">{() => <ProtectedRoute component={SyncSettings} />}</Route>
       <Route path="/subscriptions">{() => <ProtectedRoute component={Subscriptions} />}</Route>
       <Route path="/marketplace/vps">{() => <ProtectedRoute component={MarketplaceVPS} />}</Route>
       <Route path="/marketplace/eas">{() => <ProtectedRoute component={MarketplaceEAs} />}</Route>
