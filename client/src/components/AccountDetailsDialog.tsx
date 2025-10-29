@@ -283,7 +283,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                                 {month.return >= 0 ? '+' : ''}{month.return}%
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                +<InlineCurrencyValue value={month.profit} />
+                                +<InlineCurrencyValue value={account.isCentAccount ? (month.profit / 100) : month.profit} />
                               </p>
                             </div>
                           </div>
