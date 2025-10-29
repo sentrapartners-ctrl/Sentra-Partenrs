@@ -37,6 +37,7 @@ export default function Analytics() {
   const { isAuthenticated, loading } = useAuth();
   const [period, setPeriod] = useState<Period>("30d");
   const [selectedAccount, setSelectedAccount] = useState<number | "all">("all");
+  const [balancePeriod, setBalancePeriod] = useState<string>("all");
   const periodDates = getPeriodDates(period);
 
   // Aplica conversão baseada em isCentAccount
@@ -56,10 +57,24 @@ export default function Analytics() {
     { enabled: isAuthenticated }
   );
 
+  // Calcular data de início baseado no período selecionado
+  const getBalanceStartDate = () => {
+    const now = new Date();
+    switch (balancePeriod) {
+      case "7d": return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case "30d": return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case "90d": return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      case "6m": return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      case "1y": return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      case "all": return new Date(2020, 0, 1); // Desde 01/01/2020
+      default: return new Date(2020, 0, 1);
+    }
+  };
+
   const { data: balanceHistoryData } = trpc.balanceHistory.get.useQuery(
     {
       accountId: selectedAccount === "all" ? undefined : selectedAccount,
-      startDate: new Date(2020, 0, 1), // Desde 01/01/2020
+      startDate: getBalanceStartDate(),
       endDate: new Date(),
     },
     { enabled: isAuthenticated }
@@ -385,10 +400,24 @@ export default function Analytics() {
         {/* Gráfico de Evolução do Balance */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Evolução do Balance
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Evolução do Balance
+              </CardTitle>
+              <select 
+                value={balancePeriod} 
+                onChange={(e) => setBalancePeriod(e.target.value)}
+                className="px-3 py-1 border rounded-md bg-background text-sm"
+              >
+                <option value="7d">Últimos 7 dias</option>
+                <option value="30d">Últimos 30 dias</option>
+                <option value="90d">Últimos 90 dias</option>
+                <option value="6m">Últimos 6 meses</option>
+                <option value="1y">Último ano</option>
+                <option value="all">Todo o período</option>
+              </select>
+            </div>
           </CardHeader>
           <CardContent>
             {balanceChartData.length > 0 ? (

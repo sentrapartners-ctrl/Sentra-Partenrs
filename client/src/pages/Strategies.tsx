@@ -44,7 +44,7 @@ export default function Strategies() {
   const { data: allTrades } = trpc.trades.list.useQuery(
     { 
       limit: 10000,
-      accountId: selectedAccount === "all" ? undefined : selectedAccount,
+      accountId: selectedAccount === "all" ? undefined : parseInt(selectedAccount),
     },
     { enabled: isAuthenticated }
   );
