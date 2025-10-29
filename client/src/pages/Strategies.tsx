@@ -28,6 +28,7 @@ export default function Strategies() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
   
   // Form state
   const [notes, setNotes] = useState("");
@@ -35,8 +36,16 @@ export default function Strategies() {
   const [marketConditions, setMarketConditions] = useState("");
   const [lessonsLearned, setLessonsLearned] = useState("");
 
+  const { data: accounts } = trpc.accounts.list.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
   const { data: allTrades } = trpc.trades.list.useQuery(
-    { limit: 10000 },
+    { 
+      limit: 10000,
+      accountId: selectedAccount === "all" ? undefined : selectedAccount,
+    },
     { enabled: isAuthenticated }
   );
 
@@ -176,11 +185,26 @@ export default function Strategies() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Diário de Trading</h1>
-          <p className="text-muted-foreground">
-            Calendário com lucro diário e anotações de estratégias
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Diário de Trading</h1>
+            <p className="text-muted-foreground">
+              Calendário com lucro diário e anotações de estratégias
+            </p>
+          </div>
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="Selecione uma conta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as contas</SelectItem>
+              {accounts?.map((account: any) => (
+                <SelectItem key={account.id} value={account.id.toString()}>
+                  {account.broker} - {account.accountNumber}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

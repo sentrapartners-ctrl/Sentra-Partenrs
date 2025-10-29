@@ -59,7 +59,7 @@ export default function Analytics() {
   const { data: balanceHistoryData } = trpc.balanceHistory.get.useQuery(
     {
       accountId: selectedAccount === "all" ? undefined : selectedAccount,
-      startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      startDate: new Date(2020, 0, 1), // Desde 01/01/2020
       endDate: new Date(),
     },
     { enabled: isAuthenticated }
