@@ -692,29 +692,6 @@ void CheckAndCopySignals()
                     <span className="text-sm font-medium">{account.openPositions || 0}</span>
                   </div>
 
-                  {/* Botão Gerar Conector */}
-                  <div className="pt-2 border-t">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleGenerateEA(account);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-2"
-                      disabled={!getLicenseForAccount(account.accountNumber)}
-                    >
-                      <Download className="h-4 w-4" />
-                      Gerar Conector
-                    </Button>
-                    
-                    {!getLicenseForAccount(account.accountNumber) && (
-                      <p className="text-xs text-muted-foreground text-center mt-2">
-                        Solicite uma licença ao administrador
-                      </p>
-                    )}
-                  </div>
-
                   {/* Classification */}
                   <div className="pt-2 border-t">
                     {editingId === account.id ? (
