@@ -18,6 +18,8 @@ import uploadRouter from "../routes/upload";
 // import mt4ConnectorRouter from "../routes/mt4-connector";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
+import { scheduleNotificationCleanup } from "../services/notification-cleanup";
+import { scheduleAutomatedReports } from "../services/automated-reports";
 // import { runMigrations } from "../scripts/runMigrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -98,6 +100,13 @@ async function startServer() {
     // TEMPORARIAMENTE DESABILITADO: Aguardando correção do schema do banco
     // startCryptoPaymentMonitoring();
     // console.log("💰 Monitoramento de pagamentos cripto iniciado");
+
+    // Iniciar serviços automáticos
+    scheduleNotificationCleanup();
+    console.log("🧹 Limpeza automática de notificações iniciada");
+
+    scheduleAutomatedReports();
+    console.log("📊 Relatórios automáticos iniciados");
   });
 }
 

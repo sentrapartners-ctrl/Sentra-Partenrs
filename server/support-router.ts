@@ -83,6 +83,38 @@ export const supportRouter = router({
         throw new Error('Acesso negado');
       }
 
+      // 🔥 ATRIBUIÇÃO AUTOMÁTICA: Se admin/manager abrir ticket não atribuído
+      if (
+        (ctx.user.role === 'admin' || ctx.user.role === 'manager') &&
+        !ticket[0].assignedTo &&
+        ticket[0].status === 'open'
+      ) {
+        // Atribuir automaticamente
+        await db
+          .update(supportTickets)
+          .set({ 
+            assignedTo: ctx.user.id,
+            status: 'in_progress',
+          })
+          .where(eq(supportTickets.id, input.ticketId));
+
+        // Enviar mensagem automática ao usuário
+        await db.insert(supportMessages).values({
+          ticketId: input.ticketId,
+          senderId: ctx.user.id,
+          senderType: 'system',
+          message: `${ctx.user.name || ctx.user.email} entrou na conversa e está pronto para ajudar!`,
+        });
+
+        // Notificar o usuário
+        await db.insert(supportNotifications).values({
+          userId: ticket[0].userId,
+          ticketId: input.ticketId,
+          type: 'ticket_assigned',
+          message: `${ctx.user.name || ctx.user.email} foi atribuído ao seu ticket`,
+        });
+      }
+
       // Buscar mensagens
       const messages = await db
         .select()
