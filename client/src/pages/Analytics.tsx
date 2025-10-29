@@ -425,13 +425,13 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Gráfico de Evolução do Balance */}
+        {/* Gráfico de Equity Growth */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Evolução do Balance
+                Equity Growth
               </CardTitle>
               <select 
                 value={balancePeriod} 
@@ -448,20 +448,63 @@ export default function Analytics() {
             </div>
           </CardHeader>
           <CardContent>
-            {balanceChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={balanceChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
+            {trades && trades.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={(() => {
+                  // Calcula equity acumulado por trade
+                  let cumulativeEquity = accounts?.[0]?.balance || 0;
+                  return trades
+                    .filter(t => t.closeTime)
+                    .sort((a, b) => new Date(a.closeTime!).getTime() - new Date(b.closeTime!).getTime())
+                    .map((trade, index) => {
+                      const profit = getActualProfit(trade);
+                      cumulativeEquity += profit;
+                      return {
+                        date: new Date(trade.closeTime!).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                        equity: cumulativeEquity,
+                        profit: profit,
+                        tradeNumber: index + 1,
+                      };
+                    });
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#888"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    stroke="#888"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                    formatter={(value: any, name: string) => {
+                      if (name === 'equity') return [`$${value.toFixed(2)}`, 'Equity'];
+                      if (name === 'profit') return [`$${value.toFixed(2)}`, 'Lucro'];
+                      return value;
+                    }}
+                  />
                   <Legend />
-                  <Line type="monotone" dataKey="balance" stroke="#8b5cf6" name="Balance" />
-                  <Line type="monotone" dataKey="equity" stroke="#10b981" name="Equity" />
+                  <Bar 
+                    dataKey="profit" 
+                    fill="#10b981"
+                    name="Lucro/Prejuízo"
+                    opacity={0.6}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="equity" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2}
+                    name="Equity Growth"
+                    dot={false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[400px] flex items-center justify-center text-muted-foreground">
                 Sem dados para exibir
               </div>
             )}
