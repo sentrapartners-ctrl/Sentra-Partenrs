@@ -16,6 +16,7 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  barkKey: varchar("barkKey", { length: 255 }), // Bark notification key
 });
 
 export type User = typeof users.$inferSelect;
@@ -359,6 +360,7 @@ export const userSettings = mysqlTable("user_settings", {
   drawdownThreshold: int("drawdownThreshold").default(1000), // percentage * 100 (10.00%)
   telegramChatId: varchar("telegramChatId", { length: 64 }),
   telegramEnabled: boolean("telegramEnabled").default(false),
+  barkKey: varchar("barkKey", { length: 255 }), // Bark notification key
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

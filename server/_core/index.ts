@@ -21,6 +21,7 @@ import settingsRouter from "../routes/settings";
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
 import { scheduleNotificationCleanup } from "../services/notification-cleanup";
 import { scheduleAutomatedReports } from "../services/automated-reports";
+import { initNotificationCron } from "../notification-cron";
 // import { runMigrations } from "../scripts/runMigrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -111,6 +112,9 @@ async function startServer() {
 
       scheduleAutomatedReports();
       console.log("📊 Relatórios automáticos iniciados");
+
+      initNotificationCron();
+      console.log("🔔 Notificações Bark agendadas iniciadas");
     }, 5000);
   });
 }

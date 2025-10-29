@@ -535,6 +535,7 @@ export const appRouter = router({
         alertTrades: z.boolean().optional(),
         alertConnection: z.boolean().optional(),
         drawdownThreshold: z.number().optional(),
+        barkKey: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.createOrUpdateUserSettings({
