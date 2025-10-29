@@ -8,7 +8,7 @@ import { lt } from "drizzle-orm";
  */
 
 export async function cleanupOldNotifications() {
-  const db = await getDb();
+  const db = getDb();
   if (!db) {
     console.log("[Notification Cleanup] Database not available");
     return;

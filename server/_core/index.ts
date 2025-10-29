@@ -101,12 +101,14 @@ async function startServer() {
     // startCryptoPaymentMonitoring();
     // console.log("💰 Monitoramento de pagamentos cripto iniciado");
 
-    // Iniciar serviços automáticos
-    scheduleNotificationCleanup();
-    console.log("🧹 Limpeza automática de notificações iniciada");
+    // Iniciar serviços automáticos após 5 segundos (aguardar DB estar pronto)
+    setTimeout(() => {
+      scheduleNotificationCleanup();
+      console.log("🧹 Limpeza automática de notificações iniciada");
 
-    scheduleAutomatedReports();
-    console.log("📊 Relatórios automáticos iniciados");
+      scheduleAutomatedReports();
+      console.log("📊 Relatórios automáticos iniciados");
+    }, 5000);
   });
 }
 

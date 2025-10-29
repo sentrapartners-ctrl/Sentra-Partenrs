@@ -35,7 +35,7 @@ interface WeeklyReport {
  * Gerar relatório diário para um usuário
  */
 async function generateDailyReport(userId: number): Promise<DailyReport[]> {
-  const db = await getDb();
+  const db = getDb();
   if (!db) return [];
 
   try {
@@ -99,7 +99,7 @@ async function generateDailyReport(userId: number): Promise<DailyReport[]> {
  * Gerar relatório semanal para um usuário
  */
 async function generateWeeklyReport(userId: number): Promise<WeeklyReport | null> {
-  const db = await getDb();
+  const db = getDb();
   if (!db) return null;
 
   try {
@@ -177,7 +177,7 @@ async function generateWeeklyReport(userId: number): Promise<WeeklyReport | null
  * Enviar relatório diário para todos os usuários
  */
 async function sendDailyReports() {
-  const db = await getDb();
+  const db = getDb();
   if (!db) {
     console.log("[Daily Reports] Database not available");
     return;
@@ -231,7 +231,7 @@ async function sendDailyReports() {
  * Enviar relatório semanal para todos os usuários
  */
 async function sendWeeklyReports() {
-  const db = await getDb();
+  const db = getDb();
   if (!db) {
     console.log("[Weekly Reports] Database not available");
     return;
