@@ -837,3 +837,26 @@ export const apiKeys = mysqlTable("api_keys", {
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = typeof apiKeys.$inferInsert;
+
+/**
+ * Notifications - General notification system
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["trade", "account", "alert", "system", "support"]).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").default(false).notNull(),
+  readAt: timestamp("readAt"),
+  metadata: text("metadata"), // JSON for additional data (e.g., tradeId, accountId)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  readIdx: index("read_idx").on(table.read),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+  typeIdx: index("type_idx").on(table.type),
+}));
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

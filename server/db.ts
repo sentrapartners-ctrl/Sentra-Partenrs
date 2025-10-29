@@ -34,7 +34,10 @@ import {
   Alert,
   apiKeys,
   InsertApiKey,
-  ApiKey
+  ApiKey,
+  notifications,
+  InsertNotification,
+  Notification
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 

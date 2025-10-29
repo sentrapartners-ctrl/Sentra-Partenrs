@@ -12,6 +12,7 @@ import { supportRouter } from "./support-router";
 import { passwordResetRouter } from "./password-reset-router";
 import { eaLicenseRouter } from "./ea-license-router";
 import { mt4Router } from "./mt4-router";
+import { notificationsRouter } from "./notifications-router";
 
 // Função para gerar API Key única
 function generateApiKey(): string {
@@ -31,6 +32,7 @@ export const appRouter = router({
   passwordReset: passwordResetRouter,
   eaLicense: eaLicenseRouter,
   mt4: mt4Router,
+  notifications: notificationsRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

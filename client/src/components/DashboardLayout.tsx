@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 import { CurrencySelector } from "./CurrencySelector";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SupportChat } from "./SupportChat";
+import { NotificationBell } from "./NotificationBell";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -285,6 +286,7 @@ function DashboardLayoutContent({
 
           <SidebarFooter className="p-3 space-y-2">
             <div className="flex items-center justify-center gap-2">
+              <NotificationBell />
               <ThemeToggleButton />
               <CurrencySelector />
             </div>
@@ -342,6 +344,7 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <ThemeToggleButton />
               <CurrencySelector />
             </div>
