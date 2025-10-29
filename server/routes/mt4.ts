@@ -106,6 +106,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
         userId: user.id,
         balance: balanceInt,
         equity: equityInt,
+        isCentAccount: account.isCentAccount || false,
         timestamp: new Date(),
       });
     }

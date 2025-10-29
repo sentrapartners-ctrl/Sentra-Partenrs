@@ -305,6 +305,7 @@ export const balanceHistory = mysqlTable("balance_history", {
   userId: int("userId").notNull(),
   balance: int("balance").notNull(), // stored in cents
   equity: int("equity").notNull(), // stored in cents
+  isCentAccount: boolean("isCentAccount").default(false).notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 }, (table) => ({
   accountIdIdx: index("accountId_idx").on(table.accountId),
