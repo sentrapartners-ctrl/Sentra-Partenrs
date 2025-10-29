@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { getDb } from "../db";
 import { trades } from "../../drizzle/schema";
+import { sql } from "drizzle-orm";
 
 const router = express.Router();
 
@@ -47,6 +48,54 @@ router.post("/delete-all-trades", async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/admin/run-migration
+ * Aplica migration para adicionar isCentAccount na tabela balance_history
+ */
+router.post("/run-migration", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Verifica se a coluna já existe
+    const checkColumn = await db.execute(sql`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = 'defaultdb' 
+        AND TABLE_NAME = 'balance_history' 
+        AND COLUMN_NAME = 'isCentAccount'
+    `);
+
+    if (checkColumn.length > 0) {
+      return res.json({ 
+        success: true, 
+        message: "Migration already applied - column isCentAccount exists" 
+      });
+    }
+
+    // Aplica a migration
+    await db.execute(sql`
+      ALTER TABLE balance_history 
+      ADD COLUMN isCentAccount BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+
+    console.log("✅ Migration applied: isCentAccount column added to balance_history");
+
+    res.json({ 
+      success: true, 
+      message: "Migration applied successfully" 
+    });
+  } catch (error: any) {
+    console.error("❌ Migration error:", error);
+    res.status(500).json({ 
+      error: "Failed to apply migration", 
+      details: error.message 
     });
   }
 });
