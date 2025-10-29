@@ -15,7 +15,7 @@ import { eq, and, desc } from "drizzle-orm";
 export const supportRouter = router({
   // Listar meus tickets
   myTickets: protectedProcedure.query(async ({ ctx }) => {
-    const db = getDb();
+    const db = await getDb();
     return await db
       .select()
       .from(supportTickets)
@@ -33,7 +33,7 @@ export const supportRouter = router({
       category: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       
       // Criar ticket
       const ticketResult = await db.insert(supportTickets).values({
@@ -62,7 +62,7 @@ export const supportRouter = router({
   messages: protectedProcedure
     .input(z.object({ ticketId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       
       // Verificar se o ticket pertence ao usuário ou se é admin/manager
       const ticket = await db
@@ -146,7 +146,7 @@ export const supportRouter = router({
       message: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
 
       // Verificar acesso ao ticket
       const ticket = await db
@@ -209,7 +209,7 @@ export const supportRouter = router({
   closeTicket: protectedProcedure
     .input(z.object({ ticketId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
 
       // Verificar acesso
       const ticket = await db
@@ -248,7 +248,7 @@ export const supportRouter = router({
       throw new Error('Acesso negado');
     }
 
-    const db = getDb();
+    const db = await getDb();
     return await db
       .select()
       .from(supportTickets)
@@ -267,7 +267,7 @@ export const supportRouter = router({
         throw new Error('Acesso negado');
       }
 
-      const db = getDb();
+      const db = await getDb();
       await db
         .update(supportTickets)
         .set({ 
