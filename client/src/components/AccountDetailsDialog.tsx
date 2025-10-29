@@ -24,9 +24,9 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
   if (!account) return null;
 
   // Calcular métricas básicas
-  const balance = (account.balance || 0) / (account.isCentAccount ? 10000 : 100);
-  const equity = (account.equity || 0) / (account.isCentAccount ? 10000 : 100);
-  const marginFree = (account.marginFree || 0) / (account.isCentAccount ? 10000 : 100);
+  const balance = (account.balance || 0) / 100;
+  const equity = (account.equity || 0) / 100;
+  const marginFree = (account.marginFree || 0) / 100;
   const drawdownPercent = account.balance ? ((equity - balance) / balance * 100) : 0;
 
   // Usar dados reais ou valores padrão
@@ -160,7 +160,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                   <div>
                     <p className="text-sm text-muted-foreground">Margem Usada:</p>
                     <p className="font-medium">
-                      <InlineCurrencyValue value={(account.marginUsed || 0) / (account.isCentAccount ? 10000 : 100)} />
+                      <InlineCurrencyValue value={(account.marginUsed || 0) / 100} />
                     </p>
                   </div>
                   <div>
