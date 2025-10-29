@@ -20,7 +20,7 @@ const adminProcedure = protectedProcedure.use(async (opts) => {
 export const adminRouter = router({
   // ===== SUPPORT MANAGEMENT =====
   getAllTickets: adminProcedure.query(async () => {
-    const database = getDb();
+    const database = await getDb();
     return await database.select().from(supportTickets).orderBy(supportTickets.createdAt);
   }),
 
@@ -30,7 +30,7 @@ export const adminRouter = router({
       status: z.enum(['open', 'in_progress', 'waiting_user', 'waiting_support', 'resolved', 'closed']),
     }))
     .mutation(async ({ input }) => {
-      const database = getDb();
+      const database = await getDb();
       await database.update(supportTickets)
         .set({ status: input.status })
         .where(eq(supportTickets.id, input.ticketId));
@@ -43,7 +43,7 @@ export const adminRouter = router({
       adminId: z.number(),
     }))
     .mutation(async ({ input }) => {
-      const database = getDb();
+      const database = await getDb();
       await database.update(supportTickets)
         .set({ assignedTo: input.adminId })
         .where(eq(supportTickets.id, input.ticketId));
@@ -126,7 +126,7 @@ export const adminRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const database = getDb();
+      const database = await getDb();
 
       // Buscar cliente atual
       const client = await database.select().from(users).where(eq(users.id, input.clientId)).limit(1);
@@ -170,7 +170,7 @@ export const adminRouter = router({
   transferHistory: adminProcedure
     .input(z.object({ clientId: z.number().optional() }))
     .query(async ({ input }) => {
-      const database = getDb();
+      const database = await getDb();
       if (input.clientId) {
         return await database.select().from(clientTransferHistory).where(eq(clientTransferHistory.clientId, input.clientId));
       }
@@ -180,14 +180,14 @@ export const adminRouter = router({
   // ===== SUBSCRIPTION PLANS =====
   subscriptionPlans: router({
     list: adminProcedure.query(async () => {
-      const database = getDb();
+      const database = await getDb();
       return await database.select().from(subscriptionPlans);
     }),
 
     getById: adminProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const plans = await database.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, input.id));
         return plans[0] || null;
       }),
@@ -212,7 +212,7 @@ export const adminRouter = router({
         sortOrder: z.number().default(0),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const result = await database.insert(subscriptionPlans).values(input);
         return { id: Number(result[0].insertId), success: true };
       }),
@@ -238,7 +238,7 @@ export const adminRouter = router({
         sortOrder: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const { id, ...data } = input;
         await database.update(subscriptionPlans).set(data).where(eq(subscriptionPlans.id, id));
         return { success: true };
@@ -254,7 +254,7 @@ export const adminRouter = router({
         priceLifetime: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const { id, ...prices } = input;
         await database.update(subscriptionPlans).set(prices).where(eq(subscriptionPlans.id, id));
         return { success: true };
@@ -263,7 +263,7 @@ export const adminRouter = router({
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         await database.delete(subscriptionPlans).where(eq(subscriptionPlans.id, input.id));
         return { success: true };
       }),
@@ -272,14 +272,14 @@ export const adminRouter = router({
   // ===== EA PRODUCTS =====
   eaProducts: router({
     list: adminProcedure.query(async () => {
-      const database = getDb();
+      const database = await getDb();
       return await database.select().from(eaProducts);
     }),
 
     getById: adminProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const products = await database.select().from(eaProducts).where(eq(eaProducts.id, input.id));
         return products[0] || null;
       }),
@@ -307,7 +307,7 @@ export const adminRouter = router({
         sortOrder: z.number().default(0),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const result = await database.insert(eaProducts).values(input);
         return { id: Number(result[0].insertId), success: true };
       }),
@@ -336,7 +336,7 @@ export const adminRouter = router({
         sortOrder: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const { id, ...data } = input;
         await database.update(eaProducts).set(data).where(eq(eaProducts.id, id));
         return { success: true };
@@ -348,7 +348,7 @@ export const adminRouter = router({
         price: z.number(),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         await database.update(eaProducts).set({ price: input.price }).where(eq(eaProducts.id, input.id));
         return { success: true };
       }),
@@ -356,7 +356,7 @@ export const adminRouter = router({
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         await database.delete(eaProducts).where(eq(eaProducts.id, input.id));
         return { success: true };
       }),
@@ -365,14 +365,14 @@ export const adminRouter = router({
   // ===== VPS PRODUCTS =====
   vpsProducts: router({
     list: adminProcedure.query(async () => {
-      const database = getDb();
+      const database = await getDb();
       return await database.select().from(vpsProducts);
     }),
 
     getById: adminProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const products = await database.select().from(vpsProducts).where(eq(vpsProducts.id, input.id));
         return products[0] || null;
       }),
@@ -396,7 +396,7 @@ export const adminRouter = router({
         sortOrder: z.number().default(0),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const result = await database.insert(vpsProducts).values(input);
         return { id: Number(result[0].insertId), success: true };
       }),
@@ -421,7 +421,7 @@ export const adminRouter = router({
         sortOrder: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const { id, ...data } = input;
         await database.update(vpsProducts).set(data).where(eq(vpsProducts.id, id));
         return { success: true };
@@ -434,7 +434,7 @@ export const adminRouter = router({
         setupFee: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         const { id, ...prices } = input;
         await database.update(vpsProducts).set(prices).where(eq(vpsProducts.id, id));
         return { success: true };
@@ -443,7 +443,7 @@ export const adminRouter = router({
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        const database = getDb();
+        const database = await getDb();
         await database.delete(vpsProducts).where(eq(vpsProducts.id, input.id));
         return { success: true };
       }),
