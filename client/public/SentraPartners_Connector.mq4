@@ -1,201 +1,260 @@
 //+------------------------------------------------------------------+
-//|                                      SentraPartners_Connector.mq4 |
-//|                                           Sentra Partners Platform |
-//|                                        https://sentrapartners.com |
+//|                                    SentraPartners_Connector.mq4  |
+//|                                              Sentra Partners      |
+//|                                      https://sentrapartners.com   |
 //+------------------------------------------------------------------+
 #property copyright "Sentra Partners"
 #property link      "https://sentrapartners.com"
-#property version   "2.00"
+#property version   "3.0"
 #property strict
+#property description "Conector MT4 para Sentra Partners - Versão Simplificada"
 
-// Input parameters
-input string USER_EMAIL = "";  // Email cadastrado na plataforma
-input string API_URL = "https://sentrapartners.com/api/trpc";  // API URL
-input int UPDATE_INTERVAL = 30;  // Intervalo de atualização (segundos)
+//--- Parâmetros de Entrada
+input string UserEmail = "seu@email.com";        // Email cadastrado na plataforma
+input string AccountType = "CENT";                // Tipo de conta: CENT ou STANDARD
+input int SyncInterval = 60;                      // Intervalo de sincronização (segundos)
+input bool DebugMode = false;                     // Modo debug (mostra mais logs)
 
-// Global variables
-datetime lastUpdate = 0;
-int lastOrdersTotal = 0;
+//--- Variáveis Globais
+string API_BASE_URL = "https://sentrapartners.com/api/mt4";
+datetime lastSync = 0;
+int lastTradeCount = 0;
 
 //+------------------------------------------------------------------+
-//| Expert initialization function                                     |
+//| Inicialização do Expert Advisor                                  |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   if(StringLen(USER_EMAIL) == 0)
+   Print("╔════════════════════════════════════════╗");
+   Print("║  SENTRA PARTNERS CONNECTOR v3.0       ║");
+   Print("╚════════════════════════════════════════╝");
+   Print("Email: ", UserEmail);
+   Print("Conta: ", AccountNumber());
+   Print("Tipo: ", AccountType);
+   Print("Broker: ", AccountCompany());
+   Print("Servidor: ", AccountServer());
+   Print("Moeda: ", AccountCurrency());
+   Print("Alavancagem: ", AccountLeverage());
+   Print("════════════════════════════════════════");
+   
+   // Validações
+   if(UserEmail == "seu@email.com" || UserEmail == "")
    {
-      Alert("ERRO: Email não configurado! Insira o email cadastrado na plataforma");
+      Alert("❌ ERRO: Configure o parâmetro UserEmail!");
       return(INIT_FAILED);
    }
    
-   Print("Sentra Partners Connector iniciado");
-   Print("Email: ", USER_EMAIL);
-   Print("Conta: ", AccountNumber());
-   Print("Broker: ", AccountCompany());
-   Print("Server: ", AccountServer());
+   if(AccountType != "CENT" && AccountType != "STANDARD")
+   {
+      Alert("❌ ERRO: AccountType deve ser CENT ou STANDARD");
+      return(INIT_FAILED);
+   }
    
-   // Sincronizar imediatamente
+   // Sincronização inicial
    SyncAccount();
-   SyncAllTrades();
+   SyncTrades();
    
+   Print("✅ Conector iniciado com sucesso!");
    return(INIT_SUCCEEDED);
 }
 
 //+------------------------------------------------------------------+
-//| Expert deinitialization function                                   |
+//| Desligamento do Expert Advisor                                   |
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-   Print("Sentra Partners Connector finalizado. Razão: ", reason);
+   Print("🔌 Conector desconectado. Motivo: ", reason);
 }
 
 //+------------------------------------------------------------------+
-//| Expert tick function                                               |
+//| Função executada a cada tick                                     |
 //+------------------------------------------------------------------+
 void OnTick()
 {
-   // Verificar se é hora de atualizar
-   if(TimeCurrent() - lastUpdate >= UPDATE_INTERVAL)
+   // Sincroniza a cada X segundos
+   if(TimeCurrent() - lastSync >= SyncInterval)
    {
       SyncAccount();
-      
-      // Verificar se houve mudança no número de ordens
-      if(OrdersTotal() != lastOrdersTotal || OrdersHistoryTotal() > 0)
-      {
-         SyncAllTrades();
-         lastOrdersTotal = OrdersTotal();
-      }
-      
-      lastUpdate = TimeCurrent();
+      SyncTrades();
+      lastSync = TimeCurrent();
    }
 }
 
 //+------------------------------------------------------------------+
-//| Sincronizar dados da conta                                        |
+//| Sincroniza dados da conta                                        |
 //+------------------------------------------------------------------+
 void SyncAccount()
 {
-   string accountType = "REAL";
-   if(IsDemo()) accountType = "DEMO";
+   string url = API_BASE_URL + "/heartbeat";
    
-   // Detectar se é conta CENT pelo nome do servidor ou símbolo
-   string server = AccountServer();
-   if(StringFind(server, "Cent", 0) >= 0 || StringFind(server, "CENT", 0) >= 0)
+   // Monta parâmetros (form-urlencoded)
+   string params = 
+      "email=" + UserEmail +
+      "&account_number=" + IntegerToString(AccountNumber()) +
+      "&broker=" + UrlEncode(AccountCompany()) +
+      "&server=" + UrlEncode(AccountServer()) +
+      "&platform=MT4" +
+      "&account_type=" + AccountType +
+      "&balance=" + DoubleToString(AccountBalance(), 2) +
+      "&equity=" + DoubleToString(AccountEquity(), 2) +
+      "&margin_free=" + DoubleToString(AccountFreeMargin(), 2) +
+      "&open_positions=" + IntegerToString(OrdersTotal()) +
+      "&currency=" + AccountCurrency() +
+      "&leverage=" + IntegerToString(AccountLeverage());
+   
+   // Envia POST
+   int result = SendPost(url, params);
+   
+   if(result == 200)
    {
-      accountType = "CENT";
+      if(DebugMode) Print("✅ Conta sincronizada | Balance: $", AccountBalance(), " | Equity: $", AccountEquity());
    }
-   
-   string json = "{";
-   json += "\"email\":\"" + USER_EMAIL + "\",";
-   json += "\"accountNumber\":\"" + IntegerToString(AccountNumber()) + "\",";
-   json += "\"broker\":\"" + AccountCompany() + "\",";
-   json += "\"server\":\"" + server + "\",";
-   json += "\"platform\":\"MT4\",";
-   json += "\"accountType\":\"" + accountType + "\",";
-   json += "\"balance\":" + DoubleToString(AccountBalance(), 2) + ",";
-   json += "\"equity\":" + DoubleToString(AccountEquity(), 2) + ",";
-   json += "\"margin\":" + DoubleToString(AccountMargin(), 2) + ",";
-   json += "\"marginFree\":" + DoubleToString(AccountFreeMargin(), 2) + ",";
-   json += "\"marginLevel\":" + DoubleToString(AccountMargin() > 0 ? (AccountEquity() / AccountMargin() * 100) : 0, 2) + ",";
-   json += "\"leverage\":" + IntegerToString(AccountLeverage()) + ",";
-   json += "\"openPositions\":" + IntegerToString(OrdersTotal()) + ",";
-   json += "\"currency\":\"" + AccountCurrency() + "\"";
-   json += "}";
-   
-   SendRequest("mt4.syncAccount", json);
+   else
+   {
+      Print("⚠️ Erro ao sincronizar conta. HTTP: ", result);
+   }
 }
 
 //+------------------------------------------------------------------+
-//| Sincronizar todos os trades                                       |
+//| Sincroniza todos os trades                                       |
 //+------------------------------------------------------------------+
-void SyncAllTrades()
+void SyncTrades()
 {
-   // Sincronizar ordens abertas
-   for(int i = 0; i < OrdersTotal(); i++)
+   int totalOpen = OrdersTotal();
+   int totalHistory = OrdersHistoryTotal();
+   int synced = 0;
+   
+   // Sincroniza trades abertos
+   for(int i = 0; i < totalOpen; i++)
    {
       if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
       {
-         SyncTrade();
+         if(SyncSingleTrade("open")) synced++;
       }
    }
    
-   // Sincronizar histórico recente (últimas 100 ordens)
-   int total = OrdersHistoryTotal();
-   int start = MathMax(0, total - 100);
-   
-   for(int i = start; i < total; i++)
+   // Sincroniza histórico (últimos 50 trades para não sobrecarregar)
+   int historyStart = MathMax(0, totalHistory - 50);
+   for(int i = historyStart; i < totalHistory; i++)
    {
       if(OrderSelect(i, SELECT_BY_POS, MODE_HISTORY))
       {
-         SyncTrade();
+         if(SyncSingleTrade("closed")) synced++;
       }
    }
+   
+   if(DebugMode && synced > 0)
+   {
+      Print("📊 ", synced, " trades sincronizados (", totalOpen, " abertos + ", (totalHistory - historyStart), " histórico)");
+   }
 }
 
 //+------------------------------------------------------------------+
-//| Sincronizar trade individual                                      |
+//| Sincroniza um trade individual                                   |
 //+------------------------------------------------------------------+
-void SyncTrade()
+bool SyncSingleTrade(string status)
 {
-   string type = "BUY";
-   if(OrderType() == OP_SELL || OrderType() == OP_SELLLIMIT || OrderType() == OP_SELLSTOP)
-      type = "SELL";
+   string url = API_BASE_URL + "/trade";
    
-   string json = "{";
-   json += "\"email\":\"" + USER_EMAIL + "\",";
-   json += "\"accountNumber\":\"" + IntegerToString(AccountNumber()) + "\",";
-   json += "\"ticket\":" + IntegerToString(OrderTicket()) + ",";
-   json += "\"symbol\":\"" + OrderSymbol() + "\",";
-   json += "\"type\":\"" + type + "\",";
-   json += "\"volume\":" + DoubleToString(OrderLots(), 2) + ",";
-   json += "\"openPrice\":" + DoubleToString(OrderOpenPrice(), 5) + ",";
-   json += "\"openTime\":\"" + TimeToString(OrderOpenTime(), TIME_DATE|TIME_SECONDS) + "\",";
-   
-   if(OrderCloseTime() > 0)
+   // Determina tipo (BUY ou SELL)
+   string tradeType = "BUY";
+   int orderType = OrderType();
+   if(orderType == OP_SELL || orderType == OP_SELLLIMIT || orderType == OP_SELLSTOP)
    {
-      json += "\"closePrice\":" + DoubleToString(OrderClosePrice(), 5) + ",";
-      json += "\"closeTime\":\"" + TimeToString(OrderCloseTime(), TIME_DATE|TIME_SECONDS) + "\",";
+      tradeType = "SELL";
    }
    
-   json += "\"stopLoss\":" + DoubleToString(OrderStopLoss(), 5) + ",";
-   json += "\"takeProfit\":" + DoubleToString(OrderTakeProfit(), 5) + ",";
-   json += "\"profit\":" + DoubleToString(OrderProfit(), 2) + ",";
-   json += "\"commission\":" + DoubleToString(OrderCommission(), 2) + ",";
-   json += "\"swap\":" + DoubleToString(OrderSwap(), 2) + ",";
-   json += "\"comment\":\"" + OrderComment() + "\"";
-   json += "}";
+   // Monta parâmetros
+   string params = 
+      "email=" + UserEmail +
+      "&account_number=" + IntegerToString(AccountNumber()) +
+      "&ticket=" + IntegerToString(OrderTicket()) +
+      "&symbol=" + OrderSymbol() +
+      "&type=" + tradeType +
+      "&volume=" + DoubleToString(OrderLots(), 2) +
+      "&open_price=" + DoubleToString(OrderOpenPrice(), 5) +
+      "&close_price=" + DoubleToString(OrderClosePrice(), 5) +
+      "&stop_loss=" + DoubleToString(OrderStopLoss(), 5) +
+      "&take_profit=" + DoubleToString(OrderTakeProfit(), 5) +
+      "&profit=" + DoubleToString(OrderProfit(), 2) +
+      "&commission=" + DoubleToString(OrderCommission(), 2) +
+      "&swap=" + DoubleToString(OrderSwap(), 2) +
+      "&status=" + status +
+      "&open_time=" + IntegerToString(OrderOpenTime()) +
+      "&close_time=" + IntegerToString(OrderCloseTime());
    
-   SendRequest("mt4.syncTrade", json);
+   // Envia POST
+   int result = SendPost(url, params);
+   
+   if(result == 200)
+   {
+      return true;
+   }
+   else
+   {
+      if(DebugMode) Print("⚠️ Erro ao sincronizar trade #", OrderTicket(), ". HTTP: ", result);
+      return false;
+   }
 }
 
 //+------------------------------------------------------------------+
-//| Enviar requisição HTTP                                            |
+//| Envia requisição POST                                            |
 //+------------------------------------------------------------------+
-void SendRequest(string method, string json)
+int SendPost(string url, string params)
 {
-   string url = API_URL + "/" + method;
-   string headers = "Content-Type: application/json\r\n";
-   
    char post[];
    char result[];
-   string result_headers;
+   string headers = "Content-Type: application/x-www-form-urlencoded\r\n";
    
-   StringToCharArray(json, post, 0, StringLen(json));
+   // Converte parâmetros para array de bytes
+   StringToCharArray(params, post, 0, StringLen(params));
    
-   int res = WebRequest(
+   // Envia requisição
+   int httpCode = WebRequest(
       "POST",
       url,
       headers,
-      5000,
+      5000,  // timeout 5 segundos
       post,
       result,
-      result_headers
+      headers
    );
    
-   if(res == -1)
+   // Verifica erros
+   if(httpCode == -1)
    {
       int error = GetLastError();
-      Print("Erro ao enviar dados: ", error);
-      Print("Certifique-se de adicionar '", API_URL, "' nas URLs permitidas em Ferramentas > Opções > Expert Advisors");
+      if(error == 4060)
+      {
+         Print("❌ ERRO: Adicione a URL nas permitidas!");
+         Print("   Vá em: Ferramentas > Opções > Expert Advisors");
+         Print("   Adicione: https://sentrapartners.com");
+      }
+      else
+      {
+         Print("❌ Erro WebRequest: ", error);
+      }
    }
+   
+   return httpCode;
 }
+
+//+------------------------------------------------------------------+
+//| Codifica string para URL (básico)                                |
+//+------------------------------------------------------------------+
+string UrlEncode(string str)
+{
+   string result = str;
+   
+   // Substitui caracteres especiais mais comuns
+   StringReplace(result, " ", "%20");
+   StringReplace(result, "&", "%26");
+   StringReplace(result, "=", "%3D");
+   StringReplace(result, "+", "%2B");
+   StringReplace(result, "#", "%23");
+   StringReplace(result, "/", "%2F");
+   
+   return result;
+}
+
+//+------------------------------------------------------------------+
