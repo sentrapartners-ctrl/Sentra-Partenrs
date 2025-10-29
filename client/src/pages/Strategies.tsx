@@ -95,8 +95,10 @@ export default function Strategies() {
       if (trade.status !== 'closed' || !trade.closeTime) return;
       
       const dateStr = new Date(trade.closeTime).toISOString().split('T')[0];
-      // Valores já vêm corretos do banco (em USD)
-      const profit = (trade.profit || 0) / 1000000; // Dividir por 1 milhão pois está em centavos
+      // Aplicar conversão baseada no tipo de conta
+      const profit = (trade as any).isCentAccount 
+        ? ((trade.profit || 0) / 100) 
+        : (trade.profit || 0);
       
       profitsByDate.set(dateStr, (profitsByDate.get(dateStr) || 0) + profit);
     });
