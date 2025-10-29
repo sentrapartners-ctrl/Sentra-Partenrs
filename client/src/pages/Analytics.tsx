@@ -41,8 +41,7 @@ export default function Analytics() {
 
   // Aplica conversão baseada em isCentAccount
   const getActualProfit = (trade: any) => {
-    const divisor = trade.isCentAccount ? 10000 : 100;
-    return (trade.profit || 0) / divisor;
+    return trade.isCentAccount ? ((trade.profit || 0) / 100) : (trade.profit || 0);
   };
 
   const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
@@ -131,9 +130,9 @@ export default function Analytics() {
       drawdown: (() => {
         if (!accounts || accounts.length === 0) return 0;
         const totalBalance = accounts.reduce((sum: number, acc: any) => 
-          sum + ((acc.balance || 0) / (acc.isCentAccount ? 10000 : 100)), 0);
+          sum + (acc.isCentAccount ? ((acc.balance || 0) / 100) : (acc.balance || 0)), 0);
         const totalEquity = accounts.reduce((sum: number, acc: any) => 
-          sum + ((acc.equity || 0) / (acc.isCentAccount ? 10000 : 100)), 0);
+          sum + (acc.isCentAccount ? ((acc.equity || 0) / 100) : (acc.equity || 0)), 0);
         return totalBalance > 0 ? ((totalEquity - totalBalance) / totalBalance * 100) : 0;
       })(),
     };
@@ -145,8 +144,8 @@ export default function Analytics() {
     
     return balanceHistoryData.map((item: any) => ({
       date: new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-      balance: (item.balance || 0) / (item.isCentAccount ? 10000 : 100),
-      equity: (item.equity || 0) / (item.isCentAccount ? 10000 : 100),
+      balance: item.isCentAccount ? ((item.balance || 0) / 100) : (item.balance || 0),
+      equity: item.isCentAccount ? ((item.equity || 0) / 100) : (item.equity || 0),
     }));
   }, [balanceHistoryData]);
 

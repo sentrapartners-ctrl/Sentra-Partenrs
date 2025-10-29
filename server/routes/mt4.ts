@@ -66,11 +66,10 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       accountTypeStr = isCentAccount ? "CENT" : "STANDARD";
     }
     
-    const divisor = isCentAccount ? 10000 : 100;
-
-    const balanceInt = Math.round(parseFloat(balance) * divisor);
-    const equityInt = Math.round(parseFloat(equity) * divisor);
-    const marginFreeInt = margin_free ? Math.round(parseFloat(margin_free) * divisor) : 0;
+    // Backend salva valores direto como vêm do MT4/MT5 (sem multiplicar)
+    const balanceInt = Math.round(parseFloat(balance));
+    const equityInt = Math.round(parseFloat(equity));
+    const marginFreeInt = margin_free ? Math.round(parseFloat(margin_free)) : 0;
 
     // Criar ou atualizar conta
     const accountData = {
@@ -177,8 +176,7 @@ router.post("/trade", async (req: Request, res: Response) => {
       });
     }
 
-    const isCentAccount = account.isCentAccount || false;
-    const divisor = isCentAccount ? 10000 : 100;
+    // Backend salva valores direto (sem multiplicar)
 
     // Converte timestamps (Unix timestamp)
     const parseTimestamp = (ts: any): Date | null => {
@@ -213,9 +211,9 @@ router.post("/trade", async (req: Request, res: Response) => {
       closeTime: closeTimeDate,
       stopLoss: stop_loss ? Math.round(parseFloat(stop_loss) * 100000) : null,
       takeProfit: take_profit ? Math.round(parseFloat(take_profit) * 100000) : null,
-      profit: Math.round(parseFloat(profit) * divisor),
-      commission: commission ? Math.round(parseFloat(commission) * divisor) : 0,
-      swap: swap ? Math.round(parseFloat(swap) * divisor) : 0,
+      profit: Math.round(parseFloat(profit)),
+      commission: commission ? Math.round(parseFloat(commission)) : 0,
+      swap: swap ? Math.round(parseFloat(swap)) : 0,
       comment: "",
       magicNumber: 0,
     });
@@ -288,8 +286,7 @@ router.post("/positions", async (req: Request, res: Response) => {
       });
     }
 
-    const isCentAccount = account.isCentAccount || false;
-    const divisor = isCentAccount ? 10000 : 100;
+    // Backend salva valores direto (sem multiplicar)
 
     // Processar cada posição
     let saved = 0;
@@ -374,8 +371,7 @@ router.post("/trades", async (req: Request, res: Response) => {
       });
     }
 
-    const isCentAccount = account.isCentAccount || false;
-    const divisor = isCentAccount ? 10000 : 100;
+    // Backend salva valores direto (sem multiplicar)
 
     // Processar cada trade
     let saved = 0;

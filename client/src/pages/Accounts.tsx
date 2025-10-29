@@ -623,7 +623,7 @@ void CheckAndCopySignals()
                     <span className="text-sm text-muted-foreground">Balanço:</span>
                     <div className="text-right text-sm font-bold">
                       <InlineCurrencyValue 
-                        value={(account.balance || 0) / (account.isCentAccount ? 10000 : 100)}
+                        value={account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)}
                       />
                       <div className="text-[10px] text-muted-foreground">
                         {(account.balance || 0).toLocaleString('pt-BR')} cents
@@ -636,7 +636,7 @@ void CheckAndCopySignals()
                     <span className="text-sm text-muted-foreground">Equity:</span>
                     <div className="text-right text-sm font-bold">
                       <InlineCurrencyValue 
-                        value={(account.equity || 0) / (account.isCentAccount ? 10000 : 100)}
+                        value={account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)}
                       />
                       <div className="text-[10px] text-muted-foreground">
                         {(account.equity || 0).toLocaleString('pt-BR')} cents
@@ -672,7 +672,7 @@ void CheckAndCopySignals()
                     <span className="text-sm text-muted-foreground">Margem Livre:</span>
                     <div className="text-right text-sm">
                       <InlineCurrencyValue 
-                        value={(account.marginFree || 0) / (account.isCentAccount ? 10000 : 100)}
+                        value={account.isCentAccount ? ((account.marginFree || 0) / 100) : (account.marginFree || 0)}
                       />
                       <div className="text-[10px] text-muted-foreground">
                         {(account.marginFree || 0).toLocaleString('pt-BR')} cents

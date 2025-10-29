@@ -24,8 +24,8 @@ export function useAccountConnectionNotifications() {
 
       // Se é uma conta nova (não estava na lista anterior)
       if (!previousAccountsRef.current.has(accountKey)) {
-        const balance = ((account.balance || 0) / (account.isCentAccount ? 10000 : 100)).toFixed(2);
-        const equity = ((account.equity || 0) / (account.isCentAccount ? 10000 : 100)).toFixed(2);
+        const balance = (account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)).toFixed(2);
+        const equity = (account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)).toFixed(2);
         
         // Mostra notificação
         toast.success('🎉 Conta Conectada!', {
