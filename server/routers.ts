@@ -176,13 +176,16 @@ export const appRouter = router({
         const trades = await db.getAccountTrades(input.accountId, 1000);
         const closedTrades = trades.filter(t => t.closeTime);
 
+        // Fator de conversão baseado no tipo de conta
+        const conversionFactor = account.isCentAccount ? 10000 : 100;
+
         // Calcular métricas
         const winningTrades = closedTrades.filter(t => (t.profit || 0) > 0);
         const losingTrades = closedTrades.filter(t => (t.profit || 0) < 0);
         const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
-        const avgProfit = winningTrades.length > 0 ? winningTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / winningTrades.length : 0;
-        const avgLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / losingTrades.length : 0;
-        const totalProfit = closedTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+        const avgProfit = winningTrades.length > 0 ? winningTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / winningTrades.length / conversionFactor : 0;
+        const avgLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / losingTrades.length / conversionFactor : 0;
+        const totalProfit = closedTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / conversionFactor;
 
         // Calcular rendimento mensal (últimos 6 meses)
         const now = new Date();
@@ -197,7 +200,7 @@ export const appRouter = router({
             return closeTime >= monthStart && closeTime <= monthEnd;
           });
 
-          const monthProfit = monthTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+          const monthProfit = monthTrades.reduce((sum, t) => sum + (t.profit || 0), 0) / conversionFactor;
           const monthReturn = account.balance ? (monthProfit / account.balance) * 100 : 0;
 
           monthlyReturns.push({
@@ -212,7 +215,7 @@ export const appRouter = router({
           id: t.id,
           symbol: t.symbol,
           type: t.type,
-          profit: t.profit || 0,
+          profit: (t.profit || 0) / conversionFactor,
           pips: t.pips || 0,
           closeTime: t.closeTime,
         }));
