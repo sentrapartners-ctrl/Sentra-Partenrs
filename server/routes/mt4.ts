@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
-import * as db from "../db";
+import { getDb, createOrUpdateAccount, getAccountByNumberAndUser, createOrUpdateTrade, recordBalanceSnapshot } from "../db";
+import { getUserByEmail } from "../auth";
 
 const router = express.Router();
 
@@ -55,7 +56,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     });
 
     // Buscar usuário
-    const user = await db.getUserByEmail(userEmail);
+    const user = await getUserByEmail(userEmail);
     if (!user) {
       console.log("[MT4] Usuário não encontrado:", userEmail);
       return res.status(404).json({
@@ -65,7 +66,7 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     }
 
     // Buscar ou criar conta
-    let account = await db.getAccountByNumberAndUser(account_number.toString(), user.id);
+    let account = await getAccountByNumberAndUser(account_number.toString(), user.id);
 
     const isCentAccount = account_type === "CENT";
     const divisor = isCentAccount ? 10000 : 100;
@@ -76,49 +77,37 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     const marginFreeInt = margin_free ? Math.round(parseFloat(margin_free) * divisor) : 0;
     const marginLevelInt = margin_level ? Math.round(parseFloat(margin_level) * 100) : 0;
 
-    if (account) {
-      // Atualizar conta existente
-      await db.updateTradingAccount(account.id, {
-        balance: balanceInt,
-        equity: equityInt,
-        marginUsed: marginInt,
-        marginFree: marginFreeInt,
-        marginLevel: marginLevelInt,
-        openPositions: parseInt(open_positions) || 0,
-        status: "connected",
-        lastHeartbeat: new Date(),
-      });
+    // Criar ou atualizar conta
+    const accountData = {
+      userId: user.id,
+      accountNumber: account_number.toString(),
+      broker: broker || "Unknown",
+      server: server || "",
+      platform: platform as "MT4" | "MT5",
+      accountType: account_type as "DEMO" | "REAL" | "CENT",
+      isCentAccount,
+      balance: balanceInt,
+      equity: equityInt,
+      marginUsed: marginInt,
+      marginFree: marginFreeInt,
+      marginLevel: marginLevelInt,
+      leverage: parseInt(leverage) || 100,
+      openPositions: parseInt(open_positions) || 0,
+      currency,
+      status: "connected" as const,
+      lastHeartbeat: new Date(),
+    };
 
-      console.log("[MT4] ✅ Conta atualizada:", account_number);
-    } else {
-      // Criar nova conta
-      const accountId = await db.createTradingAccount({
-        userId: user.id,
-        accountNumber: account_number.toString(),
-        broker: broker || "Unknown",
-        server: server || "",
-        platform: platform as "MT4" | "MT5",
-        accountType: account_type as "DEMO" | "REAL" | "CENT",
-        isCentAccount,
-        balance: balanceInt,
-        equity: equityInt,
-        marginUsed: marginInt,
-        marginFree: marginFreeInt,
-        marginLevel: marginLevelInt,
-        leverage: parseInt(leverage) || 100,
-        openPositions: parseInt(open_positions) || 0,
-        currency,
-        status: "connected",
-        lastHeartbeat: new Date(),
-      });
+    const accountId = await createOrUpdateAccount(accountData);
+    
+    // Pega a conta atualizada
+    account = await getAccountByNumberAndUser(account_number.toString(), user.id);
 
-      account = await db.getTradingAccount(accountId);
-      console.log("[MT4] ✅ Nova conta criada:", account_number);
-    }
+    console.log("[MT4] ✅ Conta sincronizada:", account_number);
 
     // Registrar histórico de saldo
     if (account) {
-      await db.createBalanceHistory({
+      await recordBalanceSnapshot({
         accountId: account.id,
         userId: user.id,
         balance: balanceInt,
@@ -192,7 +181,7 @@ router.post("/trade", async (req: Request, res: Response) => {
     });
 
     // Buscar usuário
-    const user = await db.getUserByEmail(userEmail);
+    const user = await getUserByEmail(userEmail);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -201,7 +190,7 @@ router.post("/trade", async (req: Request, res: Response) => {
     }
 
     // Buscar conta
-    const account = await db.getAccountByNumberAndUser(account_number.toString(), user.id);
+    const account = await getAccountByNumberAndUser(account_number.toString(), user.id);
     if (!account) {
       return res.status(404).json({
         success: false,
@@ -228,39 +217,34 @@ router.post("/trade", async (req: Request, res: Response) => {
     const closeTimeDate = parseTimestamp(close_time);
 
     // Detecta tipo (aceita tanto string quanto número)
-    let tradeType: "BUY" | "SELL" = "BUY";
+    let tradeType = "buy";
     if (typeof type === 'string') {
-      tradeType = type.toUpperCase() === 'SELL' ? 'SELL' : 'BUY';
+      tradeType = type.toUpperCase() === 'SELL' ? 'sell' : 'buy';
     } else if (typeof type === 'number') {
-      tradeType = type === 1 ? 'SELL' : 'BUY';
+      tradeType = type === 1 ? 'sell' : 'buy';
     }
 
     // Determina status
-    let tradeStatus: "open" | "closed" = "open";
-    if (status) {
-      tradeStatus = status === "closed" ? "closed" : "open";
-    } else if (closeTimeDate) {
-      tradeStatus = "closed";
-    }
+    let tradeStatus = status || (closeTimeDate ? "closed" : "open");
 
-    await db.createOrUpdateTrade({
-      userId: user.id,
+    await createOrUpdateTrade({
       accountId: account.id,
-      ticket: parseInt(tradeTicket),
+      userId: user.id,
+      ticket: tradeTicket.toString(),
       symbol: symbol || "UNKNOWN",
       type: tradeType,
-      volume: tradeVolume ? parseFloat(tradeVolume) : 0,
+      volume: tradeVolume ? Math.round(parseFloat(tradeVolume) * 100) : 0,
       openPrice: open_price ? Math.round(parseFloat(open_price) * 100000) : 0,
       openTime: openTimeDate,
-      closePrice: close_price ? Math.round(parseFloat(close_price) * 100000) : undefined,
-      closeTime: closeTimeDate || undefined,
-      stopLoss: stop_loss ? Math.round(parseFloat(stop_loss) * 100000) : undefined,
-      takeProfit: take_profit ? Math.round(parseFloat(take_profit) * 100000) : undefined,
+      closePrice: close_price ? Math.round(parseFloat(close_price) * 100000) : null,
+      closeTime: closeTimeDate,
+      stopLoss: stop_loss ? Math.round(parseFloat(stop_loss) * 100000) : null,
+      takeProfit: take_profit ? Math.round(parseFloat(take_profit) * 100000) : null,
       profit: Math.round(parseFloat(profit) * divisor),
-      commission: commission ? Math.round(parseFloat(commission) * divisor) : undefined,
-      swap: swap ? Math.round(parseFloat(swap) * divisor) : undefined,
-      comment: comment || undefined,
-      status: tradeStatus,
+      commission: commission ? Math.round(parseFloat(commission) * divisor) : 0,
+      swap: swap ? Math.round(parseFloat(swap) * divisor) : 0,
+      comment: comment || "",
+      magicNumber: magic_number || 0,
     });
 
     console.log("[MT4] ✅ Trade salvo:", tradeTicket);
@@ -294,7 +278,7 @@ router.post("/ping", async (req: Request, res: Response) => {
       });
     }
 
-    const user = await db.getUserByEmail(userEmail);
+    const user = await getUserByEmail(userEmail);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -302,7 +286,7 @@ router.post("/ping", async (req: Request, res: Response) => {
       });
     }
 
-    const account = await db.getAccountByNumberAndUser(account_number.toString(), user.id);
+    const account = await getAccountByNumberAndUser(account_number.toString(), user.id);
     if (!account) {
       return res.status(404).json({
         success: false,
@@ -310,7 +294,12 @@ router.post("/ping", async (req: Request, res: Response) => {
       });
     }
 
-    await db.updateAccountHeartbeat(account.id);
+    // Atualizar heartbeat
+    await createOrUpdateAccount({
+      ...account,
+      lastHeartbeat: new Date(),
+      status: "connected",
+    });
 
     res.json({
       success: true,
