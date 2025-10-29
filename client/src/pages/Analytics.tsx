@@ -25,6 +25,7 @@ import {
   Line,
   BarChart,
   Bar,
+  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -450,22 +451,31 @@ export default function Analytics() {
           <CardContent>
             {trades && trades.length > 0 ? (
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={(() => {
-                  // Calcula equity acumulado por trade
-                  let cumulativeEquity = accounts?.[0]?.balance || 0;
-                  return trades
+                <ComposedChart data={(() => {
+                  // Pega a conta selecionada
+                  const selectedAccountData = accounts?.find(acc => acc.id === selectedAccount);
+                  
+                  // Balance inicial (com conversão CENT)
+                  const initialBalance = selectedAccountData 
+                    ? (selectedAccountData.isCentAccount ? (selectedAccountData.balance / 100) : selectedAccountData.balance)
+                    : 0;
+                  
+                  // Calcula equity acumulado trade por trade
+                  let cumulativeEquity = initialBalance;
+                  const sortedTrades = trades
                     .filter(t => t.closeTime)
-                    .sort((a, b) => new Date(a.closeTime!).getTime() - new Date(b.closeTime!).getTime())
-                    .map((trade, index) => {
-                      const profit = getActualProfit(trade);
-                      cumulativeEquity += profit;
-                      return {
-                        date: new Date(trade.closeTime!).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                        equity: cumulativeEquity,
-                        profit: profit,
-                        tradeNumber: index + 1,
-                      };
-                    });
+                    .sort((a, b) => new Date(a.closeTime!).getTime() - new Date(b.closeTime!).getTime());
+                  
+                  return sortedTrades.map((trade, index) => {
+                    const profit = getActualProfit(trade);
+                    cumulativeEquity += profit;
+                    return {
+                      date: new Date(trade.closeTime!).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                      equity: cumulativeEquity,
+                      profit: profit,
+                      tradeNumber: index + 1,
+                    };
+                  });
                 })()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis 
@@ -481,8 +491,8 @@ export default function Analytics() {
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
                     formatter={(value: any, name: string) => {
-                      if (name === 'equity') return [`$${value.toFixed(2)}`, 'Equity'];
-                      if (name === 'profit') return [`$${value.toFixed(2)}`, 'Lucro'];
+                      if (name === 'Equity Growth') return [`$${value.toFixed(2)}`, 'Equity'];
+                      if (name === 'Lucro/Prejuízo') return [`$${value.toFixed(2)}`, 'Lucro'];
                       return value;
                     }}
                   />
@@ -497,11 +507,11 @@ export default function Analytics() {
                     type="monotone" 
                     dataKey="equity" 
                     stroke="#f59e0b" 
-                    strokeWidth={2}
+                    strokeWidth={3}
                     name="Equity Growth"
                     dot={false}
                   />
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-[400px] flex items-center justify-center text-muted-foreground">
