@@ -182,7 +182,7 @@ export default function Trades() {
                         </span>
                         <span className="font-bold">
                           <InlineCurrencyValue 
-                            value={(trade.profit || 0) / 100}
+                            value={(trade.profit || 0) / 100000}
                             colored={true}
                           />
                         </span>
