@@ -523,17 +523,22 @@ export const appRouter = router({
         name: z.string().min(1).max(256),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Gerar API Key única
-        const key = generateApiKey();
-        
-        const id = await db.createApiKey({
-          userId: ctx.user.id,
-          name: input.name,
-          key,
-          isActive: true,
-        });
-        
-        return { id, key };
+        try {
+          // Gerar API Key única
+          const key = generateApiKey();
+          
+          const id = await db.createApiKey({
+            userId: ctx.user.id,
+            name: input.name,
+            key,
+            isActive: true,
+          });
+          
+          return { id, key };
+        } catch (error) {
+          console.error('[API Keys] Error creating API key:', error);
+          throw new Error(`Falha ao criar API Key: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        }
       }),
 
     toggle: protectedProcedure
