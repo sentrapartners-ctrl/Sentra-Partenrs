@@ -312,10 +312,10 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                   <CardTitle className="text-lg">Últimos 5 Trades</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {recentTrades.length > 0 ? (
-                    <div className="space-y-3">
-                      {recentTrades.map((trade: any) => (
-                        <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  {recentTrades.length > 0 ? (                    <div className="space-y-2">
+                      {recentTrades.slice(0, 5).map((trade) => {
+                        console.log('[AccountDetailsDialog] Trade:', { profit: trade.profit, isCentAccount: account.isCentAccount });
+                        return (                   <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-4">
                             <Badge className={trade.type === "BUY" ? "bg-green-500" : "bg-red-500"}>
                               {trade.type}
@@ -336,7 +336,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                             </p>
                           </div>
                         </div>
-                      ))}
+                      );})}
                     </div>
                   ) : (
                     <p className="text-center text-muted-foreground py-8">
