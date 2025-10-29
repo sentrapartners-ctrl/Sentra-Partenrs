@@ -329,7 +329,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                           </div>
                           <div className="text-right">
                             <p className={`font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={trade.profit} />
+                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={account.isCentAccount ? (trade.profit / 100) : trade.profit} />
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {trade.pips >= 0 ? '+' : ''}{trade.pips} pips

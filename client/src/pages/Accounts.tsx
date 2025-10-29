@@ -625,9 +625,11 @@ void CheckAndCopySignals()
                       <InlineCurrencyValue 
                         value={account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)}
                       />
-                      <div className="text-[10px] text-muted-foreground">
-                        {(account.balance || 0).toLocaleString('pt-BR')} cents
-                      </div>
+                      {account.isCentAccount && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {(account.balance || 0).toLocaleString('pt-BR')} cents
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -638,9 +640,11 @@ void CheckAndCopySignals()
                       <InlineCurrencyValue 
                         value={account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)}
                       />
-                      <div className="text-[10px] text-muted-foreground">
-                        {(account.equity || 0).toLocaleString('pt-BR')} cents
-                      </div>
+                      {account.isCentAccount && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {(account.equity || 0).toLocaleString('pt-BR')} cents
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -674,9 +678,11 @@ void CheckAndCopySignals()
                       <InlineCurrencyValue 
                         value={account.isCentAccount ? ((account.marginFree || 0) / 100) : (account.marginFree || 0)}
                       />
-                      <div className="text-[10px] text-muted-foreground">
-                        {(account.marginFree || 0).toLocaleString('pt-BR')} cents
-                      </div>
+                      {account.isCentAccount && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {(account.marginFree || 0).toLocaleString('pt-BR')} cents
+                        </div>
+                      )}
                     </div>
                   </div>
 
