@@ -623,7 +623,7 @@ void CheckAndCopySignals()
                     <span className="text-sm text-muted-foreground">Balanço:</span>
                     <div className="text-right text-sm font-bold">
                       <InlineCurrencyValue 
-                        value={account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)}
+                        value={account.isCentAccount ? ((account.balance || 0) / 10000) : ((account.balance || 0) / 100)}
                       />
                       {account.isCentAccount && (
                         <div className="text-[10px] text-muted-foreground">
@@ -638,7 +638,7 @@ void CheckAndCopySignals()
                     <span className="text-sm text-muted-foreground">Equity:</span>
                     <div className="text-right text-sm font-bold">
                       <InlineCurrencyValue 
-                        value={account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)}
+                        value={account.isCentAccount ? ((account.equity || 0) / 10000) : ((account.equity || 0) / 100)}
                       />
                       {account.isCentAccount && (
                         <div className="text-[10px] text-muted-foreground">
@@ -676,7 +676,7 @@ void CheckAndCopySignals()
                     <span className="text-sm text-muted-foreground">Margem Livre:</span>
                     <div className="text-right text-sm">
                       <InlineCurrencyValue 
-                        value={account.isCentAccount ? ((account.marginFree || 0) / 100) : (account.marginFree || 0)}
+                        value={account.isCentAccount ? ((account.marginFree || 0) / 10000) : ((account.marginFree || 0) / 100)}
                       />
                       {account.isCentAccount && (
                         <div className="text-[10px] text-muted-foreground">

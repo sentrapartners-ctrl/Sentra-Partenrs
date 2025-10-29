@@ -24,9 +24,9 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
   if (!account) return null;
 
   // Calcular métricas básicas
-  const balance = account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0);
-  const equity = account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0);
-  const marginFree = account.isCentAccount ? ((account.marginFree || 0) / 100) : (account.marginFree || 0);
+  const balance = account.isCentAccount ? ((account.balance || 0) / 10000) : ((account.balance || 0) / 100);
+  const equity = account.isCentAccount ? ((account.equity || 0) / 10000) : ((account.equity || 0) / 100);
+  const marginFree = account.isCentAccount ? ((account.marginFree || 0) / 10000) : ((account.marginFree || 0) / 100);
   const drawdownPercent = account.balance ? ((equity - balance) / balance * 100) : 0;
 
   // Usar dados reais ou valores padrão
@@ -160,7 +160,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                   <div>
                     <p className="text-sm text-muted-foreground">Margem Usada:</p>
                     <p className="font-medium">
-                      <InlineCurrencyValue value={account.isCentAccount ? ((account.marginUsed || 0) / 100) : (account.marginUsed || 0)} />
+                      <InlineCurrencyValue value={account.isCentAccount ? ((account.marginUsed || 0) / 10000) : ((account.marginUsed || 0) / 100)} />
                     </p>
                   </div>
                   <div>
@@ -329,7 +329,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                           </div>
                           <div className="text-right">
                             <p className={`font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={account.isCentAccount ? (trade.profit / 100) : trade.profit} />
+                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={account.isCentAccount ? (trade.profit / 10000) : (trade.profit / 100)} />
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {trade.pips >= 0 ? '+' : ''}{trade.pips} pips

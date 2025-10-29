@@ -26,10 +26,10 @@ export default function Home() {
     
     // Calcula balanço total aplicando conversão por conta
     const totalBalance = (summary?.accounts || []).reduce((sum, acc: any) => {
-      return sum + (acc.isCentAccount ? ((acc.balance || 0) / 100) : (acc.balance || 0));
+      return sum + (acc.isCentAccount ? ((acc.balance || 0) / 10000) : ((acc.balance || 0) / 100));
     }, 0);
     const totalEquity = (summary?.accounts || []).reduce((sum, acc: any) => {
-      return sum + (acc.isCentAccount ? ((acc.equity || 0) / 100) : (acc.equity || 0));
+      return sum + (acc.isCentAccount ? ((acc.equity || 0) / 10000) : ((acc.equity || 0) / 100));
     }, 0);
     const profitLoss = totalEquity - totalBalance;
     const profitLossPercent = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
@@ -58,7 +58,7 @@ export default function Home() {
     // Aplica conversão baseada em isCentAccount
     return dashboardData.recentTrades.map((trade: any) => ({
       ...trade,
-      profit: trade.isCentAccount ? ((trade.profit || 0) / 100) : (trade.profit || 0),
+      profit: trade.isCentAccount ? ((trade.profit || 0) / 10000) : ((trade.profit || 0) / 100),
       volume: (trade.volume || 0) / 100,
       openPrice: (trade.openPrice || 0) / 100000,
       closePrice: (trade.closePrice || 0) / 100000,
@@ -277,7 +277,7 @@ export default function Home() {
                         <span className="text-muted-foreground">Balanço:</span>
                         <div className="text-right font-medium text-sm">
                           <InlineCurrencyValue 
-                            value={account.isCentAccount ? ((account.balance || 0) / 100) : (account.balance || 0)}
+                            value={account.isCentAccount ? ((account.balance || 0) / 10000) : ((account.balance || 0) / 100)}
                           />
                         </div>
                       </div>
@@ -285,7 +285,7 @@ export default function Home() {
                         <span className="text-muted-foreground">Equity:</span>
                         <div className="text-right font-medium text-sm">
                           <InlineCurrencyValue 
-                            value={account.isCentAccount ? ((account.equity || 0) / 100) : (account.equity || 0)}
+                            value={account.isCentAccount ? ((account.equity || 0) / 10000) : ((account.equity || 0) / 100)}
                           />
                         </div>
                       </div>
