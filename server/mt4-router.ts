@@ -143,9 +143,9 @@ export const mt4Router = router({
           closeTime: input.closeTime ? new Date(input.closeTime) : undefined,
           stopLoss: input.stopLoss ? Math.round(input.stopLoss * 100000) : undefined,
           takeProfit: input.takeProfit ? Math.round(input.takeProfit * 100000) : undefined,
-          profit: Math.round(input.profit * 100), // Converter para centavos
-          commission: input.commission ? Math.round(input.commission * 100) : undefined,
-          swap: input.swap ? Math.round(input.swap * 100) : undefined,
+          profit: Math.round(input.profit), // Já vem em centavos do MT4
+          commission: input.commission ? Math.round(input.commission) : undefined,
+          swap: input.swap ? Math.round(input.swap) : undefined,
           comment: input.comment,
           status: input.closeTime ? "closed" : "open",
         });
