@@ -58,7 +58,15 @@ export async function getDb() {
         // Executar migrations apenas uma vez
         if (!_migrationRun) {
           _migrationRun = true;
-          // Importar e executar migration de notificações
+          // Importar e executar migrations
+          import('./apply-balance-fix').then(({ applyBalanceFix }) => {
+            applyBalanceFix().catch(err => {
+              console.error('[Database] Balance fix failed:', err);
+            });
+          }).catch(err => {
+            console.error('[Database] Failed to import balance fix:', err);
+          });
+          
           import('./migrations/create-notifications-table').then(({ createNotificationsTable }) => {
             createNotificationsTable().catch(err => {
               console.error('[Database] Migration failed:', err);
