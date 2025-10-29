@@ -229,7 +229,8 @@ export const appRouter = router({
           id: t.id,
           symbol: t.symbol,
           type: t.type,
-          profit: (t.profit || 0) / conversionFactor,
+          profit: t.profit || 0, // Não divide aqui, deixa o frontend fazer
+          isCentAccount: account.isCentAccount,
           pips: t.pips || 0,
           closeTime: t.closeTime,
         }));
