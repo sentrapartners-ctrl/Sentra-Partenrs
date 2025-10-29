@@ -350,7 +350,8 @@ export async function getUserTrades(userId: number, limit: number = 100) {
     ...r.trade,
     accountNumber: r.account?.accountNumber,
     broker: r.account?.broker,
-    accountType: r.account?.accountType
+    accountType: r.account?.accountType,
+    isCentAccount: r.account?.isCentAccount || false
   }));
   
   return await applyTradeConversion(tradesWithAccount);
@@ -359,11 +360,24 @@ export async function getUserTrades(userId: number, limit: number = 100) {
 export async function getAccountTrades(accountId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select().from(trades)
+  const result = await db.select({
+    trade: trades,
+    account: tradingAccounts
+  }).from(trades)
+    .leftJoin(tradingAccounts, eq(trades.accountId, tradingAccounts.id))
     .where(eq(trades.accountId, accountId))
     .orderBy(desc(trades.openTime))
     .limit(limit);
-  return await applyTradeConversion(result);
+  
+  const tradesWithAccount = result.map(r => ({
+    ...r.trade,
+    accountNumber: r.account?.accountNumber,
+    broker: r.account?.broker,
+    accountType: r.account?.accountType,
+    isCentAccount: r.account?.isCentAccount || false
+  }));
+  
+  return await applyTradeConversion(tradesWithAccount);
 }
 
 export async function getOpenTrades(userId: number) {
@@ -397,7 +411,8 @@ export async function getTradesByDateRange(userId: number, startDate: Date, endD
     ...r.trade,
     accountNumber: r.account?.accountNumber,
     broker: r.account?.broker,
-    accountType: r.account?.accountType
+    accountType: r.account?.accountType,
+    isCentAccount: r.account?.isCentAccount || false
   }));
   
   return await applyTradeConversion(tradesWithAccount);
