@@ -242,9 +242,12 @@ function AdminSupport() {
                             }`}
                           >
                             {!isSupport && (
-                              <p className="text-xs font-semibold mb-1">
-                                Cliente
-                              </p>
+                              <div className="text-xs font-semibold mb-1">
+                                <p>{msg.senderName?.split(' ')[0] || 'Cliente'}</p>
+                                <p className="text-[10px] font-normal text-muted-foreground">
+                                  {msg.senderEmail}
+                                </p>
+                              </div>
                             )}
                             <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                             

@@ -4,7 +4,8 @@ import { getDb } from "./db";
 import { 
   supportTickets, 
   supportMessages, 
-  supportNotifications 
+  supportNotifications,
+  users
 } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -115,10 +116,23 @@ export const supportRouter = router({
         });
       }
 
-      // Buscar mensagens
+      // Buscar mensagens com dados do remetente
       const messages = await db
-        .select()
+        .select({
+          id: supportMessages.id,
+          ticketId: supportMessages.ticketId,
+          senderId: supportMessages.senderId,
+          senderType: supportMessages.senderType,
+          message: supportMessages.message,
+          attachments: supportMessages.attachments,
+          isRead: supportMessages.isRead,
+          readAt: supportMessages.readAt,
+          createdAt: supportMessages.createdAt,
+          senderName: users.name,
+          senderEmail: users.email,
+        })
         .from(supportMessages)
+        .leftJoin(users, eq(supportMessages.senderId, users.id))
         .where(eq(supportMessages.ticketId, input.ticketId))
         .orderBy(supportMessages.createdAt);
 
