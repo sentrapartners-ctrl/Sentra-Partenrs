@@ -51,7 +51,7 @@ export const mt4Router = router({
       const key = await validateApiKey(input.apiKey);
       
       // Verificar se a conta já existe
-      let account = await db.getAccountByNumber(input.accountNumber, key.userId);
+      let account = await db.getAccountByNumberAndUser(input.accountNumber, key.userId);
       
       const isCentAccount = input.accountType === "CENT";
       
@@ -129,7 +129,7 @@ export const mt4Router = router({
       const key = await validateApiKey(input.apiKey);
       
       // Buscar conta
-      const account = await db.getAccountByNumber(input.accountNumber, key.userId);
+      const account = await db.getAccountByNumberAndUser(input.accountNumber, key.userId);
       
       if (!account) {
         throw new TRPCError({

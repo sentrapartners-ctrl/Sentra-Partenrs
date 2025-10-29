@@ -1113,7 +1113,7 @@ export async function deleteApiKey(id: number) {
     .where(eq(apiKeys.id, id));
 }
 
-export async function getAccountByNumber(accountNumber: string, userId: number) {
+export async function getAccountByNumberAndUser(accountNumber: string, userId: number) {
   const db = await getDb();
   if (!db) return null;
   
