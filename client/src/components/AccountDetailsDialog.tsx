@@ -313,9 +313,7 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                 </CardHeader>
                 <CardContent>
                   {recentTrades.length > 0 ? (                    <div className="space-y-2">
-                      {recentTrades.slice(0, 5).map((trade) => {
-                        console.log('[AccountDetailsDialog] Trade:', { profit: trade.profit, isCentAccount: account.isCentAccount });
-                        return (                   <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      {recentTrades.slice(0, 5).map((trade) => (                   <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-4">
                             <Badge className={trade.type === "BUY" ? "bg-green-500" : "bg-red-500"}>
                               {trade.type}
@@ -329,14 +327,14 @@ export function AccountDetailsDialog({ account, open, onOpenChange }: AccountDet
                           </div>
                           <div className="text-right">
                             <p className={`font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={account.isCentAccount ? (trade.profit / 100) : trade.profit} />
+                              {trade.profit >= 0 ? '+' : ''}<InlineCurrencyValue value={(trade as any).isCentAccount ? ((trade.profit || 0) / 100) : (trade.profit || 0)} />
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {trade.pips >= 0 ? '+' : ''}{trade.pips} pips
                             </p>
                           </div>
                         </div>
-                      );})}
+                      ))}
                     </div>
                   ) : (
                     <p className="text-center text-muted-foreground py-8">
