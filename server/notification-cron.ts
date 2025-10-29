@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { db } from './db';
+import { getDb } from './db';
 import { users, trades } from '../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { sendDailyProfitNotification, sendWeeklyProfitNotification } from './bark-notifications';
@@ -8,6 +8,9 @@ import { sendDailyProfitNotification, sendWeeklyProfitNotification } from './bar
  * Calcula lucro e estatísticas de um período
  */
 async function calculateProfitStats(userId: number, startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
   const userTrades = await db
     .select()
     .from(trades)
@@ -43,6 +46,9 @@ async function calculateProfitStats(userId: number, startDate: Date, endDate: Da
  * Calcula melhor e pior dia da semana
  */
 async function calculateBestWorstDays(userId: number, startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
   const userTrades = await db
     .select()
     .from(trades)
@@ -92,6 +98,9 @@ async function calculateBestWorstDays(userId: number, startDate: Date, endDate: 
 async function sendDailyNotifications() {
   console.log('Running daily profit notifications...');
   
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
   const allUsers = await db.select().from(users).where(sql`barkKey IS NOT NULL`);
 
   const today = new Date();
@@ -129,6 +138,9 @@ async function sendDailyNotifications() {
  */
 async function sendWeeklyNotifications() {
   console.log('Running weekly profit notifications...');
+  
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
   
   const allUsers = await db.select().from(users).where(sql`barkKey IS NOT NULL`);
 
