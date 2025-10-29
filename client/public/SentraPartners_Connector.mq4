@@ -89,7 +89,7 @@ void SyncAccount()
    
    // Monta parâmetros (form-urlencoded)
    string params = 
-      "email=" + UserEmail +
+      "email=" + UrlEncode(UserEmail) +
       "&account_number=" + IntegerToString(AccountNumber()) +
       "&broker=" + UrlEncode(AccountCompany()) +
       "&server=" + UrlEncode(AccountServer()) +
@@ -166,7 +166,7 @@ bool SyncSingleTrade(string status)
    
    // Monta parâmetros
    string params = 
-      "email=" + UserEmail +
+      "email=" + UrlEncode(UserEmail) +
       "&account_number=" + IntegerToString(AccountNumber()) +
       "&ticket=" + IntegerToString(OrderTicket()) +
       "&symbol=" + OrderSymbol() +
