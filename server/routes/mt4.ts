@@ -220,6 +220,22 @@ router.post("/trade", async (req: Request, res: Response) => {
       magicNumber: 0,
     });
 
+    // Detectar se é conta CENT pelo símbolo (termina com 'c')
+    if (symbol && symbol.toLowerCase().endsWith('c') && !account.isCentAccount) {
+      const db = await getDb();
+      const { accounts } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      await db.update(accounts)
+        .set({ 
+          accountType: "CENT",
+          isCentAccount: true 
+        })
+        .where(eq(accounts.id, account.id));
+      
+      console.log(`[MT4] ✅ Conta ${account_number} atualizada para CENT (símbolo: ${symbol})`);
+    }
+
     res.json({
       success: true,
       message: "Trade sincronizado",
