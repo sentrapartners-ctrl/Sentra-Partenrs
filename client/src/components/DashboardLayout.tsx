@@ -42,7 +42,7 @@ const menuItems = [
   { icon: CreditCard, label: "Assinaturas", path: "/subscriptions" },
   { icon: Server, label: "VPS", path: "/marketplace/vps" },
   { icon: Bot, label: "Expert Advisors", path: "/marketplace/eas" },
-  { icon: Key, label: "API Keys", path: "/api-keys" },
+
   { icon: Settings, label: "Configurações", path: "/settings" },
 ];
 

@@ -512,53 +512,6 @@ export const appRouter = router({
     }),
   }),
 
-  // ===== API KEYS =====
-  apiKeys: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserApiKeys(ctx.user.id);
-    }),
-
-    create: protectedProcedure
-      .input(z.object({
-        name: z.string().min(1).max(256),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        try {
-          // Gerar API Key única
-          const key = generateApiKey();
-          
-          const id = await db.createApiKey({
-            userId: ctx.user.id,
-            name: input.name,
-            key,
-            isActive: true,
-          });
-          
-          return { id, key };
-        } catch (error) {
-          console.error('[API Keys] Error creating API key:', error);
-          throw new Error(`Falha ao criar API Key: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-        }
-      }),
-
-    toggle: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        isActive: z.boolean(),
-      }))
-      .mutation(async ({ input }) => {
-        await db.toggleApiKeyStatus(input.id, input.isActive);
-        return { success: true };
-      }),
-
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.deleteApiKey(input.id);
-        return { success: true };
-      }),
-  }),
-
   // ===== USER SETTINGS =====
   settings: router({
     get: protectedProcedure.query(async ({ ctx }) => {
