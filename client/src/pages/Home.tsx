@@ -34,8 +34,19 @@ export default function Home() {
     const profitLoss = totalEquity - totalBalance;
     const profitLossPercent = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
     
-    // Calcula drawdown após conversão correta
-    const drawdown = totalBalance > 0 ? (profitLoss / totalBalance) * 100 : 0;
+    // Calcula lucro do dia (trades fechados hoje)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayProfit = (dashboardData?.recentTrades || []).reduce((sum, trade: any) => {
+      if (!trade.closeTime) return sum;
+      const closeDate = new Date(trade.closeTime);
+      closeDate.setHours(0, 0, 0, 0);
+      if (closeDate.getTime() === today.getTime()) {
+        const profit = trade.isCentAccount ? ((trade.profit || 0) / 100) : (trade.profit || 0);
+        return sum + profit;
+      }
+      return sum;
+    }, 0);
 
     return {
       totalBalance,
@@ -48,7 +59,7 @@ export default function Home() {
       winRate: tradeStats?.winRate || 0,
       totalTrades: tradeStats?.totalTrades || 0,
       netProfit: tradeStats?.netProfit || 0,
-      drawdown,
+      todayProfit,
     };
   }, [dashboardData]);
 
@@ -143,17 +154,21 @@ export default function Home() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Drawdown</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Lucro do Dia</CardTitle>
+              {(stats?.todayProfit || 0) >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${
-                (stats?.drawdown || 0) < 0 ? "text-red-500" : "text-green-500"
+                (stats?.todayProfit || 0) >= 0 ? "text-green-500" : "text-red-500"
               }`}>
-                {(stats?.drawdown || 0).toFixed(2)}%
+                <CurrencyValue value={stats?.todayProfit || 0} />
               </div>
               <p className="text-xs text-muted-foreground">
-                Equity vs Balance
+                Trades fechados hoje
               </p>
             </CardContent>
           </Card>
