@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Key, Plus, Copy, Trash2, Power, Download } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export default function ApiKeys() {
-  const { toast } = useToast();
+  // toast já importado do sonner
   const [newKeyName, setNewKeyName] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
@@ -33,17 +33,10 @@ export default function ApiKeys() {
       setNewlyCreatedKey(data.key);
       setNewKeyName("");
       refetch();
-      toast({
-        title: "API Key criada!",
-        description: "Copie e guarde sua chave em local seguro. Ela não será exibida novamente.",
-      });
+      toast.success("API Key criada! Copie e guarde sua chave em local seguro.");
     },
     onError: () => {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a API Key",
-        variant: "destructive",
-      });
+      toast.error("Não foi possível criar a API Key");
     },
   });
 
@@ -53,10 +46,7 @@ export default function ApiKeys() {
     },
     onSuccess: () => {
       refetch();
-      toast({
-        title: "Status atualizado",
-        description: "O status da API Key foi alterado com sucesso",
-      });
+      toast.success("Status da API Key atualizado com sucesso");
     },
   });
 
@@ -66,19 +56,13 @@ export default function ApiKeys() {
     },
     onSuccess: () => {
       refetch();
-      toast({
-        title: "API Key excluída",
-        description: "A API Key foi removida com sucesso",
-      });
+      toast.success("API Key excluída com sucesso");
     },
   });
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copiado!",
-      description: "API Key copiada para a área de transferência",
-    });
+    toast.success("API Key copiada para a área de transferência");
   };
 
   const downloadEA = () => {
