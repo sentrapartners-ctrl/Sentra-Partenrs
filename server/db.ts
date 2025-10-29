@@ -43,6 +43,8 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+let _migrationRun = false;
+
 export async function getDb() {
   if (!_db) {
     // Priorizar AIVEN_DATABASE_URL se existir, senão usar DATABASE_URL (banco Manus)
@@ -52,6 +54,19 @@ export async function getDb() {
       try {
         console.log("[Database] Connecting to:", dbUrl.includes('aiven') ? 'Aiven MySQL' : 'Manus TiDB');
         _db = drizzle(dbUrl);
+        
+        // Executar migrations apenas uma vez
+        if (!_migrationRun) {
+          _migrationRun = true;
+          // Importar e executar migration de notificações
+          import('./migrations/create-notifications-table').then(({ createNotificationsTable }) => {
+            createNotificationsTable().catch(err => {
+              console.error('[Database] Migration failed:', err);
+            });
+          }).catch(err => {
+            console.error('[Database] Failed to import migration:', err);
+          });
+        }
       } catch (error) {
         console.warn("[Database] Failed to connect:", error);
         _db = null;
