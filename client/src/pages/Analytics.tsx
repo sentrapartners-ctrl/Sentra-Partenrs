@@ -157,12 +157,40 @@ export default function Analytics() {
   const balanceChartData = useMemo(() => {
     if (!balanceHistoryData || balanceHistoryData.length === 0) return [];
     
+    // Se for "all", agrupa por data e soma os balances
+    if (selectedAccount === "all") {
+      const groupedByDate = new Map<string, { balance: number; equity: number }>();
+      
+      balanceHistoryData.forEach((item: any) => {
+        const dateKey = new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const balance = item.isCentAccount ? ((item.balance || 0) / 100) : (item.balance || 0);
+        const equity = item.isCentAccount ? ((item.equity || 0) / 100) : (item.equity || 0);
+        
+        if (groupedByDate.has(dateKey)) {
+          const existing = groupedByDate.get(dateKey)!;
+          groupedByDate.set(dateKey, {
+            balance: existing.balance + balance,
+            equity: existing.equity + equity,
+          });
+        } else {
+          groupedByDate.set(dateKey, { balance, equity });
+        }
+      });
+      
+      return Array.from(groupedByDate.entries()).map(([date, values]) => ({
+        date,
+        balance: values.balance,
+        equity: values.equity,
+      }));
+    }
+    
+    // Se for uma conta específica, retorna direto
     return balanceHistoryData.map((item: any) => ({
       date: new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       balance: item.isCentAccount ? ((item.balance || 0) / 100) : (item.balance || 0),
       equity: item.isCentAccount ? ((item.equity || 0) / 100) : (item.equity || 0),
     }));
-  }, [balanceHistoryData]);
+  }, [balanceHistoryData, selectedAccount]);
 
   // Dados para gráfico de performance por dia da semana
   const weekdayData = useMemo(() => {
