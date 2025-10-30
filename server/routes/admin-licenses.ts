@@ -10,24 +10,57 @@ const router = express.Router();
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
+    console.log("[Admin Licenses] GET / - Iniciando...");
+    
     const db = await getDb();
     if (!db) {
-      return res.status(500).json({ error: "Database not available" });
+      console.error("[Admin Licenses] Database not available");
+      return res.status(500).json({ 
+        success: false,
+        error: "Database not available" 
+      });
     }
 
-    const [licenses]: any = await db.execute(`
+    console.log("[Admin Licenses] Database conectado");
+
+    // Query simples primeiro
+    const query = `
       SELECT 
-        l.*,
+        l.id,
+        l.user_id as userId,
+        l.license_key as licenseKey,
+        l.ea_name as eaName,
+        l.license_type as licenseType,
+        l.status,
+        l.allowed_accounts as allowedAccounts,
+        l.expires_at as expiresAt,
+        l.last_used_at as lastUsedAt,
+        l.created_at as createdAt,
         u.email as userEmail
       FROM ea_licenses l
       LEFT JOIN users u ON l.user_id = u.id
       ORDER BY l.created_at DESC
-    `);
+    `;
 
-    res.json({ licenses });
+    console.log("[Admin Licenses] Executando query...");
+    const [rows]: any = await db.execute(query);
+    
+    console.log(`[Admin Licenses] Query OK - ${rows.length} licenças encontradas`);
+
+    return res.json({ 
+      success: true,
+      licenses: rows 
+    });
+
   } catch (error: any) {
-    console.error("[Admin] Erro ao listar licenças:", error);
-    res.status(500).json({ error: error.message });
+    console.error("[Admin Licenses] ERRO:", error.message);
+    console.error("[Admin Licenses] Stack:", error.stack);
+    
+    return res.status(500).json({ 
+      success: false,
+      error: error.message,
+      details: error.stack
+    });
   }
 });
 
@@ -37,6 +70,8 @@ router.get("/", async (req: Request, res: Response) => {
  */
 router.post("/", async (req: Request, res: Response) => {
   try {
+    console.log("[Admin Licenses] POST / - Criando licença...");
+    
     const {
       userEmail,
       licenseKey,
@@ -46,8 +81,16 @@ router.post("/", async (req: Request, res: Response) => {
       expiresAt,
     } = req.body;
 
+    console.log("[Admin Licenses] Dados recebidos:", {
+      userEmail,
+      licenseKey: licenseKey ? licenseKey.substring(0, 10) + '...' : 'N/A',
+      eaName,
+      licenseType
+    });
+
     if (!userEmail || !licenseKey || !eaName) {
       return res.status(400).json({
+        success: false,
         error: "Parâmetros obrigatórios: userEmail, licenseKey, eaName",
       });
     }
@@ -55,12 +98,21 @@ router.post("/", async (req: Request, res: Response) => {
     // Buscar usuário pelo email
     const user = await getUserByEmail(userEmail);
     if (!user) {
-      return res.status(404).json({ error: "Usuário não encontrado" });
+      console.log("[Admin Licenses] Usuário não encontrado:", userEmail);
+      return res.status(404).json({ 
+        success: false,
+        error: "Usuário não encontrado" 
+      });
     }
+
+    console.log("[Admin Licenses] Usuário encontrado:", user.id);
 
     const db = await getDb();
     if (!db) {
-      return res.status(500).json({ error: "Database not available" });
+      return res.status(500).json({ 
+        success: false,
+        error: "Database not available" 
+      });
     }
 
     // Verificar se a chave já existe
@@ -70,10 +122,15 @@ router.post("/", async (req: Request, res: Response) => {
     );
 
     if (existing.length > 0) {
-      return res.status(400).json({ error: "Chave de licença já existe" });
+      console.log("[Admin Licenses] Chave já existe");
+      return res.status(400).json({ 
+        success: false,
+        error: "Chave de licença já existe" 
+      });
     }
 
     // Criar licença
+    console.log("[Admin Licenses] Inserindo no banco...");
     await db.execute(
       `INSERT INTO ea_licenses 
         (user_id, license_key, ea_name, license_type, allowed_accounts, expires_at, status) 
@@ -88,19 +145,19 @@ router.post("/", async (req: Request, res: Response) => {
       ]
     );
 
-    console.log("[Admin] Licença criada:", {
-      userEmail,
-      eaName,
-      licenseType,
-    });
+    console.log("[Admin Licenses] Licença criada com sucesso!");
 
-    res.json({
+    return res.json({
       success: true,
       message: "Licença criada com sucesso",
     });
+    
   } catch (error: any) {
-    console.error("[Admin] Erro ao criar licença:", error);
-    res.status(500).json({ error: error.message });
+    console.error("[Admin Licenses] Erro ao criar licença:", error);
+    return res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -113,9 +170,14 @@ router.patch("/:id", async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, allowedAccounts, expiresAt } = req.body;
 
+    console.log("[Admin Licenses] PATCH /:id - Atualizando licença:", id);
+
     const db = await getDb();
     if (!db) {
-      return res.status(500).json({ error: "Database not available" });
+      return res.status(500).json({ 
+        success: false,
+        error: "Database not available" 
+      });
     }
 
     const updates: string[] = [];
@@ -135,7 +197,10 @@ router.patch("/:id", async (req: Request, res: Response) => {
     }
 
     if (updates.length === 0) {
-      return res.status(400).json({ error: "Nenhum campo para atualizar" });
+      return res.status(400).json({ 
+        success: false,
+        error: "Nenhum campo para atualizar" 
+      });
     }
 
     values.push(id);
@@ -145,15 +210,19 @@ router.patch("/:id", async (req: Request, res: Response) => {
       values
     );
 
-    console.log("[Admin] Licença atualizada:", id);
+    console.log("[Admin Licenses] Licença atualizada:", id);
 
-    res.json({
+    return res.json({
       success: true,
       message: "Licença atualizada com sucesso",
     });
+    
   } catch (error: any) {
-    console.error("[Admin] Erro ao atualizar licença:", error);
-    res.status(500).json({ error: error.message });
+    console.error("[Admin Licenses] Erro ao atualizar licença:", error);
+    return res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -165,22 +234,31 @@ router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    console.log("[Admin Licenses] DELETE /:id - Excluindo licença:", id);
+
     const db = await getDb();
     if (!db) {
-      return res.status(500).json({ error: "Database not available" });
+      return res.status(500).json({ 
+        success: false,
+        error: "Database not available" 
+      });
     }
 
     await db.execute("DELETE FROM ea_licenses WHERE id = ?", [id]);
 
-    console.log("[Admin] Licença excluída:", id);
+    console.log("[Admin Licenses] Licença excluída:", id);
 
-    res.json({
+    return res.json({
       success: true,
       message: "Licença excluída com sucesso",
     });
+    
   } catch (error: any) {
-    console.error("[Admin] Erro ao excluir licença:", error);
-    res.status(500).json({ error: error.message });
+    console.error("[Admin Licenses] Erro ao excluir licença:", error);
+    return res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

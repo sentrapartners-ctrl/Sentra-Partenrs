@@ -46,14 +46,23 @@ export default function LicenseManager() {
   const loadLicenses = async () => {
     setLoading(true);
     try {
+      console.log("[LicenseManager] Carregando licenças...");
       const response = await fetch("/api/admin/licenses");
+      
+      console.log("[LicenseManager] Response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log("[LicenseManager] Dados recebidos:", data);
         setLicenses(data.licenses || []);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: "Erro desconhecido" }));
+        console.error("[LicenseManager] Erro na resposta:", errorData);
+        toast.error(errorData.error || "Erro ao carregar licenças");
       }
-    } catch (error) {
-      console.error("Erro ao carregar licenças:", error);
-      toast.error("Não foi possível carregar as licenças");
+    } catch (error: any) {
+      console.error("[LicenseManager] Erro ao carregar licenças:", error);
+      toast.error("Não foi possível carregar as licenças: " + error.message);
     } finally {
       setLoading(false);
     }
