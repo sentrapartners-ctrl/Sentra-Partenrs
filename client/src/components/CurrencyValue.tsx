@@ -82,19 +82,22 @@ export function InlineCurrencyValue({
 
   const sign = value >= 0 ? "+" : "";
 
-  if (currency === from || !showConverted) {
-    return (
-      <span className={`${className} ${colorClass}`}>
-        {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
-          minimumFractionDigits: 2, 
-          maximumFractionDigits: 2 
-        })}
-      </span>
-    );
-  }
-
   // Modo compact para calendário (ultra responsivo: 5px mobile, 7px tablet, 10px desktop)
   if (compact) {
+    // Se mostra apenas uma moeda, ainda usa fonte pequena no compact
+    if (currency === from || !showConverted) {
+      return (
+        <span className={`${className} ${colorClass} flex flex-col items-center`}>
+          <span className="text-[5px] xs:text-[6px] sm:text-[7px] md:text-[9px] lg:text-[10px] leading-[1.1]">
+            {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
+              minimumFractionDigits: 2, 
+              maximumFractionDigits: 2 
+            })}
+          </span>
+        </span>
+      );
+    }
+    // Se mostra duas moedas, exibe ambas com fonte pequena
     return (
       <span className={`${className} ${colorClass} flex flex-col items-center gap-[1px]`}>
         <span className="text-[5px] xs:text-[6px] sm:text-[7px] md:text-[9px] lg:text-[10px] leading-[1.1]">
