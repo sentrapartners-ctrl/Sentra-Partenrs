@@ -45,7 +45,6 @@ const menuItems = [
   { icon: Bot, label: "Expert Advisors", path: "/marketplace/eas" },
 
   { icon: Settings, label: "Configurações", path: "/settings" },
-  { icon: RefreshCw, label: "Sincronização", path: "/sync-settings" },
 ];
 
 const adminMenuItems = [

@@ -14,7 +14,9 @@
 input string UserEmail = "";                            // ⚠️ SEU EMAIL CADASTRADO NO SISTEMA
 input string AccountType = "STANDARD";                  // Tipo de Conta: CENT ou STANDARD
 input string MasterServer = "https://sentrapartners.com/api/mt";
-input int HeartbeatInterval = 60;                       // Segundos entre heartbeats
+input int HeartbeatInterval = 10800;                    // Segundos entre heartbeats (padrão: 3h)
+input int ProfitUpdateInterval = 7200;                  // Atualização de lucro (segundos) - Padrão: 2h
+input string HistorySendTimes = "03:00,12:00,21:00";    // Horários para enviar histórico (HH:MM)
 input int HistoryDays = 90;                             // Dias de histórico (0 = todo histórico)
 input bool EnableLogs = true;                           // Habilitar logs detalhados
 
@@ -23,8 +25,12 @@ input bool EnableLogs = true;                           // Habilitar logs detalh
 //====================================================
 bool historySent = false;
 datetime lastHeartbeat = 0;
+datetime lastProfitUpdate = 0;
+datetime lastHistorySend = 0;
 int totalTradesSent = 0;
 bool isConnected = false;
+int profitTimer = 0;
+int historyTimer = 0;
 
 //====================================================
 // INICIALIZAÇÃO
@@ -37,8 +43,9 @@ int OnInit() {
     Print("User Email: ", UserEmail);
     Print("Tipo de Conta: ", AccountType);
     Print("Servidor: ", MasterServer);
-    Print("Heartbeat: ", HeartbeatInterval, " segundos");
-    Print("Histórico: ", HistoryDays == 0 ? "Completo" : IntegerToString(HistoryDays) + " dias");
+    Print("Heartbeat: ", HeartbeatInterval/3600, "h (posições abertas)");
+    Print("Profit Update: ", ProfitUpdateInterval/3600, "h");
+    Print("Histórico: ", HistorySendTimes, " (", HistoryDays == 0 ? "Completo" : IntegerToString(HistoryDays) + " dias", ")");
     Print("===========================================");
     
     // Validar email
@@ -78,8 +85,23 @@ int OnInit() {
 // TIMER - EXECUTADO A CADA INTERVALO
 //====================================================
 void OnTimer() {
+    datetime currentTime = TimeCurrent();
+    
+    // Heartbeat e posições abertas
     SendHeartbeat();
     ExportOpenPositions();
+    
+    // Atualiza lucro a cada ProfitUpdateInterval (padrão: 2h)
+    if(currentTime - lastProfitUpdate >= ProfitUpdateInterval) {
+        SendProfitUpdate();
+        lastProfitUpdate = currentTime;
+    }
+    
+    // Envia histórico nos horários configurados
+    if(ShouldSendHistory()) {
+        ExportHistoricalTrades();
+        lastHistorySend = currentTime;
+    }
 }
 
 //====================================================
@@ -305,6 +327,58 @@ bool SendToServer(string endpoint, string jsonData) {
     } else {
         Print("✗ Erro HTTP ", res, " ao enviar para ", endpoint);
         return false;
+    }
+}
+
+//====================================================
+// FUNÇÃO: VERIFICAR SE DEVE ENVIAR HISTÓRICO
+//====================================================
+bool ShouldSendHistory() {
+    datetime currentTime = TimeCurrent();
+    
+    // Não enviar se já enviou nos últimos 30 minutos
+    if(currentTime - lastHistorySend < 1800) {
+        return false;
+    }
+    
+    MqlDateTime dt;
+    TimeToStruct(currentTime, dt);
+    string currentTimeStr = StringFormat("%02d:%02d", dt.hour, dt.min);
+    
+    // Verificar se está em algum dos horários configurados
+    string times[];
+    int numTimes = StringSplit(HistorySendTimes, ',', times);
+    
+    for(int i = 0; i < numTimes; i++) {
+        string targetTime = times[i];
+        StringTrimLeft(targetTime);
+        StringTrimRight(targetTime);
+        
+        // Comparar apenas hora:minuto (permite envio durante 1 minuto)
+        if(StringFind(currentTimeStr, targetTime) == 0) {
+            if(EnableLogs) Print("⏰ Horário de envio de histórico: ", targetTime);
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+//====================================================
+// FUNÇÃO: ENVIAR ATUALIZAÇÃO DE LUCRO
+//====================================================
+void SendProfitUpdate() {
+    string data = "{";
+    data += "\"user_email\":\"" + UserEmail + "\",";
+    data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    data += "\"balance\":" + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + ",";
+    data += "\"equity\":" + DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY), 2) + ",";
+    data += "\"profit\":" + DoubleToString(AccountInfoDouble(ACCOUNT_PROFIT), 2) + ",";
+    data += "\"margin_free\":" + DoubleToString(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 2);
+    data += "}";
+    
+    if(SendToServer("/profit", data)) {
+        if(EnableLogs) Print("✅ Atualização de lucro enviada");
     }
 }
 
