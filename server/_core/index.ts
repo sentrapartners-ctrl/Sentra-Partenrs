@@ -17,6 +17,7 @@ import mt4Router from "../routes/mt4";
 import uploadRouter from "../routes/upload";
 import settingsRouter from "../routes/settings";
 import copyTradingRouter from "../routes/copy-trading";
+import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
 
 // import mt4ConnectorRouter from "../routes/mt4-connector";
 
@@ -99,6 +100,10 @@ async function startServer() {
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
+
+  // Configurar WebSocket para Copy Trading
+  setupCopyTradingWebSocket(server);
+  console.log("🔌 WebSocket Copy Trading configurado em /ws/copy-trading");
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
