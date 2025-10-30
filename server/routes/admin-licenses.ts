@@ -83,15 +83,34 @@ router.post("/", async (req: Request, res: Response) => {
 
     console.log("[Admin Licenses] Dados recebidos:", {
       userEmail,
-      licenseKey: licenseKey ? licenseKey.substring(0, 10) + '...' : 'N/A',
+      licenseKey: licenseKey ? licenseKey.substring(0, 10) + '...' : 'VAZIO',
       eaName,
       licenseType
     });
+    console.log("[Admin Licenses] Body completo:", JSON.stringify(req.body));
 
-    if (!userEmail || !licenseKey || !eaName) {
+    // Validação rigorosa
+    if (!userEmail || userEmail.trim() === '') {
+      console.log("[Admin Licenses] ❌ userEmail vazio");
       return res.status(400).json({
         success: false,
-        error: "Parâmetros obrigatórios: userEmail, licenseKey, eaName",
+        error: "userEmail é obrigatório",
+      });
+    }
+
+    if (!licenseKey || licenseKey.trim() === '') {
+      console.log("[Admin Licenses] ❌ licenseKey vazio");
+      return res.status(400).json({
+        success: false,
+        error: "licenseKey é obrigatório",
+      });
+    }
+
+    if (!eaName || eaName.trim() === '') {
+      console.log("[Admin Licenses] ❌ eaName vazio");
+      return res.status(400).json({
+        success: false,
+        error: "eaName é obrigatório",
       });
     }
 
