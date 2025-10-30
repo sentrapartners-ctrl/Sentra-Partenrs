@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,8 @@ import {
   Wifi,
   WifiOff,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Copy
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -51,38 +52,62 @@ export default function CopyTradingDashboard() {
   const { user, isAuthenticated } = useAuth();
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [liveTrades, setLiveTrades] = useState<LiveTrade[]>([]);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
-  useEffect(() => {
-    if (!isAuthenticated || !user) {
-      return;
-    }
+  // Memoizar estatísticas para evitar recálculos
+  const stats = useMemo(() => {
+    const masterAccounts = connectedAccounts.filter(acc => acc.type === 'master');
+    const slaveAccounts = connectedAccounts.filter(acc => acc.type === 'slave');
+    
+    const totalCopies = liveTrades.reduce((acc, trade) => 
+      acc + trade.slaveStatuses.length, 0
+    );
+    
+    const successfulCopies = liveTrades.reduce((acc, trade) => 
+      acc + trade.slaveStatuses.filter(s => s.status === 'success').length, 0
+    );
+    
+    const successRate = totalCopies > 0 
+      ? ((successfulCopies / totalCopies) * 100).toFixed(1) 
+      : '0';
 
-    // Conectar ao WebSocket com autenticação
+    return {
+      masterCount: masterAccounts.length,
+      masterOnline: masterAccounts.filter(a => a.status === 'online').length,
+      slaveCount: slaveAccounts.length,
+      slaveOnline: slaveAccounts.filter(a => a.status === 'online').length,
+      tradesCount: liveTrades.length,
+      successRate,
+      masterAccounts,
+      slaveAccounts
+    };
+  }, [connectedAccounts, liveTrades]);
+
+  const connectWebSocket = () => {
+    if (!isAuthenticated || !user) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/copy-trading`;
     
     const websocket = new WebSocket(wsUrl);
+    wsRef.current = websocket;
 
     websocket.onopen = () => {
-      console.log('WebSocket conectado');
       setWsStatus('connected');
       
-      // Autenticar com userId
       websocket.send(JSON.stringify({ 
         type: 'AUTHENTICATE',
         userId: user.id,
         email: user.email
       }));
       
-      // Solicitar lista de contas conectadas do usuário
       websocket.send(JSON.stringify({ 
         type: 'GET_CONNECTED_ACCOUNTS',
         userId: user.id
       }));
       
-      // Solicitar trades recentes do usuário
       websocket.send(JSON.stringify({ 
         type: 'GET_RECENT_TRADES',
         userId: user.id,
@@ -93,111 +118,93 @@ export default function CopyTradingDashboard() {
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       
-      // Verificar se a mensagem é para este usuário
-      if (data.userId && data.userId !== user.id) {
-        return; // Ignorar mensagens de outros usuários
-      }
+      if (data.userId && data.userId !== user.id) return;
       
       switch (data.type) {
-        case 'AUTHENTICATED':
-          console.log('Autenticado no WebSocket');
-          break;
-          
         case 'CONNECTED_ACCOUNTS':
-          // Apenas contas do usuário atual
-          setConnectedAccounts(data.accounts.filter((acc: ConnectedAccount) => 
-            acc.userId === user.id
-          ));
+          setConnectedAccounts(data.accounts);
           break;
           
         case 'RECENT_TRADES':
-          // Apenas trades do usuário atual
-          setLiveTrades(data.trades.filter((trade: LiveTrade) => 
-            trade.userId === user.id
-          ));
+          setLiveTrades(data.trades);
           break;
           
         case 'ACCOUNT_CONNECTED':
-          // Adicionar apenas se for conta do usuário
-          if (data.account.userId === user.id) {
-            setConnectedAccounts(prev => {
-              // Evitar duplicatas
-              const exists = prev.some(acc => acc.accountId === data.account.accountId);
-              if (exists) return prev;
-              return [...prev, data.account];
-            });
-          }
+          setConnectedAccounts(prev => {
+            const exists = prev.some(acc => acc.accountId === data.account.accountId);
+            if (exists) return prev;
+            return [...prev, data.account];
+          });
           break;
           
         case 'ACCOUNT_DISCONNECTED':
-          // Remover apenas se for conta do usuário
-          if (data.userId === user.id) {
-            setConnectedAccounts(prev => 
-              prev.filter(acc => acc.accountId !== data.accountId)
-            );
-          }
+          setConnectedAccounts(prev => 
+            prev.filter(acc => acc.accountId !== data.accountId)
+          );
           break;
           
         case 'NEW_TRADE':
-          // Adicionar novo trade apenas se for do usuário
-          if (data.trade.userId === user.id) {
-            setLiveTrades(prev => {
-              // Evitar duplicatas
-              const exists = prev.some(t => t.id === data.trade.id);
-              if (exists) return prev;
-              return [data.trade, ...prev.slice(0, 49)]; // Manter últimos 50
-            });
-          }
+          setLiveTrades(prev => {
+            const exists = prev.some(t => t.id === data.trade.id);
+            if (exists) return prev;
+            return [data.trade, ...prev.slice(0, 49)];
+          });
           break;
           
         case 'TRADE_COPIED':
-          // Atualizar status de cópia do slave apenas se for trade do usuário
-          if (data.userId === user.id) {
-            setLiveTrades(prev => prev.map(trade => {
-              if (trade.id === data.tradeId) {
-                return {
-                  ...trade,
-                  slaveStatuses: trade.slaveStatuses.map(status => 
-                    status.slaveAccountId === data.slaveAccountId
-                      ? { ...status, ...data.status }
-                      : status
-                  )
-                };
-              }
-              return trade;
-            }));
-          }
-          break;
-          
-        case 'ERROR':
-          console.error('WebSocket erro:', data.message);
+          setLiveTrades(prev => prev.map(trade => {
+            if (trade.id === data.tradeId) {
+              return {
+                ...trade,
+                slaveStatuses: trade.slaveStatuses.map(status => 
+                  status.slaveAccountId === data.slaveAccountId
+                    ? { ...status, ...data.status }
+                    : status
+                )
+              };
+            }
+            return trade;
+          }));
           break;
       }
     };
 
-    websocket.onerror = (error) => {
-      console.error('WebSocket erro:', error);
+    websocket.onerror = () => {
       setWsStatus('disconnected');
     };
 
     websocket.onclose = () => {
-      console.log('WebSocket desconectado');
       setWsStatus('disconnected');
+      wsRef.current = null;
       
-      // Tentar reconectar após 5 segundos
-      setTimeout(() => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      
+      reconnectTimeoutRef.current = setTimeout(() => {
         if (isAuthenticated && user) {
-          window.location.reload();
+          connectWebSocket();
         }
       }, 5000);
     };
+  };
 
-    setWs(websocket);
+  useEffect(() => {
+    connectWebSocket();
 
     return () => {
-      websocket.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
   }, [isAuthenticated, user]);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
 
   if (!isAuthenticated || !user) {
     return (
@@ -210,184 +217,122 @@ export default function CopyTradingDashboard() {
     );
   }
 
-  const masterAccounts = connectedAccounts.filter(acc => acc.type === 'master');
-  const slaveAccounts = connectedAccounts.filter(acc => acc.type === 'slave');
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online': return 'text-green-500';
-      case 'offline': return 'text-red-500';
-      case 'success': return 'text-green-500';
-      case 'failed': return 'text-red-500';
-      case 'pending': return 'text-yellow-500';
-      default: return 'text-gray-500';
-    }
-  };
-
-  const getCopyStatusIcon = (status: string) => {
-    switch (status) {
-      case 'success': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'pending': return <Clock className="h-4 w-4 text-yellow-500 animate-pulse" />;
-      default: return null;
-    }
-  };
-
-  const calculateSuccessRate = () => {
-    if (liveTrades.length === 0) return 0;
-    
-    const totalCopies = liveTrades.reduce((acc, trade) => 
-      acc + trade.slaveStatuses.length, 0
-    );
-    
-    if (totalCopies === 0) return 0;
-    
-    const successfulCopies = liveTrades.reduce((acc, trade) => 
-      acc + trade.slaveStatuses.filter(s => s.status === 'success').length, 0
-    );
-    
-    return ((successfulCopies / totalCopies) * 100).toFixed(1);
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Status de Conexão */}
-      {wsStatus !== 'connected' && (
-        <Alert variant={wsStatus === 'connecting' ? 'default' : 'destructive'}>
-          <Activity className="h-4 w-4 animate-pulse" />
-          <AlertDescription>
-            {wsStatus === 'connecting' 
-              ? 'Conectando ao servidor em tempo real...' 
-              : 'Desconectado. Tentando reconectar...'}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Header com Estatísticas do Usuário */}
-      <div className="grid gap-4 md:grid-cols-4">
+    <div className="space-y-4">
+      {/* Header com Estatísticas */}
+      <div className="grid gap-3 md:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Minhas Contas Master
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Master
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{masterAccounts.length}</div>
+            <div className="text-2xl font-bold">{stats.masterCount}</div>
             <p className="text-xs text-muted-foreground">
-              {masterAccounts.filter(a => a.status === 'online').length} online
+              {stats.masterOnline} online
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Minhas Contas Slave
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Slave
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{slaveAccounts.length}</div>
+            <div className="text-2xl font-bold">{stats.slaveCount}</div>
             <p className="text-xs text-muted-foreground">
-              {slaveAccounts.filter(a => a.status === 'online').length} online
+              {stats.slaveOnline} online
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Meus Trades Hoje
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Trades
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{liveTrades.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Últimas 24 horas
-            </p>
+            <div className="text-2xl font-bold">{stats.tradesCount}</div>
+            <p className="text-xs text-muted-foreground">Últimas 24h</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Taxa de Sucesso
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Sucesso
             </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">
-              {calculateSuccessRate()}%
+              {stats.successRate}%
             </div>
-            <p className="text-xs text-muted-foreground">
-              Cópias bem-sucedidas
-            </p>
+            <p className="text-xs text-muted-foreground">Taxa de cópia</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Minhas Contas Conectadas */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Contas Conectadas */}
         <Card>
-          <CardHeader>
-            <CardTitle>Minhas Contas Conectadas</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Usuário: {user.email}
-            </p>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between">
+              Contas Conectadas
+              {wsStatus === 'connected' && (
+                <div className="h-2 w-2 bg-green-500 rounded-full" />
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-3">
                 {/* Master Accounts */}
-                {masterAccounts.length > 0 && (
+                {stats.masterAccounts.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
-                      MASTER ACCOUNTS
+                    <h3 className="text-xs font-semibold mb-2 text-muted-foreground uppercase">
+                      Master
                     </h3>
-                    {masterAccounts.map((account) => (
+                    {stats.masterAccounts.map((account) => (
                       <div
                         key={account.accountId}
-                        className="flex items-center justify-between p-3 border rounded-lg mb-2 hover:bg-accent transition-colors"
+                        className="p-2 border rounded mb-2"
                       >
-                        <div className="flex items-center gap-3 flex-1">
-                          {account.status === 'online' ? (
-                            <Wifi className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <WifiOff className="h-5 w-5 text-red-500" />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-medium">{account.accountName}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-xs text-muted-foreground font-mono">
-                                ID: {account.accountId}
-                              </p>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(account.accountId);
-                                }}
-                                className="text-xs text-blue-500 hover:text-blue-700"
-                                title="Copiar ID da conta"
-                              >
-                                📋 Copiar
-                              </button>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-2 flex-1">
+                            {account.status === 'online' ? (
+                              <Wifi className="h-4 w-4 text-green-500 mt-0.5" />
+                            ) : (
+                              <WifiOff className="h-4 w-4 text-red-500 mt-0.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{account.accountName}</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <p className="text-xs font-mono text-muted-foreground">
+                                  {account.accountId}
+                                </p>
+                                <button
+                                  onClick={() => copyToClipboard(account.accountId)}
+                                  className="p-0.5 hover:bg-accent rounded"
+                                  title="Copiar ID"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-xs text-green-600 mt-1">
-                              ✓ Configure seus Slaves com este ID para copiar
+                          </div>
+                          <div className="text-right ml-2">
+                            <p className="text-xs font-medium whitespace-nowrap">
+                              ${account.equity.toFixed(2)}
                             </p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
-                            ${account.equity.toFixed(2)}
-                          </p>
-                          <Badge 
-                            variant={account.status === 'online' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {account.status}
-                          </Badge>
                         </div>
                       </div>
                     ))}
@@ -395,39 +340,35 @@ export default function CopyTradingDashboard() {
                 )}
 
                 {/* Slave Accounts */}
-                {slaveAccounts.length > 0 && (
+                {stats.slaveAccounts.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
-                      SLAVE ACCOUNTS
+                    <h3 className="text-xs font-semibold mb-2 text-muted-foreground uppercase">
+                      Slave
                     </h3>
-                    {slaveAccounts.map((account) => (
+                    {stats.slaveAccounts.map((account) => (
                       <div
                         key={account.accountId}
-                        className="flex items-center justify-between p-3 border rounded-lg mb-2 hover:bg-accent transition-colors"
+                        className="p-2 border rounded mb-2"
                       >
-                        <div className="flex items-center gap-3">
-                          {account.status === 'online' ? (
-                            <Wifi className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <WifiOff className="h-5 w-5 text-red-500" />
-                          )}
-                          <div>
-                            <p className="font-medium">{account.accountName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {account.accountId}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-2 flex-1">
+                            {account.status === 'online' ? (
+                              <Wifi className="h-4 w-4 text-green-500 mt-0.5" />
+                            ) : (
+                              <WifiOff className="h-4 w-4 text-red-500 mt-0.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{account.accountName}</p>
+                              <p className="text-xs font-mono text-muted-foreground">
+                                {account.accountId}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right ml-2">
+                            <p className="text-xs font-medium whitespace-nowrap">
+                              ${account.equity.toFixed(2)}
                             </p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
-                            ${account.equity.toFixed(2)}
-                          </p>
-                          <Badge 
-                            variant={account.status === 'online' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {account.status}
-                          </Badge>
                         </div>
                       </div>
                     ))}
@@ -435,15 +376,10 @@ export default function CopyTradingDashboard() {
                 )}
 
                 {connectedAccounts.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <WifiOff className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Nenhuma conta conectada</p>
-                    <p className="text-xs mt-1">
-                      Aguardando conexão dos seus EAs...
-                    </p>
-                    <p className="text-xs mt-2 font-mono text-xs bg-muted p-2 rounded">
-                      Configure seus EAs com: {user.email}
-                    </p>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <WifiOff className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma conta conectada</p>
+                    <p className="text-xs mt-1">Aguardando EAs...</p>
                   </div>
                 )}
               </div>
@@ -451,98 +387,76 @@ export default function CopyTradingDashboard() {
           </CardContent>
         </Card>
 
-        {/* Meus Trades em Tempo Real */}
+        {/* Trades em Tempo Real */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Meus Trades em Tempo Real
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              Trades em Tempo Real
               {wsStatus === 'connected' && (
                 <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-3">
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-2">
                 {liveTrades.map((trade) => (
                   <div
                     key={trade.id}
-                    className="border rounded-lg p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300"
+                    className="border rounded p-2"
                   >
-                    {/* Header do Trade */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {trade.type === 'BUY' ? (
-                          <TrendingUp className="h-5 w-5 text-green-500" />
+                          <TrendingUp className="h-4 w-4 text-green-500" />
                         ) : (
-                          <TrendingDown className="h-5 w-5 text-red-500" />
+                          <TrendingDown className="h-4 w-4 text-red-500" />
                         )}
                         <div>
-                          <p className="font-semibold">{trade.symbol}</p>
+                          <p className="font-semibold text-sm">{trade.symbol}</p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(trade.timestamp).toLocaleTimeString('pt-BR')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant={trade.type === 'BUY' ? 'default' : 'destructive'}>
+                        <Badge variant={trade.type === 'BUY' ? 'default' : 'destructive'} className="text-xs">
                           {trade.type}
                         </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {trade.volume} lotes
                         </p>
                       </div>
                     </div>
 
-                    {/* Informações do Trade */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Preço:</span>
-                      <span className="font-medium">{trade.openPrice.toFixed(5)}</span>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">Master:</span>
-                      <span className="font-mono text-xs">{trade.masterAccountId}</span>
-                    </div>
-
-                    {/* Status de Cópia por Slave */}
-                    <div className="space-y-2 pt-2 border-t">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        STATUS DE CÓPIA:
-                      </p>
-                      {trade.slaveStatuses.map((slaveStatus) => (
+                    <div className="space-y-1">
+                      {trade.slaveStatuses.map((status) => (
                         <div
-                          key={slaveStatus.slaveAccountId}
-                          className="flex items-center justify-between text-sm p-2 rounded bg-muted/50"
+                          key={status.slaveAccountId}
+                          className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/30"
                         >
-                          <div className="flex items-center gap-2">
-                            {getCopyStatusIcon(slaveStatus.status)}
-                            <div>
-                              <span className="font-medium text-xs">
-                                {slaveStatus.slaveAccountName}
-                              </span>
-                              <p className="font-mono text-xs text-muted-foreground">
-                                {slaveStatus.slaveAccountId}
-                              </p>
-                            </div>
+                          <div className="flex items-center gap-1.5">
+                            {status.status === 'success' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
+                            {status.status === 'failed' && <XCircle className="h-3 w-3 text-red-500" />}
+                            {status.status === 'pending' && <Clock className="h-3 w-3 text-yellow-500" />}
+                            <span className="font-mono truncate max-w-[100px]">
+                              {status.slaveAccountId}
+                            </span>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
-                            {slaveStatus.executionTime && (
-                              <span className="text-xs text-muted-foreground">
-                                ⚡ {slaveStatus.executionTime}ms
+                          <div className="flex items-center gap-2 text-xs">
+                            {status.executionTime && (
+                              <span className="text-muted-foreground">
+                                {status.executionTime}ms
                               </span>
                             )}
-                            {slaveStatus.slippage !== undefined && (
-                              <span className={`text-xs font-medium ${
-                                Math.abs(slaveStatus.slippage) > 2 
+                            {status.slippage !== undefined && (
+                              <span className={
+                                Math.abs(status.slippage) > 2 
                                   ? 'text-red-500' 
                                   : 'text-green-500'
-                              }`}>
-                                {slaveStatus.slippage > 0 ? '+' : ''}
-                                {slaveStatus.slippage.toFixed(1)} pips
-                              </span>
-                            )}
-                            {slaveStatus.error && (
-                              <span className="text-xs text-red-500 max-w-[150px] truncate" title={slaveStatus.error}>
-                                ❌ {slaveStatus.error}
+                              }>
+                                {status.slippage > 0 ? '+' : ''}
+                                {status.slippage.toFixed(1)}p
                               </span>
                             )}
                           </div>
@@ -554,11 +468,8 @@ export default function CopyTradingDashboard() {
 
                 {liveTrades.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
-                    <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Aguardando seus trades...</p>
-                    <p className="text-xs mt-1">
-                      Trades aparecerão aqui em tempo real
-                    </p>
+                    <Activity className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Aguardando trades...</p>
                   </div>
                 )}
               </div>
