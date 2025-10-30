@@ -23,6 +23,8 @@ input string SlaveServer = "https://sentrapartners.com/api/mt/copy";
 input int CheckInterval = 1;                    // Intervalo de verificação (segundos)
 input int HeartbeatInterval = 30;               // Intervalo de heartbeat (segundos)
 input double LotMultiplier = 1.0;               // Multiplicador de lote
+input bool MasterIsCent = false;                // Master é conta Cent?
+input bool SlaveIsCent = false;                 // Slave é conta Cent?
 input int Slippage = 3;                         // Slippage
 input int MagicNumber = 888888;                 // Magic Number
 input bool EnableLogs = true;                   // Logs
@@ -75,6 +77,8 @@ int OnInit() {
     Print("Check Interval: ", CheckInterval, "s");
     Print("Heartbeat Interval: ", HeartbeatInterval, "s");
     Print("Lot Multiplier: ", LotMultiplier);
+    Print("Master Tipo: ", MasterIsCent ? "CENT" : "STANDARD");
+    Print("Slave Tipo: ", SlaveIsCent ? "CENT" : "STANDARD");
     Print("===========================================");
     
     if(!ValidateLicense()) {
@@ -211,24 +215,32 @@ void ProcessOpenEvent(string json) {
         return;
     }
     
-    // Ajustar lote
+    // Normalizar símbolo (remover/adicionar sufixos)
+    string slaveSymbol = NormalizeSymbol(symbol);
+    if(slaveSymbol == "") {
+        Print("❌ Símbolo não encontrado no Slave: ", symbol);
+        return;
+    }
+    
+    // Ajustar lote para conta Cent/Standard
+    lots = AdjustLotForAccountType(lots);
     lots = lots * LotMultiplier;
-    lots = NormalizeLot(symbol, lots);
+    lots = NormalizeLot(slaveSymbol, lots);
     
     // Abrir ordem
     bool success = false;
     ulong slaveTicket = 0;
     
     if(type == 0) {  // BUY
-        success = trade.Buy(lots, symbol, 0, sl, tp, "Copy:" + masterTicket);
+        success = trade.Buy(lots, slaveSymbol, 0, sl, tp, "Copy:" + masterTicket);
         slaveTicket = trade.ResultOrder();
     } else {  // SELL
-        success = trade.Sell(lots, symbol, 0, sl, tp, "Copy:" + masterTicket);
+        success = trade.Sell(lots, slaveSymbol, 0, sl, tp, "Copy:" + masterTicket);
         slaveTicket = trade.ResultOrder();
     }
     
     if(success) {
-        AddSlavePosition(slaveTicket, masterTicket, symbol);
+        AddSlavePosition(slaveTicket, masterTicket, slaveSymbol);
         Print("✅ OPEN copiado: ", symbol, " ", (type == 0 ? "BUY" : "SELL"), " ", lots, " lotes (Master: ", masterTicket, " → Slave: ", slaveTicket, ")");
     } else {
         Print("❌ Erro ao copiar OPEN: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
@@ -478,6 +490,59 @@ void CloseAllSlavePositions() {
 //====================================================
 // FUNÇÕES AUXILIARES - LOTE
 //====================================================
+
+// Ajustar lote baseado no tipo de conta (Cent/Standard)
+double AdjustLotForAccountType(double lots) {
+    // Se Master é Cent e Slave é Standard: dividir por 100
+    if(MasterIsCent && !SlaveIsCent) {
+        lots = lots / 100.0;
+        if(EnableLogs) Print("🔄 Ajuste Cent→Standard: ", lots);
+    }
+    // Se Master é Standard e Slave é Cent: multiplicar por 100
+    else if(!MasterIsCent && SlaveIsCent) {
+        lots = lots * 100.0;
+        if(EnableLogs) Print("🔄 Ajuste Standard→Cent: ", lots);
+    }
+    
+    return lots;
+}
+
+// Normalizar símbolo (buscar no Slave o símbolo correspondente)
+string NormalizeSymbol(string masterSymbol) {
+    // Remover sufixos comuns do símbolo Master
+    string baseSymbol = masterSymbol;
+    StringReplace(baseSymbol, "c", "");
+    StringReplace(baseSymbol, "m", "");
+    StringReplace(baseSymbol, ".", "");
+    StringReplace(baseSymbol, "_", "");
+    
+    // Tentar encontrar símbolo exato no Slave
+    if(SymbolInfoInteger(masterSymbol, SYMBOL_SELECT)) {
+        if(EnableLogs) Print("✅ Símbolo encontrado (exato): ", masterSymbol);
+        return masterSymbol;
+    }
+    
+    // Tentar base symbol
+    if(SymbolInfoInteger(baseSymbol, SYMBOL_SELECT)) {
+        if(EnableLogs) Print("✅ Símbolo encontrado (base): ", baseSymbol);
+        return baseSymbol;
+    }
+    
+    // Tentar com sufixos comuns
+    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn"};
+    for(int i = 0; i < ArraySize(suffixes); i++) {
+        string testSymbol = baseSymbol + suffixes[i];
+        if(SymbolInfoInteger(testSymbol, SYMBOL_SELECT)) {
+            if(EnableLogs) Print("✅ Símbolo encontrado (sufixo): ", testSymbol);
+            return testSymbol;
+        }
+    }
+    
+    // Não encontrado
+    Print("❌ Símbolo não encontrado: ", masterSymbol, " (base: ", baseSymbol, ")");
+    return "";
+}
+
 double NormalizeLot(string symbol, double lots) {
     double minLot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
     double maxLot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
