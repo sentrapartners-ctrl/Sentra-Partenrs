@@ -181,7 +181,7 @@ function handleAuthenticate(ws: WebSocket, data: any) {
   }));
 }
 
-function handleGetConnectedAccounts(ws: WebSocket, data: any) {
+async function handleGetConnectedAccounts(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) {
     ws.send(JSON.stringify({
@@ -191,15 +191,82 @@ function handleGetConnectedAccounts(ws: WebSocket, data: any) {
     return;
   }
 
-  // Filtrar apenas contas do usuário
-  const userAccounts = Array.from(connectedAccounts.values())
-    .filter(account => account.userId === client.userId);
+  try {
+    const { getRawConnection } = await import('../db.js');
+    const connection = await getRawConnection();
+    
+    if (!connection) {
+      throw new Error('Conexão com banco não disponível');
+    }
 
-  ws.send(JSON.stringify({
-    type: 'CONNECTED_ACCOUNTS',
-    accounts: userAccounts,
-    userId: client.userId
-  }));
+    const userAccounts: ConnectedAccount[] = [];
+
+    // Buscar contas Master (copy_signals com heartbeat recente)
+    const [masterAccounts]: any = await connection.execute(
+      `SELECT master_email, account_number, broker, last_heartbeat, 
+              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+       FROM copy_signals 
+       WHERE master_email = ?
+       AND last_heartbeat IS NOT NULL
+       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+       ORDER BY last_heartbeat DESC`,
+      [client.email]
+    );
+
+    for (const master of masterAccounts) {
+      const isOnline = master.seconds_since_heartbeat < 60;
+      userAccounts.push({
+        accountId: master.account_number,
+        accountName: `Master ${master.account_number}`,
+        type: 'master',
+        status: isOnline ? 'online' : 'offline',
+        lastHeartbeat: new Date(master.last_heartbeat),
+        balance: 0,
+        equity: 0,
+        userId: client.userId
+      });
+    }
+
+    // Buscar contas Slave (slave_heartbeats com heartbeat recente)
+    const [slaveAccounts]: any = await connection.execute(
+      `SELECT account_number, master_account_id, broker, balance, equity, last_heartbeat,
+              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+       FROM slave_heartbeats 
+       WHERE slave_email = ?
+       AND last_heartbeat IS NOT NULL
+       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+       ORDER BY last_heartbeat DESC`,
+      [client.email]
+    );
+
+    for (const slave of slaveAccounts) {
+      const isOnline = slave.seconds_since_heartbeat < 60;
+      userAccounts.push({
+        accountId: slave.account_number,
+        accountName: `Slave ${slave.account_number}`,
+        type: 'slave',
+        status: isOnline ? 'online' : 'offline',
+        lastHeartbeat: new Date(slave.last_heartbeat),
+        balance: parseFloat(slave.balance) || 0,
+        equity: parseFloat(slave.equity) || 0,
+        userId: client.userId
+      });
+    }
+
+    console.log(`📊 Contas encontradas para ${client.email}: ${userAccounts.length} (${userAccounts.filter(a => a.status === 'online').length} online)`);
+
+    ws.send(JSON.stringify({
+      type: 'CONNECTED_ACCOUNTS',
+      accounts: userAccounts,
+      userId: client.userId
+    }));
+  } catch (error) {
+    console.error('❌ Erro ao buscar contas conectadas:', error);
+    ws.send(JSON.stringify({
+      type: 'ERROR',
+      message: 'Erro ao buscar contas conectadas'
+    }));
+  }
 }
 
 function handleGetRecentTrades(ws: WebSocket, data: any) {
