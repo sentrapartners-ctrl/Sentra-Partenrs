@@ -53,11 +53,7 @@ export default function LicenseManager() {
       }
     } catch (error) {
       console.error("Erro ao carregar licenças:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as licenças",
-        variant: "destructive",
-      });
+      toast.error("Não foi possível carregar as licenças");
     } finally {
       setLoading(false);
     }
@@ -75,11 +71,7 @@ export default function LicenseManager() {
 
   const handleCreateLicense = async () => {
     if (!formData.userEmail) {
-      toast({
-        title: "Erro",
-        description: "Email do usuário é obrigatório",
-        variant: "destructive",
-      });
+      toast.error("Email do usuário é obrigatório");
       return;
     }
 
@@ -97,10 +89,7 @@ export default function LicenseManager() {
       });
 
       if (response.ok) {
-        toast({
-          title: "✅ Licença criada!",
-          description: `Licença gerada para ${formData.userEmail}`,
-        });
+      toast.success(`Licença gerada para ${formData.userEmail}`);
         setIsDialogOpen(false);
         setFormData({
           userEmail: "",
@@ -115,11 +104,7 @@ export default function LicenseManager() {
         throw new Error(error.error || "Erro ao criar licença");
       }
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -127,10 +112,7 @@ export default function LicenseManager() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "✅ Copiado!",
-      description: "Chave copiada para a área de transferência",
-    });
+    toast.success("Chave copiada para a área de transferência");
   };
 
   const updateLicenseStatus = async (id: number, status: 'active' | 'inactive') => {
@@ -142,18 +124,11 @@ export default function LicenseManager() {
       });
 
       if (response.ok) {
-        toast({
-          title: "✅ Atualizado!",
-          description: `Licença ${status === 'active' ? 'ativada' : 'desativada'}`,
-        });
+        toast.success(`Licença ${status === 'active' ? 'ativada' : 'desativada'}`);
         loadLicenses();
       }
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar a licença",
-        variant: "destructive",
-      });
+      toast.error("Não foi possível atualizar a licença");
     }
   };
 
@@ -166,18 +141,11 @@ export default function LicenseManager() {
       });
 
       if (response.ok) {
-        toast({
-          title: "✅ Excluída!",
-          description: "Licença removida com sucesso",
-        });
+        toast.success("Licença removida com sucesso");
         loadLicenses();
       }
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir a licença",
-        variant: "destructive",
-      });
+      toast.error("Não foi possível excluir a licença");
     }
   };
 
