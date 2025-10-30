@@ -419,9 +419,18 @@ router.get("/slave-signals", async (req, res) => {
     
     let positions = [];
     try {
-      positions = JSON.parse(signal.positions);
+      // Verificar se já é um objeto ou se é uma string JSON
+      if (typeof signal.positions === 'string') {
+        positions = JSON.parse(signal.positions);
+      } else if (Array.isArray(signal.positions)) {
+        positions = signal.positions;
+      } else if (signal.positions && typeof signal.positions === 'object') {
+        // Se for objeto mas não array, converter para array
+        positions = [signal.positions];
+      }
     } catch (e) {
       console.error("[Copy Trading] Erro ao parse JSON:", e);
+      positions = [];
     }
     
     console.log("[Copy Trading] ✅ Retornando", positions.length, "posições");
