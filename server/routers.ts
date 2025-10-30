@@ -542,10 +542,15 @@ export const appRouter = router({
         barkWeeklyTime: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        console.log('[Settings Update] User ID:', ctx.user.id);
+        console.log('[Settings Update] Input:', input);
+        
         await db.createOrUpdateUserSettings({
           ...input,
           userId: ctx.user.id,
         });
+        
+        console.log('[Settings Update] Saved successfully');
         return { success: true };
       }),
 
