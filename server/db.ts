@@ -561,17 +561,41 @@ export async function getUserSettings(userId: number) {
 }
 
 export async function createOrUpdateUserSettings(settings: InsertUserSettings) {
+  console.log('[createOrUpdateUserSettings] START');
+  console.log('[createOrUpdateUserSettings] Input settings:', JSON.stringify(settings, null, 2));
+  
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  if (!db) {
+    console.error('[createOrUpdateUserSettings] Database not available!');
+    throw new Error("Database not available");
+  }
+  console.log('[createOrUpdateUserSettings] Database connected');
 
   const existing = await getUserSettings(settings.userId);
+  console.log('[createOrUpdateUserSettings] Existing settings:', existing ? 'FOUND' : 'NOT FOUND');
   
-  if (existing) {
-    await db.update(userSettings)
-      .set({ ...settings, updatedAt: new Date() })
-      .where(eq(userSettings.userId, settings.userId));
-  } else {
-    await db.insert(userSettings).values(settings);
+  try {
+    if (existing) {
+      console.log('[createOrUpdateUserSettings] Updating existing settings for userId:', settings.userId);
+      const updateData = { ...settings, updatedAt: new Date() };
+      console.log('[createOrUpdateUserSettings] Update data:', JSON.stringify(updateData, null, 2));
+      
+      const result = await db.update(userSettings)
+        .set(updateData)
+        .where(eq(userSettings.userId, settings.userId));
+      
+      console.log('[createOrUpdateUserSettings] Update result:', result);
+    } else {
+      console.log('[createOrUpdateUserSettings] Inserting new settings for userId:', settings.userId);
+      console.log('[createOrUpdateUserSettings] Insert data:', JSON.stringify(settings, null, 2));
+      
+      const result = await db.insert(userSettings).values(settings);
+      console.log('[createOrUpdateUserSettings] Insert result:', result);
+    }
+    console.log('[createOrUpdateUserSettings] SUCCESS');
+  } catch (error) {
+    console.error('[createOrUpdateUserSettings] ERROR:', error);
+    throw error;
   }
 }
 
