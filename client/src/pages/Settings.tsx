@@ -17,6 +17,15 @@ export default function Settings() {
     enabled: isAuthenticated,
   });
 
+  const updateSettings = trpc.settings.update.useMutation({
+    onSuccess: () => {
+      toast.success("Configurações salvas!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao salvar: " + error.message);
+    },
+  });
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -106,6 +115,41 @@ export default function Settings() {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Notificações Bark (iPhone)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Receba resumos diários (19h) e semanais (sábado 8h) via Bark no iPhone.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Bark Key</label>
+              <Input
+                type="text"
+                placeholder="Cole sua Bark Key aqui"
+                value={settings?.barkKey || ""}
+                onChange={(e) => {
+                  // Salvar automaticamente ao digitar
+                  const newValue = e.target.value;
+                  updateSettings.mutate({ barkKey: newValue });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                1. Baixe o app "Bark" na App Store<br />
+                2. Abra o app e copie sua chave da URL de teste<br />
+                3. Cole aqui e pronto!
+              </p>
+            </div>
           </CardContent>
         </Card>
 
