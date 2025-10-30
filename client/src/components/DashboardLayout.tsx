@@ -45,13 +45,11 @@ const menuItems = [
   { icon: Bot, label: "Expert Advisors", path: "/marketplace/eas" },
 
   { icon: Settings, label: "Configurações", path: "/settings" },
-  { icon: Key, label: "Minhas Licenças", path: "/my-licenses" },
 ];
 
 const adminMenuItems = [
   { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
   { icon: MessageCircle, label: "Chat Suporte", path: "/admin/support", adminOnly: true },
-  { icon: Key, label: "Licenças", path: "/admin/licenses", adminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
