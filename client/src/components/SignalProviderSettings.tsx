@@ -384,7 +384,7 @@ export default function SignalProviderSettings() {
                     Win Rate
                   </div>
                   <p className="text-2xl font-bold">
-                    {provider.win_rate?.toFixed(1) || 0}%
+                    {provider.win_rate ? parseFloat(provider.win_rate).toFixed(1) : 0}%
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -393,7 +393,7 @@ export default function SignalProviderSettings() {
                     Lucro Total
                   </div>
                   <p className="text-2xl font-bold text-green-600">
-                    ${provider.total_profit?.toFixed(2) || '0.00'}
+                    ${provider.total_profit ? parseFloat(provider.total_profit).toFixed(2) : '0.00'}
                   </p>
                 </div>
                 <div className="space-y-1">
