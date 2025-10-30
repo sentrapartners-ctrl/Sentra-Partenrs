@@ -17,6 +17,7 @@ import mt4Router from "../routes/mt4";
 import uploadRouter from "../routes/upload";
 import settingsRouter from "../routes/settings";
 import adminLicensesRouter from "../routes/admin-licenses";
+import myLicensesRouter from "../routes/my-licenses";
 import setupLicensesRouter from "../routes/setup-licenses";
 // import mt4ConnectorRouter from "../routes/mt4-connector";
 
@@ -75,6 +76,8 @@ async function startServer() {
   app.use("/api/settings", settingsRouter);
 
   app.use("/api/admin/licenses", adminLicensesRouter);
+
+  app.use("/api/my-licenses", myLicensesRouter);
 
   app.use("/api/setup", setupLicensesRouter);
 

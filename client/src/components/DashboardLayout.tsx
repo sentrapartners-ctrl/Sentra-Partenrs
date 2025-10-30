@@ -45,6 +45,7 @@ const menuItems = [
   { icon: Bot, label: "Expert Advisors", path: "/marketplace/eas" },
 
   { icon: Settings, label: "Configurações", path: "/settings" },
+  { icon: Key, label: "Minhas Licenças", path: "/my-licenses" },
 ];
 
 const adminMenuItems = [

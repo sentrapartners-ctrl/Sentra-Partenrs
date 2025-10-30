@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import AdminSupport from "./pages/AdminSupport";
 import LicenseManager from "./pages/admin/LicenseManager";
+import MyLicenses from "./pages/MyLicenses";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import Accounts from "./pages/Accounts";
 import Trades from "./pages/Trades";
@@ -75,6 +76,7 @@ function Router() {
       <Route path="/admin">{() => <ProtectedRoute component={Admin} />}</Route>
       <Route path="/admin/support">{() => <ProtectedRoute component={AdminSupport} />}</Route>
       <Route path="/admin/licenses">{() => <ProtectedRoute component={LicenseManager} />}</Route>
+      <Route path="/my-licenses">{() => <ProtectedRoute component={MyLicenses} />}</Route>
       <Route path="/manager">{() => <ProtectedRoute component={ManagerDashboard} />}</Route>
       <Route path="/accounts">{() => <ProtectedRoute component={Accounts} />}</Route>
       <Route path="/trades">{() => <ProtectedRoute component={Trades} />}</Route>
