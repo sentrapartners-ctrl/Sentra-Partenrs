@@ -16,6 +16,7 @@ import subscriptionsRouter from "../routes/subscriptions";
 import mt4Router from "../routes/mt4";
 import uploadRouter from "../routes/upload";
 import settingsRouter from "../routes/settings";
+import copyTradingRouter from "../routes/copy-trading";
 
 // import mt4ConnectorRouter from "../routes/mt4-connector";
 
@@ -74,6 +75,7 @@ async function startServer() {
   app.use("/api/settings", settingsRouter);
 
   app.use("/api/mt", mt4Router);
+  app.use("/api/mt/copy", copyTradingRouter);
   // Wallet authentication endpoints
 
   // tRPC API
