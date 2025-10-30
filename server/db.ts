@@ -1190,3 +1190,60 @@ export async function getAccountByNumberAndUser(accountNumber: string, userId: n
   
   return result[0] || null;
 }
+
+// ==================== Funções para MT4 Router ====================
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+export async function getTradingAccount(accountId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(tradingAccounts)
+    .where(eq(tradingAccounts.id, accountId))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+export async function createTradingAccount(account: InsertTradingAccount) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not initialized");
+  
+  const result = await db.insert(tradingAccounts).values(account);
+  return result[0].insertId;
+}
+
+export async function updateTradingAccount(accountId: number, data: Partial<InsertTradingAccount>) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(tradingAccounts)
+    .set(data)
+    .where(eq(tradingAccounts.id, accountId));
+}
+
+export async function createBalanceHistory(history: InsertBalanceHistory) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(balanceHistory).values(history);
+}
+
+export async function updateAccountHeartbeat(accountId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(tradingAccounts)
+    .set({ lastHeartbeat: new Date() })
+    .where(eq(tradingAccounts.id, accountId));
+}
