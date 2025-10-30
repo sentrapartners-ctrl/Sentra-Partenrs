@@ -184,12 +184,15 @@ function handleAuthenticate(ws: WebSocket, data: any) {
 async function handleGetConnectedAccounts(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) {
+    console.log('⚠️ GET_CONNECTED_ACCOUNTS: Cliente não autenticado');
     ws.send(JSON.stringify({
       type: 'ERROR',
       message: 'Cliente não autenticado'
     }));
     return;
   }
+
+  console.log(`🔍 GET_CONNECTED_ACCOUNTS chamado para: ${client.email} (ID: ${client.userId})`);
 
   try {
     const { getRawConnection } = await import('../db.js');
