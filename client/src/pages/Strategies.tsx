@@ -115,6 +115,27 @@ export default function Strategies() {
     return profitsByDate;
   }, [allTrades]);
 
+  // Calcular lucro total do mês atual
+  const monthlyProfit = useMemo(() => {
+    if (!allTrades) return 0;
+    
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    return allTrades.reduce((total, trade) => {
+      if (trade.status !== 'closed' || !trade.closeTime) return total;
+      
+      const tradeDate = new Date(trade.closeTime);
+      if (tradeDate.getFullYear() === year && tradeDate.getMonth() === month) {
+        const profit = (trade as any).isCentAccount 
+          ? ((trade.profit || 0) / 100) 
+          : (trade.profit || 0);
+        return total + profit;
+      }
+      return total;
+    }, 0);
+  }, [allTrades, currentDate]);
+
   // Obter entrada do journal para uma data
   const getJournalForDate = (date: Date) => {
     if (!journalEntries) return null;
@@ -277,6 +298,22 @@ export default function Strategies() {
                   })}
                 </div>
               </CardContent>
+              
+              {/* Lucro Total do Mês */}
+              <div className="mt-6 flex justify-center items-center">
+                <div className="text-center px-6 py-4 rounded-lg border bg-card">
+                  <p className="text-sm text-muted-foreground mb-2">Lucro Total do Mês</p>
+                  <div className={`text-3xl font-bold ${
+                    monthlyProfit > 0 
+                      ? 'text-green-600 dark:text-green-400' 
+                      : monthlyProfit < 0 
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-muted-foreground'
+                  }`}>
+                    <InlineCurrencyValue value={monthlyProfit} />
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
 
