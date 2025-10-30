@@ -630,13 +630,13 @@ string ExtractValue(string json, string key) {
     start = StringFind(json, ":", start) + 1;
     
     // Pular espaços e aspas
-    while(start < StringLen(json) && (StringGetChar(json, start) == ' ' || StringGetChar(json, start) == '\"')) start++;
+    while(start < StringLen(json) && (StringGetCharacter(json, start) == ' ' || StringGetCharacter(json, start) == '\"')) start++;
     
     int end = start;
     bool inQuotes = false;
     
     while(end < StringLen(json)) {
-        ushort ch = StringGetChar(json, end);
+        ushort ch = StringGetCharacter(json, end);
         if(ch == '\"') inQuotes = !inQuotes;
         if(!inQuotes && (ch == ',' || ch == '}')) break;
         end++;
