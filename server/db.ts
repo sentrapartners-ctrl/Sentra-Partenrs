@@ -1,4 +1,5 @@
 import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
+import mysql2 from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
@@ -42,6 +43,7 @@ import {
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _connection: mysql2.Connection | null = null;
 
 let _migrationRun = false;
 
@@ -53,7 +55,8 @@ export async function getDb() {
     if (dbUrl) {
       try {
         console.log("[Database] Connecting to:", dbUrl.includes('aiven') ? 'Aiven MySQL' : 'Manus TiDB');
-        _db = drizzle(dbUrl);
+        _connection = await mysql2.createConnection(dbUrl);
+        _db = drizzle(_connection);
         
         // Executar migrations apenas uma vez
         if (!_migrationRun) {
@@ -1246,4 +1249,10 @@ export async function updateAccountHeartbeat(accountId: number) {
   await db.update(tradingAccounts)
     .set({ lastHeartbeat: new Date() })
     .where(eq(tradingAccounts.id, accountId));
+}
+
+// Função para obter a conexão MySQL2 raw (para queries que precisam de execute)
+export async function getRawConnection(): Promise<mysql2.Connection | null> {
+  await getDb(); // Garante que a conexão foi inicializada
+  return _connection;
 }

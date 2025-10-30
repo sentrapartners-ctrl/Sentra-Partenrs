@@ -1,5 +1,5 @@
 import express from "express";
-import { getDb } from "../db";
+import { getDb, getRawConnection } from "../db";
 import { getUserByEmail } from "../auth";
 import { broadcastToUser } from "../websocket/copyTradingWs";
 
@@ -126,27 +126,33 @@ router.post("/master-signal", async (req, res) => {
       });
     }
     
-    const db = await getDb();
+    const connection = await getRawConnection();
+    if (!connection) {
+      return res.status(500).json({ 
+        success: false,
+        error: "Conexão com banco de dados não disponível" 
+      });
+    }
     
     // Converter positions para JSON string
     const positionsJson = JSON.stringify(positions || []);
     
     // Verificar se já existe registro para este master
-    const [existing]: any = await db.execute(
+    const [existing]: any = await connection.execute(
       "SELECT id FROM copy_signals WHERE master_email = ? AND account_number = ?",
       [email, account_number]
     );
     
     if (existing && existing.length > 0) {
       // Atualizar registro existente
-      await db.execute(
+      await connection.execute(
         "UPDATE copy_signals SET positions = ?, positions_count = ?, broker = ?, updated_at = NOW() WHERE master_email = ? AND account_number = ?",
         [positionsJson, positions_count || 0, broker || "", email, account_number]
       );
       console.log("[Copy Trading] ✅ Sinais atualizados para", email);
     } else {
       // Inserir novo registro
-      await db.execute(
+      await connection.execute(
         "INSERT INTO copy_signals (master_email, account_number, broker, positions, positions_count) VALUES (?, ?, ?, ?, ?)",
         [email, account_number, broker || "", positionsJson, positions_count || 0]
       );
