@@ -263,7 +263,7 @@ export default function Strategies() {
                           </span>
                           {hasProfit && (
                             <div className={`font-semibold leading-tight ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              <InlineCurrencyValue value={profit} />
+                              <InlineCurrencyValue value={profit} compact={true} />
                             </div>
                           )}
                           {hasJournal && (

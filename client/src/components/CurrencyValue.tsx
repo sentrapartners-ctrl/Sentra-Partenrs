@@ -68,8 +68,9 @@ export function InlineCurrencyValue({
   from = 'USD',
   className = "",
   showConverted = true,
-  colored = false
-}: CurrencyValueProps & { colored?: boolean }) {
+  colored = false,
+  compact = false
+}: CurrencyValueProps & { colored?: boolean; compact?: boolean }) {
   const { currency, rates } = useCurrency();
 
   const originalValue = value;
@@ -92,15 +93,36 @@ export function InlineCurrencyValue({
     );
   }
 
+  // Modo compact para calendário (5px, centralizado)
+  if (compact) {
+    return (
+      <span className={`${className} ${colorClass} flex flex-col items-center`}>
+        <span className="text-[5px]">
+          {sign}{currencySymbols[currency]}{Math.abs(convertedValue).toLocaleString('pt-BR', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          })}
+        </span>
+        <span className="text-[5px]">
+          {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          })}
+        </span>
+      </span>
+    );
+  }
+
+  // Modo normal para popup (10px, alinhado à direita)
   return (
-    <span className={`${className} ${colorClass} flex flex-col items-center`}>
-      <span className="text-[10px]">
+    <span className={`${className} ${colorClass} flex flex-col items-end`}>
+      <span className="text-[10px] opacity-70">
         {sign}{currencySymbols[currency]}{Math.abs(convertedValue).toLocaleString('pt-BR', { 
           minimumFractionDigits: 2, 
           maximumFractionDigits: 2 
         })}
       </span>
-      <span className="text-[10px]">
+      <span>
         {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
           minimumFractionDigits: 2, 
           maximumFractionDigits: 2 
