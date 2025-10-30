@@ -440,33 +440,22 @@ router.post("/profit", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "user_email e account_number são obrigatórios" });
     }
     
-    const db = getDb();
-    
     // Buscar usuário
-    const [users] = await db.execute(
-      "SELECT id FROM users WHERE email = ?",
-      [user_email]
-    );
-    
-    if (!Array.isArray(users) || users.length === 0) {
+    const user = await getUserByEmail(user_email);
+    if (!user) {
+      console.log("[MT4] Usuário não encontrado:", user_email);
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
     
-    const user = users[0] as any;
-    
     // Buscar conta
-    const [accounts] = await db.execute(
-      "SELECT id FROM trading_accounts WHERE user_id = ? AND account_number = ?",
-      [user.id, account_number]
-    );
-    
-    if (!Array.isArray(accounts) || accounts.length === 0) {
+    const account = await getAccountByNumberAndUser(account_number, user.id);
+    if (!account) {
+      console.log("[MT4] Conta não encontrada:", account_number);
       return res.status(404).json({ error: "Conta não encontrada" });
     }
     
-    const account = accounts[0] as any;
-    
     // Atualizar dados da conta
+    const db = getDb();
     await db.execute(
       `UPDATE trading_accounts 
        SET balance = ?, equity = ?, profit = ?, margin_free = ?, last_sync = NOW()
