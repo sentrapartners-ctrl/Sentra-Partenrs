@@ -866,3 +866,56 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+
+/**
+ * Copy Trading Settings - configurações de cópia por relação Master/Slave
+ */
+export const copyTradingSettings = mysqlTable("copy_trading_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  masterAccountId: varchar("masterAccountId", { length: 64 }).notNull(),
+  slaveAccountId: varchar("slaveAccountId", { length: 64 }).notNull(),
+  
+  // Configurações de SL/TP
+  slTpMode: mysqlEnum("slTpMode", ["copy_100", "multiply", "fixed_pips", "none"]).default("copy_100").notNull(),
+  slMultiplier: decimal("slMultiplier", { precision: 5, scale: 2 }).default("1.00"),
+  tpMultiplier: decimal("tpMultiplier", { precision: 5, scale: 2 }).default("1.00"),
+  slFixedPips: int("slFixedPips").default(20),
+  tpFixedPips: int("tpFixedPips").default(40),
+  
+  // Configurações de Volume
+  volumeMode: mysqlEnum("volumeMode", ["copy_100", "multiply", "fixed"]).default("copy_100").notNull(),
+  volumeMultiplier: decimal("volumeMultiplier", { precision: 5, scale: 2 }).default("1.00"),
+  volumeFixed: decimal("volumeFixed", { precision: 10, scale: 2 }).default("0.01"),
+  maxVolume: decimal("maxVolume", { precision: 10, scale: 2 }).default("1.00"),
+  
+  // Filtros
+  enableSymbolFilter: boolean("enableSymbolFilter").default(false),
+  allowedSymbols: text("allowedSymbols"), // JSON array
+  enableDirectionFilter: boolean("enableDirectionFilter").default(false),
+  allowedDirections: text("allowedDirections"), // JSON array ["BUY", "SELL"]
+  
+  // Gerenciamento de Risco
+  enableRiskManagement: boolean("enableRiskManagement").default(false),
+  maxDailyLoss: decimal("maxDailyLoss", { precision: 10, scale: 2 }).default("100.00"),
+  maxDailyTrades: int("maxDailyTrades").default(20),
+  
+  // Status e controle
+  isActive: boolean("isActive").default(true).notNull(),
+  dailyLoss: decimal("dailyLoss", { precision: 10, scale: 2 }).default("0.00"), // perda acumulada hoje
+  dailyTradesCount: int("dailyTradesCount").default(0), // trades copiados hoje
+  lastResetDate: date("lastResetDate"), // data do último reset diário
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  masterAccountIdIdx: index("masterAccountId_idx").on(table.masterAccountId),
+  slaveAccountIdIdx: index("slaveAccountId_idx").on(table.slaveAccountId),
+  isActiveIdx: index("isActive_idx").on(table.isActive),
+  uniqueRelation: index("unique_relation_idx").on(table.userId, table.masterAccountId, table.slaveAccountId),
+}));
+
+export type CopyTradingSettings = typeof copyTradingSettings.$inferSelect;
+export type InsertCopyTradingSettings = typeof copyTradingSettings.$inferInsert;

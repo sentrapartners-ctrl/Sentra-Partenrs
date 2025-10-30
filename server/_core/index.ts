@@ -17,6 +17,7 @@ import mt4Router from "../routes/mt4";
 import uploadRouter from "../routes/upload";
 import settingsRouter from "../routes/settings";
 import copyTradingRouter from "../routes/copy-trading";
+import copyTradingSettingsRouter from "../routes/copy-trading-settings";
 import websocketTestRouter from "../routes/websocket-test";
 import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
 
@@ -78,6 +79,7 @@ async function startServer() {
 
   app.use("/api/mt", mt4Router);
   app.use("/api/mt/copy", copyTradingRouter);
+  app.use("/api/mt/copy", copyTradingSettingsRouter);
   app.use("/api/websocket", websocketTestRouter);
   // Wallet authentication endpoints
 

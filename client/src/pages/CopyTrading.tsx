@@ -11,7 +11,7 @@ import { Copy, TrendingUp, Users, Activity, Settings } from "lucide-react";
 import { useEffect } from "react";
 
 export default function CopyTrading() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   const { data: copyRelations, refetch } = trpc.copyTrading.list.useQuery(
     undefined,
@@ -252,9 +252,28 @@ export default function CopyTrading() {
                 <CopyTradingSettings
                   masterAccountId="12345678"
                   slaveAccountId="87654321"
-                  onSave={(settings) => {
-                    console.log('Configurações salvas:', settings);
-                    // TODO: Salvar no backend
+                  onSave={async (settings) => {
+                    try {
+                      const response = await fetch('/api/mt/copy/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          user_email: user?.email,
+                          master_account_id: '12345678',
+                          slave_account_id: '87654321',
+                          settings
+                        })
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        alert('✅ Configurações salvas com sucesso!');
+                      } else {
+                        alert('❌ Erro: ' + data.error);
+                      }
+                    } catch (error) {
+                      console.error('Erro ao salvar:', error);
+                      alert('❌ Erro ao salvar configurações');
+                    }
                   }}
                 />
               </CardContent>
