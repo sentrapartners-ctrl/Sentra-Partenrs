@@ -11,10 +11,12 @@
 //====================================================
 // SISTEMA DE LICENCIAMENTO
 //====================================================
+#define LICENSE_EXPIRY_DATE D'2025.12.31 23:59:59'  // Data de expiração da licença
 
 //====================================================
 // PARÂMETROS DE ENTRADA
 //====================================================
+input string LicenseKey = "";                           // 🔑 CHAVE DE LICENÇA
 input string UserEmail = "";                            // ⚠️ SEU EMAIL CADASTRADO NO SISTEMA
 input string AccountType = "STANDARD";                  // Tipo de Conta: CENT ou STANDARD
 input string MasterServer = "https://sentrapartners.com/api/mt";
@@ -35,6 +37,9 @@ int totalTradesSent = 0;
 bool isConnected = false;
 int profitTimer = 0;
 int historyTimer = 0;
+bool licenseValid = false;
+datetime lastLicenseCheck = 0;
+int licenseCheckInterval = 3600; // Verificar licença a cada 1 hora
 
 //====================================================
 // INICIALIZAÇÃO
