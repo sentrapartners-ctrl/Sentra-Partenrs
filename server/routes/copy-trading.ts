@@ -272,6 +272,7 @@ router.post("/slave-heartbeat", async (req, res) => {
     const { 
       slave_email, 
       master_email,
+      master_account_id,
       account_number, 
       broker,
       positions_count,
@@ -280,10 +281,12 @@ router.post("/slave-heartbeat", async (req, res) => {
       timestamp
     } = req.body;
     
-    if (!slave_email || !master_email || !account_number) {
+    const masterIdentifier = master_account_id || master_email;
+    
+    if (!slave_email || !masterIdentifier || !account_number) {
       return res.status(400).json({ 
         success: false,
-        error: "slave_email, master_email e account_number são obrigatórios" 
+        error: "slave_email, master_account_id (ou master_email) e account_number são obrigatórios" 
       });
     }
     
@@ -312,15 +315,15 @@ router.post("/slave-heartbeat", async (req, res) => {
     if (existing && existing.length > 0) {
       await connection.execute(
         `UPDATE slave_heartbeats 
-         SET master_email = ?, broker = ?, positions_count = ?, balance = ?, equity = ?, last_heartbeat = NOW(), updated_at = NOW()
+         SET master_account_id = ?, broker = ?, positions_count = ?, balance = ?, equity = ?, last_heartbeat = NOW(), updated_at = NOW()
          WHERE slave_email = ? AND account_number = ?`,
-        [master_email, broker || "", positions_count || 0, balance || 0, equity || 0, slave_email, account_number]
+        [masterIdentifier, broker || "", positions_count || 0, balance || 0, equity || 0, slave_email, account_number]
       );
     } else {
       await connection.execute(
-        `INSERT INTO slave_heartbeats (slave_email, master_email, account_number, broker, positions_count, balance, equity, last_heartbeat)
+        `INSERT INTO slave_heartbeats (slave_email, master_account_id, account_number, broker, positions_count, balance, equity, last_heartbeat)
          VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [slave_email, master_email, account_number, broker || "", positions_count || 0, balance || 0, equity || 0]
+        [slave_email, masterIdentifier, account_number, broker || "", positions_count || 0, balance || 0, equity || 0]
       );
     }
     
@@ -331,7 +334,7 @@ router.post("/slave-heartbeat", async (req, res) => {
       broadcastToUser(user.id, {
         type: 'SLAVE_HEARTBEAT',
         slaveAccountId: account_number,
-        masterEmail: master_email,
+        masterAccountId: masterIdentifier,
         positionsCount: positions_count || 0,
         balance: balance || 0,
         equity: equity || 0,
@@ -358,17 +361,21 @@ router.post("/slave-heartbeat", async (req, res) => {
 //====================================================
 router.get("/slave-signals", async (req, res) => {
   try {
-    const { master_email, account_number } = req.query;
+    const { master_email, master_account_id, account_number, slave_email } = req.query;
     
     console.log("[Copy Trading] Slave solicitando sinais:", {
       master_email,
-      account_number
+      master_account_id,
+      slave_email
     });
     
-    if (!master_email) {
+    // Aceitar master_email (legado) ou master_account_id (novo)
+    const masterIdentifier = master_account_id || master_email;
+    
+    if (!masterIdentifier) {
       return res.status(400).json({ 
         success: false,
-        error: "master_email é obrigatório" 
+        error: "master_account_id ou master_email é obrigatório" 
       });
     }
     
@@ -381,12 +388,16 @@ router.get("/slave-signals", async (req, res) => {
     }
     
     // Buscar sinais mais recentes do master
-    let query = "SELECT positions, positions_count, broker, updated_at, last_heartbeat FROM copy_signals WHERE master_email = ?";
-    let params: any[] = [master_email];
+    let query = "SELECT positions, positions_count, broker, updated_at, last_heartbeat FROM copy_signals WHERE ";
+    let params: any[] = [];
     
-    if (account_number) {
-      query += " AND account_number = ?";
-      params.push(account_number);
+    // Buscar por account_number (preferencial) ou email
+    if (master_account_id) {
+      query += "account_number = ?";
+      params.push(master_account_id);
+    } else {
+      query += "master_email = ?";
+      params.push(master_email);
     }
     
     query += " AND updated_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) ORDER BY updated_at DESC LIMIT 1";

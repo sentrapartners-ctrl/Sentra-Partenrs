@@ -17,7 +17,6 @@
 // PARÂMETROS
 //====================================================
 input string UserEmail = "";                    // Email da conta Slave
-input string MasterEmail = "";                  // Email da conta Master
 input string MasterAccountNumber = "";          // Número da conta Master
 input string SlaveServer = "https://sentrapartners.com/api/mt/copy";
 input int CheckInterval = 1;                    // Intervalo de verificação (segundos)
@@ -98,7 +97,6 @@ int OnInit() {
     Print("Sentra Partners - Slave MT5 v4.0");
     Print("===========================================");
     Print("Slave Email: ", UserEmail);
-    Print("Master Email: ", MasterEmail);
     Print("Master Account: ", MasterAccountNumber);
     Print("Servidor: ", SlaveServer);
     Print("Check Interval: ", CheckInterval, "s");
@@ -113,8 +111,8 @@ int OnInit() {
         return(INIT_FAILED);
     }
     
-    if(UserEmail == "" || MasterEmail == "") {
-        Alert("❌ Configure UserEmail e MasterEmail!");
+    if(UserEmail == "" || MasterAccountNumber == "") {
+        Alert("❌ Configure UserEmail e MasterAccountNumber!");
         return(INIT_FAILED);
     }
     
@@ -165,9 +163,9 @@ void OnTimer() {
 // VERIFICAR SINAIS DO MASTER
 //====================================================
 void CheckMasterSignals() {
-    string url = SlaveServer + "/slave-signals?master_email=" + MasterEmail;
-    if(MasterAccountNumber != "") {
-        url += "&account_number=" + MasterAccountNumber;
+    string url = SlaveServer + "/slave-signals?master_account_id=" + MasterAccountNumber;
+    if(UserEmail != "") {
+        url += "&slave_email=" + UserEmail;
     }
     
     char post[];
@@ -462,7 +460,7 @@ void SyncPositions() {
 void SendSlaveHeartbeat() {
     string data = "{";
     data += "\"slave_email\":\"" + UserEmail + "\",";
-    data += "\"master_email\":\"" + MasterEmail + "\",";
+    data += "\"master_account_id\":\"" + MasterAccountNumber + "\",";
     data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
     data += "\"broker\":\"" + AccountInfoString(ACCOUNT_COMPANY) + "\",";
     data += "\"timestamp\":" + IntegerToString(TimeCurrent()) + ",";
