@@ -454,6 +454,33 @@ router.get("/my/subscriptions", async (req, res) => {
 });
 
 //====================================================
+// POST /api/signal-providers/admin/update-all-stats
+// Atualizar estatísticas de todos os provedores (admin)
+//====================================================
+router.post("/admin/update-all-stats", async (req, res) => {
+  try {
+    const { updateAllProviderStatistics } = await import("../services/update-provider-statistics");
+    
+    // Executar atualização em background
+    updateAllProviderStatistics().catch(err => 
+      console.error('[Signal Providers] Erro ao atualizar estatísticas:', err)
+    );
+    
+    res.json({
+      success: true,
+      message: 'Atualização de estatísticas iniciada em background'
+    });
+    
+  } catch (error: any) {
+    console.error('[Signal Providers] Erro ao iniciar atualização:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+//====================================================
 // DELETE /api/signal-providers/:id
 // Excluir um provedor
 //====================================================
