@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Sentra Partners"
 #property link      "https://sentrapartners.com"
-#property version   "3.00"
+#property version   "4.00"
 #property strict
 
 //====================================================
@@ -19,21 +19,44 @@ datetime LICENSE_EXPIRY_DATE = D'2025.12.31';  // 31/12/2025 23:59:59
 //====================================================
 input string UserEmail = "";                        // ⚠️ SEU EMAIL CADASTRADO
 input string MasterServer = "https://sentrapartners.com/api/mt/copy";
-input int SendInterval = 2;                         // Intervalo de envio (segundos)
+input int HeartbeatInterval = 30;                   // Intervalo de heartbeat (segundos)
+input int MaxRetries = 3;                           // Máximo de tentativas de retry
 input bool EnableLogs = true;                       // Habilitar logs
+
+//====================================================
+// ESTRUTURAS
+//====================================================
+struct PendingMessage {
+    string data;
+    int retryCount;
+    datetime timestamp;
+};
+
+struct PositionSnapshot {
+    ulong ticket;
+    string symbol;
+    int type;
+    double lots;
+    double open_price;
+    double stop_loss;
+    double take_profit;
+    datetime open_time;
+};
 
 //====================================================
 // VARIÁVEIS GLOBAIS
 //====================================================
-datetime lastSendTime = 0;
-string lastPositionsHash = "";
+datetime lastHeartbeatTime = 0;
+PendingMessage messageQueue[];
+PositionSnapshot previousPositions[];
+int queueSize = 0;
 
 //====================================================
 // INICIALIZAÇÃO
 //====================================================
 int OnInit() {
     Print("===========================================");
-    Print("Sentra Partners - Master MT5 v3.0");
+    Print("Sentra Partners - Master MT5 v4.0");
     Print("Conta: ", AccountInfoInteger(ACCOUNT_LOGIN));
     Print("Email: ", UserEmail);
     Print("===========================================");
@@ -58,25 +81,129 @@ int OnInit() {
         return(INIT_FAILED);
     }
     
-    // Timer para envio periódico
-    EventSetTimer(SendInterval);
+    // Timer para heartbeat e retry queue
+    EventSetTimer(1);  // 1 segundo para processar fila
+    
+    // Snapshot inicial das posições
+    UpdatePositionSnapshot();
     
     Print("✅ Master EA inicializado com sucesso!");
+    Print("📡 Heartbeat: ", HeartbeatInterval, "s");
+    Print("🔄 Max Retries: ", MaxRetries);
     return(INIT_SUCCEEDED);
 }
 
 //====================================================
-// TIMER
+// TRADE TRANSACTION (EVENTOS IMEDIATOS)
 //====================================================
-void OnTimer() {
-    SendPositions();
+void OnTradeTransaction(
+    const MqlTradeTransaction& trans,
+    const MqlTradeRequest& request,
+    const MqlTradeResult& result
+) {
+    // Detectar abertura de posição
+    if(trans.type == TRADE_TRANSACTION_DEAL_ADD) {
+        if(trans.deal_type == DEAL_TYPE_BUY || trans.deal_type == DEAL_TYPE_SELL) {
+            if(EnableLogs) Print("🔔 Nova posição detectada: ", trans.position);
+            SendOpenEvent(trans.position);
+        }
+    }
+    
+    // Detectar fechamento de posição
+    if(trans.type == TRADE_TRANSACTION_HISTORY_ADD) {
+        if(EnableLogs) Print("🔔 Posição fechada detectada: ", trans.position);
+        SendCloseEvent(trans.position);
+    }
+    
+    // Detectar modificação de S/L ou T/P
+    if(trans.type == TRADE_TRANSACTION_ORDER_UPDATE) {
+        if(EnableLogs) Print("🔔 Modificação detectada: ", trans.position);
+        SendModifyEvent(trans.position);
+    }
 }
 
 //====================================================
-// ENVIAR POSIÇÕES
+// TIMER (HEARTBEAT + RETRY QUEUE)
 //====================================================
-void SendPositions() {
+void OnTimer() {
+    datetime now = TimeCurrent();
+    
+    // Enviar heartbeat a cada X segundos
+    if(now - lastHeartbeatTime >= HeartbeatInterval) {
+        SendHeartbeat();
+        lastHeartbeatTime = now;
+    }
+    
+    // Processar fila de retry
+    ProcessRetryQueue();
+}
+
+//====================================================
+// ENVIAR EVENTO DE ABERTURA
+//====================================================
+void SendOpenEvent(ulong ticket) {
+    if(!PositionSelectByTicket(ticket)) return;
+    
     string data = "{";
+    data += "\"action\":\"open\",";
+    data += "\"master_email\":\"" + UserEmail + "\",";
+    data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    data += "\"broker\":\"" + AccountInfoString(ACCOUNT_COMPANY) + "\",";
+    data += "\"timestamp\":" + IntegerToString(TimeCurrent()) + ",";
+    data += "\"ticket\":" + IntegerToString(ticket) + ",";
+    data += "\"symbol\":\"" + PositionGetString(POSITION_SYMBOL) + "\",";
+    data += "\"type\":" + IntegerToString(PositionGetInteger(POSITION_TYPE)) + ",";
+    data += "\"lots\":" + DoubleToString(PositionGetDouble(POSITION_VOLUME), 2) + ",";
+    data += "\"open_price\":" + DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN), 5) + ",";
+    data += "\"stop_loss\":" + DoubleToString(PositionGetDouble(POSITION_SL), 5) + ",";
+    data += "\"take_profit\":" + DoubleToString(PositionGetDouble(POSITION_TP), 5) + ",";
+    data += "\"open_time\":" + IntegerToString(PositionGetInteger(POSITION_TIME)) + ",";
+    data += "\"comment\":\"" + PositionGetString(POSITION_COMMENT) + "\"";
+    data += "}";
+    
+    SendToServer(data);
+}
+
+//====================================================
+// ENVIAR EVENTO DE FECHAMENTO
+//====================================================
+void SendCloseEvent(ulong ticket) {
+    string data = "{";
+    data += "\"action\":\"close\",";
+    data += "\"master_email\":\"" + UserEmail + "\",";
+    data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    data += "\"timestamp\":" + IntegerToString(TimeCurrent()) + ",";
+    data += "\"ticket\":" + IntegerToString(ticket);
+    data += "}";
+    
+    SendToServer(data);
+}
+
+//====================================================
+// ENVIAR EVENTO DE MODIFICAÇÃO
+//====================================================
+void SendModifyEvent(ulong ticket) {
+    if(!PositionSelectByTicket(ticket)) return;
+    
+    string data = "{";
+    data += "\"action\":\"modify\",";
+    data += "\"master_email\":\"" + UserEmail + "\",";
+    data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    data += "\"timestamp\":" + IntegerToString(TimeCurrent()) + ",";
+    data += "\"ticket\":" + IntegerToString(ticket) + ",";
+    data += "\"stop_loss\":" + DoubleToString(PositionGetDouble(POSITION_SL), 5) + ",";
+    data += "\"take_profit\":" + DoubleToString(PositionGetDouble(POSITION_TP), 5);
+    data += "}";
+    
+    SendToServer(data);
+}
+
+//====================================================
+// ENVIAR HEARTBEAT (SINCRONIZAÇÃO)
+//====================================================
+void SendHeartbeat() {
+    string data = "{";
+    data += "\"action\":\"heartbeat\",";
     data += "\"master_email\":\"" + UserEmail + "\",";
     data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
     data += "\"broker\":\"" + AccountInfoString(ACCOUNT_COMPANY) + "\",";
@@ -99,9 +226,7 @@ void SendPositions() {
             data += "\"open_price\":" + DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN), 5) + ",";
             data += "\"stop_loss\":" + DoubleToString(PositionGetDouble(POSITION_SL), 5) + ",";
             data += "\"take_profit\":" + DoubleToString(PositionGetDouble(POSITION_TP), 5) + ",";
-            data += "\"open_time\":" + IntegerToString(PositionGetInteger(POSITION_TIME)) + ",";
-            data += "\"profit\":" + DoubleToString(PositionGetDouble(POSITION_PROFIT), 2) + ",";
-            data += "\"comment\":\"" + PositionGetString(POSITION_COMMENT) + "\"";
+            data += "\"open_time\":" + IntegerToString(PositionGetInteger(POSITION_TIME));
             data += "}";
             
             count++;
@@ -112,15 +237,14 @@ void SendPositions() {
     data += "\"positions_count\":" + IntegerToString(count);
     data += "}";
     
-    // Verificar se mudou
-    string currentHash = GetHash(data);
-    if(currentHash == lastPositionsHash && count > 0) {
-        // Nada mudou, não enviar
-        return;
-    }
-    lastPositionsHash = currentHash;
-    
-    // Enviar para servidor
+    if(EnableLogs) Print("💓 Heartbeat enviado: ", count, " posições");
+    SendToServer(data);
+}
+
+//====================================================
+// ENVIAR PARA SERVIDOR (COM RETRY)
+//====================================================
+void SendToServer(string data) {
     string url = MasterServer + "/master-signal";
     string headers = "Content-Type: application/json\r\n";
     
@@ -132,21 +256,98 @@ void SendPositions() {
     int res = WebRequest("POST", url, headers, timeout, post, result, resultHeaders);
     
     if(res == 200) {
-        if(EnableLogs) Print("✅ Posições enviadas: ", count);
+        if(EnableLogs) Print("✅ Mensagem enviada com sucesso");
     } else {
-        if(EnableLogs) Print("❌ Erro ao enviar: ", res);
+        if(EnableLogs) Print("❌ Erro ao enviar (", res, "), adicionando à fila de retry");
+        AddToRetryQueue(data);
     }
 }
 
 //====================================================
-// HASH SIMPLES
+// ADICIONAR À FILA DE RETRY
 //====================================================
-string GetHash(string str) {
-    long hash = 0;
-    for(int i = 0; i < StringLen(str); i++) {
-        hash = (hash * 31 + StringGetCharacter(str, i)) & 0x7FFFFFFF;
+void AddToRetryQueue(string data) {
+    ArrayResize(messageQueue, queueSize + 1);
+    messageQueue[queueSize].data = data;
+    messageQueue[queueSize].retryCount = 0;
+    messageQueue[queueSize].timestamp = TimeCurrent();
+    queueSize++;
+    
+    if(EnableLogs) Print("📥 Mensagem adicionada à fila. Total: ", queueSize);
+}
+
+//====================================================
+// PROCESSAR FILA DE RETRY
+//====================================================
+void ProcessRetryQueue() {
+    if(queueSize == 0) return;
+    
+    for(int i = queueSize - 1; i >= 0; i--) {
+        // Verificar se já passou tempo suficiente (2 segundos entre retries)
+        if(TimeCurrent() - messageQueue[i].timestamp < 2) continue;
+        
+        // Tentar reenviar
+        string url = MasterServer + "/master-signal";
+        string headers = "Content-Type: application/json\r\n";
+        
+        char post[], result[];
+        ArrayResize(post, StringToCharArray(messageQueue[i].data, post, 0, WHOLE_ARRAY, CP_UTF8) - 1);
+        
+        string resultHeaders;
+        int timeout = 5000;
+        int res = WebRequest("POST", url, headers, timeout, post, result, resultHeaders);
+        
+        if(res == 200) {
+            // Sucesso! Remover da fila
+            if(EnableLogs) Print("✅ Retry bem-sucedido! Removendo da fila");
+            RemoveFromQueue(i);
+        } else {
+            // Falhou, incrementar contador
+            messageQueue[i].retryCount++;
+            messageQueue[i].timestamp = TimeCurrent();
+            
+            if(messageQueue[i].retryCount >= MaxRetries) {
+                // Excedeu máximo de tentativas, descartar
+                if(EnableLogs) Print("❌ Mensagem descartada após ", MaxRetries, " tentativas");
+                RemoveFromQueue(i);
+            } else {
+                if(EnableLogs) Print("🔄 Retry ", messageQueue[i].retryCount, "/", MaxRetries);
+            }
+        }
     }
-    return IntegerToString(hash);
+}
+
+//====================================================
+// REMOVER DA FILA
+//====================================================
+void RemoveFromQueue(int index) {
+    for(int i = index; i < queueSize - 1; i++) {
+        messageQueue[i] = messageQueue[i + 1];
+    }
+    queueSize--;
+    ArrayResize(messageQueue, queueSize);
+}
+
+//====================================================
+// ATUALIZAR SNAPSHOT DE POSIÇÕES
+//====================================================
+void UpdatePositionSnapshot() {
+    int total = PositionsTotal();
+    ArrayResize(previousPositions, total);
+    
+    for(int i = 0; i < total; i++) {
+        ulong ticket = PositionGetTicket(i);
+        if(ticket > 0 && PositionSelectByTicket(ticket)) {
+            previousPositions[i].ticket = ticket;
+            previousPositions[i].symbol = PositionGetString(POSITION_SYMBOL);
+            previousPositions[i].type = (int)PositionGetInteger(POSITION_TYPE);
+            previousPositions[i].lots = PositionGetDouble(POSITION_VOLUME);
+            previousPositions[i].open_price = PositionGetDouble(POSITION_PRICE_OPEN);
+            previousPositions[i].stop_loss = PositionGetDouble(POSITION_SL);
+            previousPositions[i].take_profit = PositionGetDouble(POSITION_TP);
+            previousPositions[i].open_time = (datetime)PositionGetInteger(POSITION_TIME);
+        }
+    }
 }
 
 //====================================================
@@ -194,5 +395,6 @@ bool ValidateLicense() {
 void OnDeinit(const int reason) {
     EventKillTimer();
     Print("Master EA finalizado. Motivo: ", reason);
+    Print("📊 Mensagens pendentes na fila: ", queueSize);
 }
 //+------------------------------------------------------------------+
