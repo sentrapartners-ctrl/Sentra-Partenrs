@@ -17,7 +17,10 @@ import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
-  Plus
+  Plus,
+  Edit,
+  Trash2,
+  Clock
 } from "lucide-react";
 import {
   Dialog,
@@ -196,6 +199,29 @@ export default function SignalProviderSettings() {
     }
   };
 
+  const handleDeleteProvider = async (providerId: number) => {
+    if (!confirm('Tem certeza que deseja excluir este provedor? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/signal-providers/${providerId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchProviders();
+      } else {
+        alert(data.error || 'Erro ao excluir provedor');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir provedor:', error);
+      alert('Erro ao excluir provedor. Tente novamente.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -349,18 +375,27 @@ export default function SignalProviderSettings() {
                     Conta Master: {provider.master_account_number}
                   </CardDescription>
                 </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleTogglePublic(provider.id, provider.is_public)}
-                  >
-                    {provider.is_public ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                <div className="flex items-center space-x-2">
                   <Switch
                     checked={provider.is_active}
                     onCheckedChange={() => handleToggleActive(provider.id, provider.is_active)}
                   />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleTogglePublic(provider.id, provider.is_public)}
+                    title={provider.is_public ? "Tornar privado" : "Tornar público"}
+                  >
+                    {provider.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteProvider(provider.id)}
+                    title="Excluir provedor"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -368,7 +403,7 @@ export default function SignalProviderSettings() {
               <p className="text-sm text-muted-foreground mb-4">
                 {provider.description}
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Users className="h-4 w-4 mr-1" />
@@ -405,6 +440,18 @@ export default function SignalProviderSettings() {
                     {provider.subscription_fee > 0 
                       ? `${provider.subscription_fee} ${provider.currency}`
                       : 'Grátis'
+                    }
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4 mr-1" />
+                    Último Trade
+                  </div>
+                  <p className="text-sm font-medium">
+                    {provider.last_trade_at 
+                      ? new Date(provider.last_trade_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                      : 'Nenhum'
                     }
                   </p>
                 </div>

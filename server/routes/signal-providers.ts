@@ -182,8 +182,8 @@ router.post("/", async (req, res) => {
     // Criar provedor
     const [result]: any = await connection.execute(
       `INSERT INTO signal_providers 
-       (user_id, master_account_number, provider_name, description, is_public, subscription_fee, currency)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (user_id, master_account_number, provider_name, description, is_public, is_active, subscription_fee, currency)
+       VALUES (?, ?, ?, ?, ?, true, ?, ?)`,
       [user_id, master_account_number, provider_name, description, is_public, subscription_fee, currency]
     );
 
@@ -446,6 +446,70 @@ router.get("/my/subscriptions", async (req, res) => {
 
   } catch (error: any) {
     console.error('[Signal Providers] Erro ao buscar assinaturas:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+//====================================================
+// DELETE /api/signal-providers/:id
+// Excluir um provedor
+//====================================================
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const connection = await getRawConnection();
+    if (!connection) {
+      throw new Error('Conexão com banco não disponível');
+    }
+
+    // Verificar se provedor existe
+    const [providers]: any = await connection.execute(
+      `SELECT id FROM signal_providers WHERE id = ?`,
+      [id]
+    );
+
+    if (!providers || providers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Provedor não encontrado'
+      });
+    }
+
+    // Excluir assinaturas relacionadas
+    await connection.execute(
+      `DELETE FROM signal_subscriptions WHERE provider_id = ?`,
+      [id]
+    );
+
+    // Excluir estatísticas
+    await connection.execute(
+      `DELETE FROM provider_statistics WHERE provider_id = ?`,
+      [id]
+    );
+
+    // Excluir reviews
+    await connection.execute(
+      `DELETE FROM provider_reviews WHERE provider_id = ?`,
+      [id]
+    );
+
+    // Excluir provedor
+    await connection.execute(
+      `DELETE FROM signal_providers WHERE id = ?`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Provedor excluído com sucesso'
+    });
+
+  } catch (error: any) {
+    console.error('[Signal Providers] Erro ao excluir provedor:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
