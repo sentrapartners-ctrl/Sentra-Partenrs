@@ -351,16 +351,30 @@ export default function CopyTradingDashboard() {
                         key={account.accountId}
                         className="flex items-center justify-between p-3 border rounded-lg mb-2 hover:bg-accent transition-colors"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           {account.status === 'online' ? (
                             <Wifi className="h-5 w-5 text-green-500" />
                           ) : (
                             <WifiOff className="h-5 w-5 text-red-500" />
                           )}
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium">{account.accountName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {account.accountId}
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-muted-foreground font-mono">
+                                ID: {account.accountId}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(account.accountId);
+                                }}
+                                className="text-xs text-blue-500 hover:text-blue-700"
+                                title="Copiar ID da conta"
+                              >
+                                📋 Copiar
+                              </button>
+                            </div>
+                            <p className="text-xs text-green-600 mt-1">
+                              ✓ Configure seus Slaves com este ID para copiar
                             </p>
                           </div>
                         </div>

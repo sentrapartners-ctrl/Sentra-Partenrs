@@ -1,8 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { db } from '../db';
-import { copySignals, accounts } from '../db/schema';
-import { eq, and, desc, gte } from 'drizzle-orm';
 
 interface AuthenticatedClient {
   ws: WebSocket;
@@ -22,8 +19,31 @@ interface ConnectedAccount {
   userId: number;
 }
 
+interface LiveTrade {
+  id: string;
+  masterAccountId: string;
+  symbol: string;
+  type: 'BUY' | 'SELL';
+  volume: number;
+  openPrice: number;
+  timestamp: Date;
+  userId: number;
+  slaveStatuses: {
+    slaveAccountId: string;
+    slaveAccountName: string;
+    status: 'pending' | 'success' | 'failed';
+    executionTime?: number;
+    slippage?: number;
+    error?: string;
+  }[];
+}
+
 const clients = new Map<WebSocket, AuthenticatedClient>();
 const connectedAccounts = new Map<string, ConnectedAccount>();
+const activeTrades = new Map<string, LiveTrade>();
+
+// Mapeamento de accountId -> userId para validação
+const accountToUser = new Map<string, number>();
 
 export function setupCopyTradingWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
@@ -42,27 +62,27 @@ export function setupCopyTradingWebSocket(server: Server) {
         
         switch (data.type) {
           case 'AUTHENTICATE':
-            await handleAuthenticate(ws, data);
+            handleAuthenticate(ws, data);
             break;
             
           case 'GET_CONNECTED_ACCOUNTS':
-            await handleGetConnectedAccounts(ws, data);
+            handleGetConnectedAccounts(ws, data);
             break;
             
           case 'GET_RECENT_TRADES':
-            await handleGetRecentTrades(ws, data);
+            handleGetRecentTrades(ws, data);
             break;
             
           case 'ACCOUNT_HEARTBEAT':
-            await handleAccountHeartbeat(ws, data);
+            handleAccountHeartbeat(ws, data);
             break;
             
           case 'NEW_MASTER_SIGNAL':
-            await handleNewMasterSignal(ws, data);
+            handleNewMasterSignal(ws, data);
             break;
             
           case 'SLAVE_COPY_RESULT':
-            await handleSlaveCopyResult(ws, data);
+            handleSlaveCopyResult(ws, data);
             break;
             
           default:
@@ -89,6 +109,7 @@ export function setupCopyTradingWebSocket(server: Server) {
         for (const [accountId, account] of connectedAccounts.entries()) {
           if (account.userId === client.userId) {
             connectedAccounts.delete(accountId);
+            accountToUser.delete(accountId);
             
             // Notificar outros clientes do mesmo usuário
             broadcastToUser(client.userId, {
@@ -132,7 +153,7 @@ export function setupCopyTradingWebSocket(server: Server) {
   return wss;
 }
 
-async function handleAuthenticate(ws: WebSocket, data: any) {
+function handleAuthenticate(ws: WebSocket, data: any) {
   const { userId, email } = data;
   
   if (!userId || !email) {
@@ -160,7 +181,7 @@ async function handleAuthenticate(ws: WebSocket, data: any) {
   }));
 }
 
-async function handleGetConnectedAccounts(ws: WebSocket, data: any) {
+function handleGetConnectedAccounts(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) {
     ws.send(JSON.stringify({
@@ -181,7 +202,7 @@ async function handleGetConnectedAccounts(ws: WebSocket, data: any) {
   }));
 }
 
-async function handleGetRecentTrades(ws: WebSocket, data: any) {
+function handleGetRecentTrades(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) {
     ws.send(JSON.stringify({
@@ -191,51 +212,20 @@ async function handleGetRecentTrades(ws: WebSocket, data: any) {
     return;
   }
 
-  const limit = data.limit || 50;
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Filtrar trades do usuário
+  const userTrades = Array.from(activeTrades.values())
+    .filter(trade => trade.userId === client.userId)
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, 50);
 
-  try {
-    // Buscar trades recentes do usuário nas últimas 24 horas
-    const recentSignals = await db
-      .select()
-      .from(copySignals)
-      .where(
-        and(
-          eq(copySignals.userId, client.userId),
-          gte(copySignals.createdAt, yesterday)
-        )
-      )
-      .orderBy(desc(copySignals.createdAt))
-      .limit(limit);
-
-    // Formatar trades para o frontend
-    const trades = recentSignals.map(signal => ({
-      id: signal.id.toString(),
-      masterAccountId: signal.masterAccountId,
-      symbol: signal.symbol,
-      type: signal.orderType,
-      volume: signal.volume,
-      openPrice: signal.openPrice,
-      timestamp: signal.createdAt,
-      userId: signal.userId,
-      slaveStatuses: [] // Será preenchido com dados de cópia
-    }));
-
-    ws.send(JSON.stringify({
-      type: 'RECENT_TRADES',
-      trades,
-      userId: client.userId
-    }));
-  } catch (error) {
-    console.error('Erro ao buscar trades recentes:', error);
-    ws.send(JSON.stringify({
-      type: 'ERROR',
-      message: 'Erro ao buscar trades recentes'
-    }));
-  }
+  ws.send(JSON.stringify({
+    type: 'RECENT_TRADES',
+    trades: userTrades,
+    userId: client.userId
+  }));
 }
 
-async function handleAccountHeartbeat(ws: WebSocket, data: any) {
+function handleAccountHeartbeat(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) return;
 
@@ -246,6 +236,19 @@ async function handleAccountHeartbeat(ws: WebSocket, data: any) {
     balance, 
     equity 
   } = data;
+
+  // Validar que a conta pertence ao usuário
+  const existingUserId = accountToUser.get(accountId);
+  if (existingUserId && existingUserId !== client.userId) {
+    ws.send(JSON.stringify({
+      type: 'ERROR',
+      message: 'Esta conta pertence a outro usuário'
+    }));
+    return;
+  }
+
+  // Registrar conta ao usuário
+  accountToUser.set(accountId, client.userId);
 
   // Atualizar ou criar conta conectada
   const account: ConnectedAccount = {
@@ -274,7 +277,7 @@ async function handleAccountHeartbeat(ws: WebSocket, data: any) {
   }
 }
 
-async function handleNewMasterSignal(ws: WebSocket, data: any) {
+function handleNewMasterSignal(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) return;
 
@@ -289,58 +292,54 @@ async function handleNewMasterSignal(ws: WebSocket, data: any) {
     slaveAccountIds
   } = data;
 
-  try {
-    // Salvar sinal no banco de dados
-    const [signal] = await db
-      .insert(copySignals)
-      .values({
-        userId: client.userId,
-        masterAccountId,
-        slaveAccountId: '', // Será preenchido por cada slave
-        symbol,
-        orderType,
-        volume,
-        openPrice,
-        stopLoss,
-        takeProfit,
-        status: 'pending',
-        createdAt: new Date()
-      })
-      .returning();
+  // Validar que a conta Master pertence ao usuário
+  const masterUserId = accountToUser.get(masterAccountId);
+  if (!masterUserId || masterUserId !== client.userId) {
+    ws.send(JSON.stringify({
+      type: 'ERROR',
+      message: 'Conta Master não pertence a você'
+    }));
+    return;
+  }
 
-    // Preparar lista de slaves para copiar
-    const slaveStatuses = slaveAccountIds.map((slaveId: string) => ({
+  // Gerar ID único para o trade
+  const tradeId = `${masterAccountId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Preparar lista de slaves para copiar (filtrar apenas slaves do mesmo usuário)
+  const slaveStatuses = slaveAccountIds
+    .filter((slaveId: string) => accountToUser.get(slaveId) === client.userId)
+    .map((slaveId: string) => ({
       slaveAccountId: slaveId,
       slaveAccountName: connectedAccounts.get(slaveId)?.accountName || slaveId,
-      status: 'pending'
+      status: 'pending' as const
     }));
 
-    const trade = {
-      id: signal.id.toString(),
-      masterAccountId,
-      symbol,
-      type: orderType,
-      volume,
-      openPrice,
-      timestamp: new Date(),
-      userId: client.userId,
-      slaveStatuses
-    };
+  const trade: LiveTrade = {
+    id: tradeId,
+    masterAccountId,
+    symbol,
+    type: orderType,
+    volume,
+    openPrice,
+    timestamp: new Date(),
+    userId: client.userId,
+    slaveStatuses
+  };
 
-    // Broadcast para todos os clientes do usuário
-    broadcastToUser(client.userId, {
-      type: 'NEW_TRADE',
-      trade,
-      userId: client.userId
-    });
+  // Armazenar trade ativo
+  activeTrades.set(tradeId, trade);
 
-    console.log(`📈 Novo trade Master: ${symbol} ${orderType} - Usuário: ${client.email}`);
-  } catch (error) {
-    console.error('Erro ao processar novo sinal Master:', error);
-  }
+  // Broadcast para todos os clientes do usuário
+  broadcastToUser(client.userId, {
+    type: 'NEW_TRADE',
+    trade,
+    userId: client.userId
+  });
+
+  console.log(`📈 Novo trade Master: ${symbol} ${orderType} - Usuário: ${client.email} - ID: ${tradeId}`);
 }
 
-async function handleSlaveCopyResult(ws: WebSocket, data: any) {
+function handleSlaveCopyResult(ws: WebSocket, data: any) {
   const client = clients.get(ws);
   if (!client) return;
 
@@ -352,6 +351,28 @@ async function handleSlaveCopyResult(ws: WebSocket, data: any) {
     slippage,
     error
   } = data;
+
+  // Validar que o slave pertence ao usuário
+  const slaveUserId = accountToUser.get(slaveAccountId);
+  if (!slaveUserId || slaveUserId !== client.userId) {
+    ws.send(JSON.stringify({
+      type: 'ERROR',
+      message: 'Conta Slave não pertence a você'
+    }));
+    return;
+  }
+
+  // Atualizar trade ativo
+  const trade = activeTrades.get(tradeId);
+  if (trade) {
+    const slaveStatus = trade.slaveStatuses.find(s => s.slaveAccountId === slaveAccountId);
+    if (slaveStatus) {
+      slaveStatus.status = status;
+      slaveStatus.executionTime = executionTime;
+      slaveStatus.slippage = slippage;
+      slaveStatus.error = error;
+    }
+  }
 
   // Broadcast resultado da cópia para todos os clientes do usuário
   broadcastToUser(client.userId, {
@@ -399,6 +420,7 @@ export function getCopyTradingStats() {
     totalClients,
     totalAccounts,
     onlineAccounts,
+    activeTrades: activeTrades.size,
     clients: Array.from(clients.values()).map(c => ({
       userId: c.userId,
       email: c.email,
@@ -406,4 +428,15 @@ export function getCopyTradingStats() {
     })),
     accounts: Array.from(connectedAccounts.values())
   };
+}
+
+// Função para obter contas Master públicas (para exibir no painel)
+export function getMasterAccounts() {
+  return Array.from(connectedAccounts.values())
+    .filter(acc => acc.type === 'master' && acc.status === 'online')
+    .map(acc => ({
+      accountId: acc.accountId,
+      accountName: acc.accountName,
+      userId: acc.userId
+    }));
 }
