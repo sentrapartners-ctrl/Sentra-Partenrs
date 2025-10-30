@@ -347,7 +347,7 @@ export default function Analytics() {
               Métricas detalhadas e gráficos de performance
             </p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center w-full sm:w-auto">
             <AccountFilter value={selectedAccount} onChange={setSelectedAccount} />
             <PeriodFilter value={period} onChange={setPeriod} />
           </div>
@@ -429,7 +429,7 @@ export default function Analytics() {
         {/* Gráfico de Equity Growth */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
                 Equity Growth
@@ -437,14 +437,14 @@ export default function Analytics() {
               <select 
                 value={balancePeriod} 
                 onChange={(e) => setBalancePeriod(e.target.value)}
-                className="px-3 py-1 border rounded-md bg-background text-sm"
+                className="px-2 sm:px-3 py-1 border rounded-md bg-background text-xs sm:text-sm w-full sm:w-auto"
               >
-                <option value="7d">Últimos 7 dias</option>
-                <option value="30d">Últimos 30 dias</option>
-                <option value="90d">Últimos 90 dias</option>
-                <option value="6m">Últimos 6 meses</option>
-                <option value="1y">Último ano</option>
-                <option value="all">Todo o período</option>
+                <option value="7d">7 dias</option>
+                <option value="30d">30 dias</option>
+                <option value="90d">90 dias</option>
+                <option value="6m">6 meses</option>
+                <option value="1y">1 ano</option>
+                <option value="all">Tudo</option>
               </select>
             </div>
           </CardHeader>
