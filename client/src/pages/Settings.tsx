@@ -12,6 +12,7 @@ export default function Settings() {
   const { isAuthenticated, loading } = useAuth();
   const [telegramChatId, setTelegramChatId] = useState("");
   const [telegramEnabled, setTelegramEnabled] = useState(false);
+  const [barkKey, setBarkKey] = useState("");
 
   const { data: settings } = trpc.settings.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -137,12 +138,8 @@ export default function Settings() {
               <Input
                 type="text"
                 placeholder="Cole sua Bark Key aqui"
-                value={settings?.barkKey || ""}
-                onChange={(e) => {
-                  // Salvar automaticamente ao digitar
-                  const newValue = e.target.value;
-                  updateSettings.mutate({ barkKey: newValue });
-                }}
+                value={barkKey || settings?.barkKey || ""}
+                onChange={(e) => setBarkKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
                 1. Baixe o app "Bark" na App Store<br />
@@ -248,8 +245,27 @@ export default function Settings() {
         </Card>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline">Cancelar</Button>
-          <Button>Salvar Alterações</Button>
+          <Button 
+            variant="outline"
+            onClick={() => {
+              setBarkKey("");
+              setTelegramChatId("");
+              setTelegramEnabled(false);
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              updateSettings.mutate({
+                barkKey: barkKey || settings?.barkKey,
+                telegramChatId: telegramChatId || settings?.telegramChatId,
+                telegramEnabled: telegramEnabled,
+              });
+            }}
+          >
+            Salvar Alterações
+          </Button>
         </div>
       </div>
     </DashboardLayout>
