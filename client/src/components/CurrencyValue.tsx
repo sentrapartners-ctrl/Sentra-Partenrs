@@ -93,14 +93,14 @@ export function InlineCurrencyValue({
   }
 
   return (
-    <span className={`${className} ${colorClass} flex flex-col items-end`}>
-      <span className="text-[10px] opacity-70">
+    <span className={`${className} ${colorClass} flex flex-col items-center`}>
+      <span className="text-[10px]">
         {sign}{currencySymbols[currency]}{Math.abs(convertedValue).toLocaleString('pt-BR', { 
           minimumFractionDigits: 2, 
           maximumFractionDigits: 2 
         })}
       </span>
-      <span>
+      <span className="text-[10px]">
         {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
           minimumFractionDigits: 2, 
           maximumFractionDigits: 2 
