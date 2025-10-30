@@ -17,9 +17,19 @@ import {
   AlertCircle,
   Copy,
   BarChart3,
-  PieChart
+  PieChart,
+  ChevronDown
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { 
   BarChart, 
   Bar, 
@@ -357,35 +367,101 @@ export default function CopyTradingDashboard() {
 
       {/* Header com Estatísticas */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Minhas Contas Master
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics.masterCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {analytics.masterOnline} online
-            </p>
-          </CardContent>
-        </Card>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Card className="cursor-pointer hover:bg-accent transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Minhas Contas Master
+                </CardTitle>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics.masterCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  {analytics.masterOnline} online
+                </p>
+              </CardContent>
+            </Card>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuLabel>Selecione uma conta Master</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {connectedAccounts.filter(acc => acc.type === 'master').length === 0 ? (
+              <DropdownMenuItem disabled>
+                Nenhuma conta Master conectada
+              </DropdownMenuItem>
+            ) : (
+              connectedAccounts
+                .filter(acc => acc.type === 'master')
+                .map((account) => (
+                  <DropdownMenuItem key={account.accountId}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        {account.status === 'online' ? (
+                          <Wifi className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <WifiOff className="h-3 w-3 text-gray-400" />
+                        )}
+                        <span>{account.accountId}</span>
+                      </div>
+                      <Badge variant={account.status === 'online' ? 'default' : 'secondary'}>
+                        {account.status}
+                      </Badge>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Minhas Contas Slave
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics.slaveCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {analytics.slaveOnline} online
-            </p>
-          </CardContent>
-        </Card>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Card className="cursor-pointer hover:bg-accent transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Minhas Contas Slave
+                </CardTitle>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics.slaveCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  {analytics.slaveOnline} online
+                </p>
+              </CardContent>
+            </Card>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuLabel>Selecione uma conta Slave</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {connectedAccounts.filter(acc => acc.type === 'slave').length === 0 ? (
+              <DropdownMenuItem disabled>
+                Nenhuma conta Slave conectada
+              </DropdownMenuItem>
+            ) : (
+              connectedAccounts
+                .filter(acc => acc.type === 'slave')
+                .map((account) => (
+                  <DropdownMenuItem key={account.accountId}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        {account.status === 'online' ? (
+                          <Wifi className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <WifiOff className="h-3 w-3 text-gray-400" />
+                        )}
+                        <span>{account.accountId}</span>
+                      </div>
+                      <Badge variant={account.status === 'online' ? 'default' : 'secondary'}>
+                        {account.status}
+                      </Badge>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
