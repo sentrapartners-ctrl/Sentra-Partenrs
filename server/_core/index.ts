@@ -17,6 +17,7 @@ import mt4Router from "../routes/mt4";
 import uploadRouter from "../routes/upload";
 import settingsRouter from "../routes/settings";
 import adminLicensesRouter from "../routes/admin-licenses";
+import setupLicensesRouter from "../routes/setup-licenses";
 // import mt4ConnectorRouter from "../routes/mt4-connector";
 
 import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
@@ -74,6 +75,8 @@ async function startServer() {
   app.use("/api/settings", settingsRouter);
 
   app.use("/api/admin/licenses", adminLicensesRouter);
+
+  app.use("/api/setup", setupLicensesRouter);
 
   app.use("/api/mt", mt4Router);
   // Wallet authentication endpoints
