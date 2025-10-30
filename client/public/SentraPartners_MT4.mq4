@@ -9,6 +9,12 @@
 #property strict
 
 //====================================================
+// SISTEMA DE LICENCIAMENTO
+//====================================================
+#define LICENSE_EXPIRY_DATE D'2025.12.31 23:59:59'  // Data de expiração
+#define ALLOWED_ACCOUNTS ""  // Contas permitidas (separadas por vírgula) - vazio = todas
+
+//====================================================
 // PARÂMETROS DE ENTRADA
 //====================================================
 input string UserEmail = "";                            // ⚠️ SEU EMAIL CADASTRADO NO SISTEMA
@@ -46,8 +52,15 @@ int OnInit() {
     Print("Histórico: ", HistorySendTimes, " (", HistoryDays == 0 ? "Completo" : IntegerToString(HistoryDays) + " dias", ")");
     Print("===========================================");
     
-    // Validar email
-    if(UserEmail == "") {
+    // Validar licença
+    if(!ValidateLicense()) {
+        Alert("❌ LICENÇA INVÁLIDA!");
+        Print("❌ EA bloqueado: Licença inválida ou expirada.");
+        return(INIT_FAILED);
+    }
+    Print("✅ Licença válida!");
+    
+    // Validar email    if(UserEmail == "") {
         Alert("ERRO: Configure seu email no parâmetro UserEmail!");
         Print("ERRO: Email não configurado. Configure o parâmetro UserEmail com seu email cadastrado.");
         return(INIT_FAILED);
@@ -345,6 +358,65 @@ void SendProfitUpdate() {
     if(SendToServer("/profit", data)) {
         if(EnableLogs) Print("✅ Atualização de lucro enviada");
     }
+}
+
+//====================================================
+// VALIDAÇÃO DE LICENÇA
+//====================================================
+bool ValidateLicense() {
+    // 1. Verificar data de expiração
+    if(TimeCurrent() > LICENSE_EXPIRY_DATE) {
+        Print("❌ Licença expirada em: ", TimeToStr(LICENSE_EXPIRY_DATE, TIME_DATE));
+        Print("Data atual: ", TimeToStr(TimeCurrent(), TIME_DATE));
+        return false;
+    }
+    
+    // 2. Verificar contas permitidas
+    string allowedAccounts = ALLOWED_ACCOUNTS;
+    if(allowedAccounts != "") {
+        string currentAccount = IntegerToString(AccountNumber());
+        bool accountAllowed = false;
+        
+        // Separar contas por vírgula e verificar
+        int start = 0;
+        int pos = StringFind(allowedAccounts, ",", start);
+        
+        while(pos >= 0 || start < StringLen(allowedAccounts)) {
+            string account;
+            if(pos >= 0) {
+                account = StringSubstr(allowedAccounts, start, pos - start);
+                start = pos + 1;
+                pos = StringFind(allowedAccounts, ",", start);
+            } else {
+                account = StringSubstr(allowedAccounts, start);
+                start = StringLen(allowedAccounts);
+            }
+            
+            // Remover espaços
+            StringTrimLeft(account);
+            StringTrimRight(account);
+            
+            if(account == currentAccount) {
+                accountAllowed = true;
+                break;
+            }
+        }
+        
+        if(!accountAllowed) {
+            Print("❌ Conta não autorizada: ", currentAccount);
+            Print("Contas permitidas: ", allowedAccounts);
+            return false;
+        }
+    }
+    
+    Print("✅ Licença válida até: ", TimeToStr(LICENSE_EXPIRY_DATE, TIME_DATE));
+    if(ALLOWED_ACCOUNTS != "") {
+        Print("✅ Conta autorizada: ", AccountNumber());
+    } else {
+        Print("✅ Todas as contas permitidas");
+    }
+    
+    return true;
 }
 
 //====================================================

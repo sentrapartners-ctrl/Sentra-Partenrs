@@ -8,6 +8,13 @@
 #property version   "2.00"
 #property strict
 
+//====================================================
+// SISTEMA DE LICENCIAMENTO
+//====================================================
+#define LICENSE_EXPIRY_DATE D\'2025.12.31 23:59:59\'  // Data de expiração
+#define ALLOWED_ACCOUNTS ""  // Contas permitidas (separadas por vírgula) - vazio = todas
+
+
 //--- Input parameters
 input string ServerURL = "https://sentrapartners.com/api/mt/copy-signal";
 input string LicenseCheckURL = "https://sentrapartners.com/api/ea-license/validate";
@@ -42,6 +49,14 @@ int OnInit()
    Print("Servidor: ", ServerURL);
    Print("===========================================");
    
+    // Validar licença
+    if(!ValidateLicense()) {
+        Alert("❌ LICENÇA INVÁLIDA!");
+        Print("❌ EA bloqueado: Licença inválida ou expirada.");
+        return(INIT_FAILED);
+    }
+    Print("✅ Licença válida!");
+    
    // Verificar licença imediatamente
    if(!CheckLicense())
    {
