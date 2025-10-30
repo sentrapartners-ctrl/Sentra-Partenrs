@@ -392,7 +392,7 @@ function handleSlaveCopyResult(ws: WebSocket, data: any) {
   console.log(`${statusEmoji} Cópia ${status}: Trade ${tradeId} → Slave ${slaveAccountId} (${executionTime}ms)`);
 }
 
-function broadcastToUser(userId: number, message: any) {
+export function broadcastToUser(userId: number, message: any) {
   for (const [ws, client] of clients.entries()) {
     if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
