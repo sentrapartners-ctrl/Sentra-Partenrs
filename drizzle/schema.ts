@@ -16,7 +16,6 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-  barkKey: varchar("barkKey", { length: 255 }), // Bark notification key
 });
 
 export type User = typeof users.$inferSelect;

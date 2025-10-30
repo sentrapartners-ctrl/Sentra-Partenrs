@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { getDb } from './db';
-import { users, trades } from '../drizzle/schema';
+import { users, trades, userSettings } from '../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { sendDailyProfitNotification, sendWeeklyProfitNotification } from './bark-notifications';
 
@@ -101,7 +101,16 @@ async function sendDailyNotifications() {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   
-  const allUsers = await db.select().from(users).where(sql`barkKey IS NOT NULL`);
+  // Buscar usuários com barkKey configurado
+  const usersWithBark = await db
+    .select({
+      userId: userSettings.userId,
+      barkKey: userSettings.barkKey,
+    })
+    .from(userSettings)
+    .where(sql`${userSettings.barkKey} IS NOT NULL`);
+  
+  const allUsers = usersWithBark;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -112,10 +121,10 @@ async function sendDailyNotifications() {
     if (!user.barkKey) continue;
 
     try {
-      const stats = await calculateProfitStats(user.id, today, tomorrow);
+      const stats = await calculateProfitStats(user.userId, today, tomorrow);
       
       if (!stats) {
-        console.log(`No trades today for user ${user.id}`);
+        console.log(`No trades today for user ${user.userId}`);
         continue;
       }
 
@@ -126,9 +135,9 @@ async function sendDailyNotifications() {
         stats.winRate
       );
 
-      console.log(`Daily notification sent to user ${user.id}`);
+      console.log(`Daily notification sent to user ${user.userId}`);
     } catch (error) {
-      console.error(`Error sending daily notification to user ${user.id}:`, error);
+      console.error(`Error sending daily notification to user ${user.userId}:`, error);
     }
   }
 }
@@ -142,7 +151,16 @@ async function sendWeeklyNotifications() {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   
-  const allUsers = await db.select().from(users).where(sql`barkKey IS NOT NULL`);
+  // Buscar usuários com barkKey configurado
+  const usersWithBark = await db
+    .select({
+      userId: userSettings.userId,
+      barkKey: userSettings.barkKey,
+    })
+    .from(userSettings)
+    .where(sql`${userSettings.barkKey} IS NOT NULL`);
+  
+  const allUsers = usersWithBark;
 
   // Calcular domingo a sexta da semana passada
   const now = new Date();
@@ -161,14 +179,14 @@ async function sendWeeklyNotifications() {
     if (!user.barkKey) continue;
 
     try {
-      const stats = await calculateProfitStats(user.id, sunday, saturday);
+      const stats = await calculateProfitStats(user.userId, sunday, saturday);
       
       if (!stats) {
-        console.log(`No trades this week for user ${user.id}`);
+        console.log(`No trades this week for user ${user.userId}`);
         continue;
       }
 
-      const { bestDay, worstDay } = await calculateBestWorstDays(user.id, sunday, saturday);
+      const { bestDay, worstDay } = await calculateBestWorstDays(user.userId, sunday, saturday);
 
       await sendWeeklyProfitNotification(
         user.barkKey,
@@ -179,9 +197,9 @@ async function sendWeeklyNotifications() {
         worstDay
       );
 
-      console.log(`Weekly notification sent to user ${user.id}`);
+      console.log(`Weekly notification sent to user ${user.userId}`);
     } catch (error) {
-      console.error(`Error sending weekly notification to user ${user.id}:`, error);
+      console.error(`Error sending weekly notification to user ${user.userId}:`, error);
     }
   }
 }
