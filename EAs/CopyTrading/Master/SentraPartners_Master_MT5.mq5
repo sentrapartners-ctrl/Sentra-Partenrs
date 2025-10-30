@@ -8,7 +8,13 @@
 #property version   "2.00"
 #property strict
 
+//====================================================
+// SISTEMA DE LICENCIAMENTO
+//====================================================
+#define LICENSE_EXPIRY_DATE D'2025.12.31 23:59:59'  // Data de expiração da licença
+
 //--- Input parameters
+input string LicenseKey = "";                       // 🔑 CHAVE DE LICENÇA
 input string ServerURL = "https://sentrapartners.com/api/mt/copy-signal";
 input string LicenseCheckURL = "https://sentrapartners.com/api/ea-license/validate";
 input string AccountToken = "";  // Token da conta (obtido no painel web)
