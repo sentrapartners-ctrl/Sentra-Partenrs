@@ -236,7 +236,7 @@ export default function Strategies() {
                 <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
                   {days.map((day, index) => {
                     if (!day) {
-                      return <div key={`empty-${index}`} className="h-14 sm:h-16 md:h-20" />;
+                      return <div key={`empty-${index}`} className="h-12 sm:h-16 md:h-20" />;
                     }
 
                     const dateStr = day.toISOString().split('T')[0];
@@ -250,7 +250,7 @@ export default function Strategies() {
                         key={day.toISOString()}
                         onClick={() => handleDateClick(day)}
                         className={`
-                          h-14 sm:h-16 md:h-20 p-0.5 sm:p-1 md:p-2 rounded border transition-all hover:bg-accent cursor-pointer
+                          h-12 sm:h-16 md:h-20 p-0.5 sm:p-1 md:p-2 rounded border transition-all hover:bg-accent cursor-pointer
                           ${isToday ? 'border-blue-500 ring-1 md:ring-2 ring-blue-500 ring-offset-1 md:ring-offset-2' : 'border-border'}
                           ${day.getMonth() !== currentDate.getMonth() ? 'opacity-40' : ''}
                           ${hasProfit && profit > 0 ? 'bg-green-50 dark:bg-green-950/20' : ''}
@@ -258,11 +258,11 @@ export default function Strategies() {
                         `}
                       >
                         <div className="flex flex-col h-full justify-between">
-                          <span className={`text-[10px] sm:text-xs md:text-sm font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                          <span className={`text-[9px] sm:text-xs md:text-sm font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                             {day.getDate()}
                           </span>
                           {hasProfit && (
-                            <div className={`text-[8px] sm:text-[10px] md:text-xs font-semibold leading-tight ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            <div className={`text-[7px] sm:text-[10px] md:text-xs font-semibold leading-[0.9] ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                               <InlineCurrencyValue value={profit} />
                             </div>
                           )}
