@@ -138,40 +138,41 @@ export default function VPS() {
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <h3 className="font-semibold">✅ ForexVPS.net (Recomendado)</h3>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Zero custo inicial</li>
-                      <li>• Paga só o que vende</li>
-                      <li>• Billing in arrears (pro rata)</li>
-                      <li>• 19 datacenters globais</li>
-                      <li>• MT4/MT5 pré-instalado</li>
-                      <li>• Latência ~1ms</li>
-                      <li>• Setup em 60 segundos</li>
-                    </ul>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">💰 FxSVPS (Alternativa)</h3>
+                    <h3 className="font-semibold">✅ FxSVPS.com (Escolhido)</h3>
                     <ul className="text-sm text-muted-foreground space-y-1">
                       <li>• 50% desconto reseller</li>
-                      <li>• A partir de $2/mês</li>
+                      <li>• A partir de $2/mês (custo)</li>
                       <li>• Margens de 100%+</li>
                       <li>• WHMCS integration</li>
                       <li>• Setup automático</li>
                       <li>• Múltiplas localizações</li>
                       <li>• Desde 2012</li>
+                      <li>• Suporte 24/7</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">💡 Modelo de Negócio</h3>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Você paga: $2-10/mês por VPS</li>
+                      <li>• Você cobra: $20-80/mês</li>
+                      <li>• Margem: 300-800%</li>
+                      <li>• Sem custo inicial</li>
+                      <li>• Cancela quando quiser</li>
+                      <li>• White label completo</li>
                     </ul>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <h3 className="font-semibold mb-2">Como Funciona:</h3>
+                  <h3 className="font-semibold mb-2">Como Funciona (FxSVPS):</h3>
                   <ol className="text-sm text-muted-foreground space-y-2">
                     <li>1. Cliente solicita VPS através do seu site</li>
-                    <li>2. Você recebe notificação para aprovar</li>
-                    <li>3. VPS é provisionado automaticamente</li>
-                    <li>4. Cliente recebe credenciais com sua marca</li>
-                    <li>5. Você é faturado no final do mês (pro rata)</li>
+                    <li>2. Sistema cria VPS automaticamente via API</li>
+                    <li>3. Cliente recebe credenciais com sua marca</li>
+                    <li>4. Você paga FxSVPS (ex: $5/mês)</li>
+                    <li>5. Você cobra do cliente (ex: $40/mês)</li>
+                    <li>6. Lucro: $35/mês por VPS</li>
                   </ol>
                 </div>
 
@@ -254,24 +255,14 @@ export default function VPS() {
                     <h3 className="font-semibold mb-2">Provedor Preferido</h3>
                     <div className="grid gap-2">
                       <label className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent">
-                        <input type="radio" name="provider" value="forexvps" defaultChecked />
+                        <input type="radio" name="provider" value="fxsvps" defaultChecked />
                         <div className="flex-1">
-                          <div className="font-medium">ForexVPS.net</div>
+                          <div className="font-medium">FxSVPS.com</div>
                           <div className="text-sm text-muted-foreground">
-                            Zero custo inicial • Paga só o que vende
+                            50% desconto reseller • A partir de $2/mês • Margens de 100%+
                           </div>
                         </div>
-                        <Badge>Recomendado</Badge>
-                      </label>
-
-                      <label className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent">
-                        <input type="radio" name="provider" value="fxsvps" />
-                        <div className="flex-1">
-                          <div className="font-medium">FxSVPS</div>
-                          <div className="text-sm text-muted-foreground">
-                            50% desconto • A partir de $2/mês
-                          </div>
-                        </div>
+                        <Badge>Escolhido</Badge>
                       </label>
                     </div>
                   </div>
