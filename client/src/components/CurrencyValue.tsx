@@ -82,13 +82,13 @@ export function InlineCurrencyValue({
 
   const sign = value >= 0 ? "+" : "";
 
-  // Modo compact para calendário (ultra responsivo: 5px mobile, 7px tablet, 10px desktop)
+  // Modo compact para calendário (7px fixo para melhor legibilidade)
   if (compact) {
-    // Se mostra apenas uma moeda, ainda usa fonte pequena no compact
+    // Se mostra apenas uma moeda, usa 7px fixo
     if (currency === from || !showConverted) {
       return (
         <span className={`${className} ${colorClass} flex flex-col items-center`}>
-          <span className="text-[5px] xs:text-[6px] sm:text-[7px] md:text-[9px] lg:text-[10px] leading-[1.1]">
+          <span className="text-[7px] leading-[1.1]">
             {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
               minimumFractionDigits: 2, 
               maximumFractionDigits: 2 
@@ -97,16 +97,16 @@ export function InlineCurrencyValue({
         </span>
       );
     }
-    // Se mostra duas moedas, exibe ambas com fonte pequena
+    // Se mostra duas moedas, exibe ambas com 7px fixo
     return (
       <span className={`${className} ${colorClass} flex flex-col items-center gap-[1px]`}>
-        <span className="text-[5px] xs:text-[6px] sm:text-[7px] md:text-[9px] lg:text-[10px] leading-[1.1]">
+        <span className="text-[7px] leading-[1.1]">
           {sign}{currencySymbols[currency]}{Math.abs(convertedValue).toLocaleString('pt-BR', { 
             minimumFractionDigits: 2, 
             maximumFractionDigits: 2 
           })}
         </span>
-        <span className="text-[5px] xs:text-[6px] sm:text-[7px] md:text-[9px] lg:text-[10px] leading-[1.1]">
+        <span className="text-[7px] leading-[1.1]">
           {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
             minimumFractionDigits: 2, 
             maximumFractionDigits: 2 
