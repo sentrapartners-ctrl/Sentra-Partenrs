@@ -1,12 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import CopyTradingDashboard from "@/components/CopyTradingDashboard";
+import CopyTradingSettings from "@/components/CopyTradingSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Copy, TrendingUp, Users, Activity } from "lucide-react";
+import { Copy, TrendingUp, Users, Activity, Settings } from "lucide-react";
 import { useEffect } from "react";
 
 export default function CopyTrading() {
@@ -70,6 +71,10 @@ export default function CopyTrading() {
             <TabsTrigger value="relations">
               <Users className="h-4 w-4 mr-2" />
               Relações de Cópia
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="h-4 w-4 mr-2" />
+              Configurações
             </TabsTrigger>
           </TabsList>
 
@@ -230,6 +235,28 @@ export default function CopyTrading() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            {/* Configurações de Copy Trading */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurar Relação de Cópia</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Personalize como os trades serão copiados do Master para o Slave
+                </p>
+              </CardHeader>
+              <CardContent>
+                <CopyTradingSettings
+                  masterAccountId="12345678"
+                  slaveAccountId="87654321"
+                  onSave={(settings) => {
+                    console.log('Configurações salvas:', settings);
+                    // TODO: Salvar no backend
+                  }}
+                />
               </CardContent>
             </Card>
           </TabsContent>
