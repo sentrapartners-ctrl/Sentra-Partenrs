@@ -31,6 +31,8 @@ export default function Settings() {
     },
   });
 
+  const testBark = trpc.settings.testBark.useMutation();
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -205,15 +207,18 @@ export default function Settings() {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => {
-                if (!barkKey && !settings?.barkKey) {
+              onClick={async () => {
+                const key = barkKey || settings?.barkKey;
+                if (!key) {
                   toast.error("Configure sua Bark Key primeiro!");
                   return;
                 }
-                // Enviar mensagem de teste
-                fetch(`https://api.day.app/${barkKey || settings?.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`)
-                  .then(() => toast.success("🔔 Mensagem de teste enviada!"))
-                  .catch(() => toast.error("Erro ao enviar. Verifique sua Bark Key."));
+                try {
+                  await testBark.mutateAsync({ barkKey: key });
+                  toast.success("🔔 Mensagem de teste enviada!");
+                } catch (error) {
+                  toast.error("Erro ao enviar. Verifique sua Bark Key.");
+                }
               }}
             >
               Enviar Mensagem de Teste

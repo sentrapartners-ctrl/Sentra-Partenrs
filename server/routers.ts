@@ -536,6 +536,10 @@ export const appRouter = router({
         alertConnection: z.boolean().optional(),
         drawdownThreshold: z.number().optional(),
         barkKey: z.string().optional(),
+        barkDailyEnabled: z.boolean().optional(),
+        barkWeeklyEnabled: z.boolean().optional(),
+        barkDailyTime: z.string().optional(),
+        barkWeeklyTime: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.createOrUpdateUserSettings({
@@ -543,6 +547,26 @@ export const appRouter = router({
           userId: ctx.user.id,
         });
         return { success: true };
+      }),
+
+    testBark: protectedProcedure
+      .input(z.object({
+        barkKey: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const response = await fetch(
+            `https://api.day.app/${input.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`
+          );
+          
+          if (!response.ok) {
+            throw new Error('Failed to send notification');
+          }
+          
+          return { success: true };
+        } catch (error) {
+          throw new Error('Erro ao enviar notificação Bark');
+        }
       }),
   }),
 
