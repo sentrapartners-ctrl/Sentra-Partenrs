@@ -11,10 +11,11 @@
 //====================================================
 // SISTEMA DE LICENCIAMENTO
 //====================================================
-#define LICENSE_EXPIRY_DATE D'2025.12.31 23:59:59'  // Data de expiração da licença
+#define LICENSE_EXPIRY_DATE D\'2025.12.31 23:59:59\'  // Data de expiração
+#define ALLOWED_ACCOUNTS ""  // Contas permitidas (separadas por vírgula) - vazio = todas
+
 
 //--- Input parameters
-input string LicenseKey = "";                       // 🔑 CHAVE DE LICENÇA
 input string ServerURL = "https://sentrapartners.com/api/mt/get-signals";
 input string LicenseCheckURL = "https://sentrapartners.com/api/ea-license/validate";
 input string AccountToken = "";  // Token da conta Slave
@@ -55,6 +56,14 @@ int OnInit()
    Print("Copiando de: ", MasterAccountNumber);
    Print("===========================================");
    
+    // Validar licença
+    if(!ValidateLicense()) {
+        Alert("❌ LICENÇA INVÁLIDA!");
+        Print("❌ EA bloqueado: Licença inválida ou expirada.");
+        return(INIT_FAILED);
+    }
+    Print("✅ Licença válida!");
+    
    // Verificar licença
    if(!CheckLicense())
    {
