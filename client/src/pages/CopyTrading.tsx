@@ -242,7 +242,9 @@ export default function CopyTrading() {
                 )}
               </CardContent>
             </Card>
-          </TabsCont          <TabsContent value="settings" className="space-y-6">
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
             {/* Configurações de Copy Trading */}
             <CopyTradingSettings />
           </TabsContent>
@@ -250,41 +252,6 @@ export default function CopyTrading() {
           <TabsContent value="share" className="space-y-6">
             {/* Compartilhar Sinais */}
             <SignalProviderSettings />
-          </TabsContent>        <CardTitle>Configurar Relação de Cópia</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Personalize como os trades serão copiados do Master para o Slave
-                </p>
-              </CardHeader>
-              <CardContent>
-                <CopyTradingSettings
-                  masterAccountId="12345678"
-                  slaveAccountId="87654321"
-                  onSave={async (settings) => {
-                    try {
-                      const response = await fetch('/api/mt/copy/settings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          user_email: user?.email,
-                          master_account_id: '12345678',
-                          slave_account_id: '87654321',
-                          settings
-                        })
-                      });
-                      const data = await response.json();
-                      if (data.success) {
-                        alert('✅ Configurações salvas com sucesso!');
-                      } else {
-                        alert('❌ Erro: ' + data.error);
-                      }
-                    } catch (error) {
-                      console.error('Erro ao salvar:', error);
-                      alert('❌ Erro ao salvar configurações');
-                    }
-                  }}
-                />
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
