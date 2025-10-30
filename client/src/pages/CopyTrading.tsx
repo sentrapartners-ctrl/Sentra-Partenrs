@@ -2,12 +2,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import CopyTradingDashboard from "@/components/CopyTradingDashboard";
 import CopyTradingSettings from "@/components/CopyTradingSettings";
+import SignalProviderSettings from "@/components/SignalProviderSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Copy, TrendingUp, Users, Activity, Settings } from "lucide-react";
+import { Copy, TrendingUp, Users, Activity, Settings, Share2 } from "lucide-react";
 import { useEffect } from "react";
 
 export default function CopyTrading() {
@@ -75,6 +76,10 @@ export default function CopyTrading() {
             <TabsTrigger value="settings">
               <Settings className="h-4 w-4 mr-2" />
               Configurações
+            </TabsTrigger>
+            <TabsTrigger value="share">
+              <Share2 className="h-4 w-4 mr-2" />
+              Compartilhar Sinais
             </TabsTrigger>
           </TabsList>
 
@@ -237,13 +242,15 @@ export default function CopyTrading() {
                 )}
               </CardContent>
             </Card>
+          </TabsCont          <TabsContent value="settings" className="space-y-6">
+            {/* Configurações de Copy Trading */}
+            <CopyTradingSettings />
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-6">
-            {/* Configurações de Copy Trading */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurar Relação de Cópia</CardTitle>
+          <TabsContent value="share" className="space-y-6">
+            {/* Compartilhar Sinais */}
+            <SignalProviderSettings />
+          </TabsContent>        <CardTitle>Configurar Relação de Cópia</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Personalize como os trades serão copiados do Master para o Slave
                 </p>

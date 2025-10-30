@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, CreditCard, ShoppingCart, Server, Bot, Moon, Sun, MessageCircle, MessageSquare, Key } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Wallet, TrendingUp, Copy, Bell, Settings, BookOpen, Calendar, LineChart, DollarSign, Shield, CreditCard, ShoppingCart, Server, Bot, Moon, Sun, MessageCircle, MessageSquare, Key, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -37,6 +37,7 @@ const menuItems = [
   { icon: TrendingUp, label: "Trades", path: "/trades" },
   { icon: LineChart, label: "Análises", path: "/analytics" },
   { icon: Copy, label: "Copy Trading", path: "/copy-trading" },
+  { icon: Users, label: "Traders", path: "/traders" },
   { icon: BookOpen, label: "Estratégias", path: "/strategies" },
   { icon: Calendar, label: "Calendário", path: "/calendar" },
   { icon: Bell, label: "Alertas", path: "/alerts" },

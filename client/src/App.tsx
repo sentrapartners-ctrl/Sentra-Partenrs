@@ -17,6 +17,7 @@ import Accounts from "./pages/Accounts";
 import Trades from "./pages/Trades";
 import Analytics from "./pages/Analytics";
 import CopyTrading from "./pages/CopyTrading";
+import Traders from "./pages/Traders";
 import WebSocketTest from "./pages/WebSocketTest";
 import Strategies from "./pages/Strategies";
 import Calendar from "./pages/Calendar";
@@ -82,6 +83,7 @@ function Router() {
       <Route path="/trades">{() => <ProtectedRoute component={Trades} />}</Route>
       <Route path="/analytics">{() => <ProtectedRoute component={Analytics} />}</Route>
       <Route path="/copy-trading">{() => <ProtectedRoute component={CopyTrading} />}</Route>
+      <Route path="/traders">{() => <ProtectedRoute component={Traders} />}</Route>
       <Route path="/websocket-test">{() => <ProtectedRoute component={WebSocketTest} />}</Route>
       <Route path="/strategies">{() => <ProtectedRoute component={Strategies} />}</Route>
       <Route path="/calendar">{() => <ProtectedRoute component={Calendar} />}</Route>

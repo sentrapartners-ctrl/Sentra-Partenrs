@@ -1,0 +1,375 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  Share2, 
+  Eye, 
+  EyeOff, 
+  Users, 
+  TrendingUp, 
+  DollarSign,
+  AlertCircle,
+  CheckCircle2,
+  Plus
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+interface Provider {
+  id: number;
+  user_id: number;
+  master_account_number: string;
+  provider_name: string;
+  description: string;
+  is_public: boolean;
+  is_active: boolean;
+  subscription_fee: number;
+  currency: string;
+  total_subscribers?: number;
+  active_subscribers?: number;
+  win_rate?: number;
+  total_profit?: number;
+}
+
+interface MasterAccount {
+  accountId: string;
+  accountName: string;
+  status: 'online' | 'offline';
+}
+
+export default function SignalProviderSettings() {
+  const { user } = useAuth();
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [masterAccounts, setMasterAccounts] = useState<MasterAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    master_account_number: '',
+    provider_name: '',
+    description: '',
+    is_public: true,
+    subscription_fee: 0,
+    currency: 'USD'
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchProviders();
+      fetchMasterAccounts();
+    }
+  }, [user]);
+
+  const fetchProviders = async () => {
+    try {
+      // Buscar provedores do usuário
+      const response = await fetch('/api/signal-providers');
+      const data = await response.json();
+      if (data.success) {
+        // Filtrar apenas provedores do usuário atual
+        const userProviders = data.providers.filter((p: Provider) => p.user_id === user?.id);
+        setProviders(userProviders);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar provedores:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMasterAccounts = async () => {
+    try {
+      const response = await fetch(`/api/mt/copy/connected-accounts?email=${encodeURIComponent(user?.email || '')}`);
+      const data = await response.json();
+      if (data.success) {
+        const masters = data.accounts.filter((acc: any) => acc.type === 'master');
+        setMasterAccounts(masters);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar contas Master:', error);
+    }
+  };
+
+  const handleCreateProvider = async () => {
+    try {
+      const response = await fetch('/api/signal-providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          user_id: user?.id
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchProviders();
+        setIsDialogOpen(false);
+        setFormData({
+          master_account_number: '',
+          provider_name: '',
+          description: '',
+          is_public: true,
+          subscription_fee: 0,
+          currency: 'USD'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao criar provedor:', error);
+    }
+  };
+
+  const handleToggleActive = async (providerId: number, currentStatus: boolean) => {
+    try {
+      await fetch(`/api/signal-providers/${providerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !currentStatus })
+      });
+      await fetchProviders();
+    } catch (error) {
+      console.error('Erro ao atualizar provedor:', error);
+    }
+  };
+
+  const handleTogglePublic = async (providerId: number, currentStatus: boolean) => {
+    try {
+      await fetch(`/api/signal-providers/${providerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_public: !currentStatus })
+      });
+      await fetchProviders();
+    } catch (error) {
+      console.error('Erro ao atualizar provedor:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Compartilhar Sinais</h2>
+          <p className="text-muted-foreground">
+            Compartilhe seus sinais de trading com outros usuários
+          </p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Provedor
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Provedor de Sinais</DialogTitle>
+              <DialogDescription>
+                Configure sua conta Master para compartilhar sinais
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Conta Master</Label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={formData.master_account_number}
+                  onChange={(e) => setFormData({ ...formData, master_account_number: e.target.value })}
+                >
+                  <option value="">Selecione uma conta</option>
+                  {masterAccounts.map((acc) => (
+                    <option key={acc.accountId} value={acc.accountId}>
+                      {acc.accountName} ({acc.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nome do Provedor</Label>
+                <Input
+                  placeholder="Ex: Estratégia Scalping EUR/USD"
+                  value={formData.provider_name}
+                  onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  placeholder="Descreva sua estratégia e resultados..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={4}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={formData.is_public}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_public: checked })}
+                />
+                <Label>Público (visível no marketplace)</Label>
+              </div>
+              <div className="space-y-2">
+                <Label>Taxa de Assinatura (opcional)</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={formData.subscription_fee}
+                    onChange={(e) => setFormData({ ...formData, subscription_fee: parseFloat(e.target.value) || 0 })}
+                  />
+                  <select
+                    className="p-2 border rounded-md"
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                  >
+                    <option value="USD">USD</option>
+                    <option value="BRL">BRL</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateProvider}>
+                Criar Provedor
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Info Alert */}
+      {providers.length === 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Você ainda não está compartilhando sinais. Crie um provedor para permitir que outros usuários copiem suas operações.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Lista de Provedores */}
+      <div className="grid gap-4">
+        {providers.map((provider) => (
+          <Card key={provider.id}>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <CardTitle>{provider.provider_name}</CardTitle>
+                    {provider.is_active ? (
+                      <Badge variant="default">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Ativo
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Inativo</Badge>
+                    )}
+                    {provider.is_public ? (
+                      <Badge variant="outline">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Público
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">
+                        <EyeOff className="h-3 w-3 mr-1" />
+                        Privado
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription>
+                    Conta Master: {provider.master_account_number}
+                  </CardDescription>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTogglePublic(provider.id, provider.is_public)}
+                  >
+                    {provider.is_public ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Switch
+                    checked={provider.is_active}
+                    onCheckedChange={() => handleToggleActive(provider.id, provider.is_active)}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                {provider.description}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Users className="h-4 w-4 mr-1" />
+                    Assinantes
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {provider.active_subscribers || 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    Win Rate
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {provider.win_rate?.toFixed(1) || 0}%
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Lucro Total
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${provider.total_profit?.toFixed(2) || '0.00'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Taxa
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {provider.subscription_fee > 0 
+                      ? `${provider.subscription_fee} ${provider.currency}`
+                      : 'Grátis'
+                    }
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
