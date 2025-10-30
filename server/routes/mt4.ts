@@ -426,17 +426,34 @@ router.post("/validate-license", async (req: Request, res: Response) => {
   try {
     const { license_key, account_number, broker, user_email } = req.body;
 
-    console.log('[License] Validação de licença:', {
-      license_key: license_key ? license_key.substring(0, 10) + '...' : 'N/A',
-      account_number,
-      broker,
-      user_email
-    });
+    console.log('[License] Validação de licença recebida');
+    console.log('[License] Body:', JSON.stringify(req.body));
+    console.log('[License] license_key:', license_key ? `${license_key.substring(0, 10)}...` : 'VAZIO/UNDEFINED');
+    console.log('[License] account_number:', account_number || 'VAZIO/UNDEFINED');
+    console.log('[License] user_email:', user_email || 'VAZIO/UNDEFINED');
 
-    if (!license_key || !account_number) {
+    // Validação estrita
+    if (!license_key || license_key.trim() === '') {
+      console.log('[License] ❌ license_key vazio ou inválido');
       return res.status(400).json({
         valid: false,
-        error: "Parâmetros obrigatórios: license_key, account_number",
+        error: "license_key é obrigatório",
+      });
+    }
+
+    if (!account_number || account_number.toString().trim() === '') {
+      console.log('[License] ❌ account_number vazio ou inválido');
+      return res.status(400).json({
+        valid: false,
+        error: "account_number é obrigatório",
+      });
+    }
+
+    if (!user_email || user_email.trim() === '') {
+      console.log('[License] ❌ user_email vazio ou inválido');
+      return res.status(400).json({
+        valid: false,
+        error: "user_email é obrigatório",
       });
     }
 
