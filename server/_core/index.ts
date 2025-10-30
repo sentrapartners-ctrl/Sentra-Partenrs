@@ -30,6 +30,7 @@ import { startCryptoPaymentMonitoring } from "../services/cryptoPaymentMonitor";
 import { scheduleNotificationCleanup } from "../services/notification-cleanup";
 import { scheduleAutomatedReports } from "../services/automated-reports";
 import { initNotificationCron } from "../notification-cron";
+import { scheduleProviderCleanup } from "../services/cleanup-inactive-providers";
 // import { runMigrations } from "../scripts/runMigrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -134,6 +135,9 @@ async function startServer() {
 
       initNotificationCron();
       console.log("🔔 Notificações Bark agendadas iniciadas");
+
+      scheduleProviderCleanup();
+      console.log("🧹 Limpeza automática de provedores inativos iniciada");
     }, 5000);
   });
 }

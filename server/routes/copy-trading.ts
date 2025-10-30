@@ -1,7 +1,7 @@
 import express from "express";
-import { getDb, getRawConnection } from "../db";
-import { getUserByEmail } from "../auth";
+import { getRawConnection } from "../db";
 import { broadcastToUser } from "../websocket/copyTradingWs";
+import { updateProviderStatistics } from "../services/update-provider-statistics";
 
 const router = express.Router();
 
@@ -142,6 +142,11 @@ async function processCloseEvent(connection: any, email: string, accountNumber: 
   );
   
   console.log(`[Copy Trading] ✅ CLOSE: ticket ${ticket}`);
+  
+  // Atualizar estatísticas do provedor (se houver)
+  updateProviderStatistics(accountNumber).catch(err => 
+    console.error('[Copy Trading] Erro ao atualizar estatísticas do provedor:', err)
+  );
   
   // Broadcast via WebSocket
   try {
