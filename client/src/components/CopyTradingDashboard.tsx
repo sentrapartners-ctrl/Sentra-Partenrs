@@ -286,6 +286,33 @@ export default function CopyTradingDashboard() {
     };
   };
 
+  // Polling HTTP como fallback
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const fetchAccounts = async () => {
+      try {
+        const response = await fetch(`/api/mt/copy/connected-accounts?email=${encodeURIComponent(user.email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.accounts) {
+            setConnectedAccounts(data.accounts);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar contas via HTTP:', error);
+      }
+    };
+
+    // Buscar imediatamente
+    fetchAccounts();
+
+    // Polling a cada 5 segundos
+    const intervalId = setInterval(fetchAccounts, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, user]);
+
   useEffect(() => {
     connectWebSocket();
 

@@ -445,4 +445,92 @@ router.get("/slave-signals", async (req, res) => {
   }
 });
 
+//====================================================
+// GET /api/mt/copy/connected-accounts
+// Retorna contas Master e Slave online (fallback HTTP)
+//====================================================
+router.get("/connected-accounts", async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        error: "email é obrigatório" 
+      });
+    }
+    
+    const connection = await getRawConnection();
+    if (!connection) {
+      throw new Error('Conexão com banco não disponível');
+    }
+
+    const accounts: any[] = [];
+
+    // Buscar contas Master (copy_signals com heartbeat recente)
+    const [masterAccounts]: any = await connection.execute(
+      `SELECT master_email, account_number, broker, last_heartbeat, 
+              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+       FROM copy_signals 
+       WHERE master_email = ?
+       AND last_heartbeat IS NOT NULL
+       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+       ORDER BY last_heartbeat DESC`,
+      [email]
+    );
+
+    for (const master of masterAccounts) {
+      const isOnline = master.seconds_since_heartbeat < 60;
+      accounts.push({
+        accountId: master.account_number,
+        accountName: `Master ${master.account_number}`,
+        type: 'master',
+        status: isOnline ? 'online' : 'offline',
+        lastHeartbeat: master.last_heartbeat,
+        balance: 0,
+        equity: 0
+      });
+    }
+
+    // Buscar contas Slave (slave_heartbeats com heartbeat recente)
+    const [slaveAccounts]: any = await connection.execute(
+      `SELECT account_number, master_account_id, broker, balance, equity, last_heartbeat,
+              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+       FROM slave_heartbeats 
+       WHERE slave_email = ?
+       AND last_heartbeat IS NOT NULL
+       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+       ORDER BY last_heartbeat DESC`,
+      [email]
+    );
+
+    for (const slave of slaveAccounts) {
+      const isOnline = slave.seconds_since_heartbeat < 60;
+      accounts.push({
+        accountId: slave.account_number,
+        accountName: `Slave ${slave.account_number}`,
+        type: 'slave',
+        status: isOnline ? 'online' : 'offline',
+        lastHeartbeat: slave.last_heartbeat,
+        balance: parseFloat(slave.balance) || 0,
+        equity: parseFloat(slave.equity) || 0
+      });
+    }
+
+    console.log(`📊 HTTP: Contas encontradas para ${email}: ${accounts.length} (${accounts.filter(a => a.status === 'online').length} online)`);
+
+    res.json({
+      success: true,
+      accounts
+    });
+    
+  } catch (error: any) {
+    console.error('[Copy Trading] Erro ao buscar contas conectadas:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 export default router;
