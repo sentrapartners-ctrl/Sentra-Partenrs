@@ -8,8 +8,9 @@
 -- ============================================
 
 -- 1. Atualizar tabela copy_signals (adicionar last_heartbeat)
+-- MySQL não suporta IF NOT EXISTS em ADD COLUMN, então vamos ignorar erro se já existir
 ALTER TABLE copy_signals 
-ADD COLUMN IF NOT EXISTS last_heartbeat TIMESTAMP NULL DEFAULT NULL;
+ADD COLUMN last_heartbeat TIMESTAMP NULL DEFAULT NULL;
 
 -- 2. Criar tabela copy_trades (trades individuais com eventos)
 CREATE TABLE IF NOT EXISTS copy_trades (
@@ -56,7 +57,8 @@ CREATE TABLE IF NOT EXISTS slave_heartbeats (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Criar índice adicional em copy_signals para performance
-CREATE INDEX IF NOT EXISTS idx_heartbeat ON copy_signals(last_heartbeat);
+-- MySQL não suporta IF NOT EXISTS em CREATE INDEX, então vamos ignorar erro se já existir
+CREATE INDEX idx_heartbeat ON copy_signals(last_heartbeat);
 
 -- ============================================
 -- MIGRATION 006: Signal Providers

@@ -48,7 +48,10 @@ router.post('/run-all', async (req, res) => {
           error.code === 'ER_TABLE_EXISTS_ERROR' ||
           error.code === 'ER_DUP_FIELDNAME' ||
           error.code === 'ER_DUP_KEYNAME' ||
-          error.message.includes('already exists')
+          error.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||
+          error.message.includes('already exists') ||
+          error.message.includes('Duplicate column') ||
+          error.message.includes('Duplicate key')
         ) {
           console.log(`[Migrations] Statement ${i + 1} ignorado (já existe)`);
           results.push({ index: i + 1, status: 'skipped', reason: 'already_exists' });
