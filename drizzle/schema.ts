@@ -360,6 +360,10 @@ export const userSettings = mysqlTable("user_settings", {
   telegramChatId: varchar("telegramChatId", { length: 64 }),
   telegramEnabled: boolean("telegramEnabled").default(false),
   barkKey: varchar("barkKey", { length: 255 }), // Bark notification key
+  barkDailyEnabled: boolean("barkDailyEnabled").default(true),
+  barkWeeklyEnabled: boolean("barkWeeklyEnabled").default(true),
+  barkDailyTime: varchar("barkDailyTime", { length: 5 }).default("19:00"),
+  barkWeeklyTime: varchar("barkWeeklyTime", { length: 5 }).default("08:00"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

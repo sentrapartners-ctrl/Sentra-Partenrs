@@ -13,6 +13,10 @@ export default function Settings() {
   const [telegramChatId, setTelegramChatId] = useState("");
   const [telegramEnabled, setTelegramEnabled] = useState(false);
   const [barkKey, setBarkKey] = useState("");
+  const [barkDailyEnabled, setBarkDailyEnabled] = useState(true);
+  const [barkWeeklyEnabled, setBarkWeeklyEnabled] = useState(true);
+  const [barkDailyTime, setBarkDailyTime] = useState("19:00");
+  const [barkWeeklyTime, setBarkWeeklyTime] = useState("08:00");
 
   const { data: settings } = trpc.settings.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -147,6 +151,73 @@ export default function Settings() {
                 3. Cole aqui e pronto!
               </p>
             </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div>
+                <p className="font-medium">Resumo Diário</p>
+                <p className="text-sm text-muted-foreground">
+                  Lucro, trades e win rate do dia
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={barkDailyTime}
+                  onChange={(e) => setBarkDailyTime(e.target.value)}
+                  className="w-24"
+                  disabled={!barkDailyEnabled}
+                />
+                <Button
+                  variant={barkDailyEnabled ? "default" : "outline"}
+                  onClick={() => setBarkDailyEnabled(!barkDailyEnabled)}
+                  size="sm"
+                >
+                  {barkDailyEnabled ? "Ativado" : "Desativado"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Resumo Semanal</p>
+                <p className="text-sm text-muted-foreground">
+                  Sábado: resumo domingo a sexta
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={barkWeeklyTime}
+                  onChange={(e) => setBarkWeeklyTime(e.target.value)}
+                  className="w-24"
+                  disabled={!barkWeeklyEnabled}
+                />
+                <Button
+                  variant={barkWeeklyEnabled ? "default" : "outline"}
+                  onClick={() => setBarkWeeklyEnabled(!barkWeeklyEnabled)}
+                  size="sm"
+                >
+                  {barkWeeklyEnabled ? "Ativado" : "Desativado"}
+                </Button>
+              </div>
+            </div>
+
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                if (!barkKey && !settings?.barkKey) {
+                  toast.error("Configure sua Bark Key primeiro!");
+                  return;
+                }
+                // Enviar mensagem de teste
+                fetch(`https://api.day.app/${barkKey || settings?.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`)
+                  .then(() => toast.success("🔔 Mensagem de teste enviada!"))
+                  .catch(() => toast.error("Erro ao enviar. Verifique sua Bark Key."));
+              }}
+            >
+              Enviar Mensagem de Teste
+            </Button>
           </CardContent>
         </Card>
 
@@ -259,6 +330,10 @@ export default function Settings() {
             onClick={() => {
               updateSettings.mutate({
                 barkKey: barkKey || settings?.barkKey,
+                barkDailyEnabled,
+                barkWeeklyEnabled,
+                barkDailyTime,
+                barkWeeklyTime,
                 telegramChatId: telegramChatId || settings?.telegramChatId,
                 telegramEnabled: telegramEnabled,
               });
