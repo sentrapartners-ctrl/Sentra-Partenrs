@@ -109,6 +109,29 @@ export default function SignalProviderSettings() {
     try {
       setIsCreating(true);
       setError(null);
+
+      // Validação frontend
+      if (!formData.master_account_number) {
+        setError('Selecione uma conta Master');
+        setIsCreating(false);
+        return;
+      }
+      if (!formData.provider_name || formData.provider_name.trim() === '') {
+        setError('Digite o nome do provedor');
+        setIsCreating(false);
+        return;
+      }
+      if (!user?.id) {
+        setError('Usuário não autenticado');
+        setIsCreating(false);
+        return;
+      }
+
+      console.log('[SignalProvider] Criando provedor:', {
+        user_id: user.id,
+        master_account_number: formData.master_account_number,
+        provider_name: formData.provider_name
+      });
       
       const response = await fetch('/api/signal-providers', {
         method: 'POST',
