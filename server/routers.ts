@@ -559,18 +559,29 @@ export const appRouter = router({
         barkKey: z.string(),
       }))
       .mutation(async ({ input }) => {
+        console.log('[testBark] START');
+        console.log('[testBark] Bark Key:', input.barkKey);
+        
         try {
-          const response = await fetch(
-            `https://api.day.app/${input.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`
-          );
+          const url = `https://api.day.app/${input.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`;
+          console.log('[testBark] URL:', url);
+          
+          const response = await fetch(url);
+          console.log('[testBark] Response status:', response.status);
+          
+          const responseText = await response.text();
+          console.log('[testBark] Response body:', responseText);
           
           if (!response.ok) {
-            throw new Error('Failed to send notification');
+            console.error('[testBark] Response not OK:', response.status, responseText);
+            throw new Error(`Failed to send notification: ${response.status}`);
           }
           
+          console.log('[testBark] SUCCESS');
           return { success: true };
-        } catch (error) {
-          throw new Error('Erro ao enviar notificação Bark');
+        } catch (error: any) {
+          console.error('[testBark] ERROR:', error);
+          throw new Error(`Erro ao enviar notificação Bark: ${error.message}`);
         }
       }),
   }),
