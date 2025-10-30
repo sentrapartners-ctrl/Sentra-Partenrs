@@ -93,17 +93,17 @@ export function InlineCurrencyValue({
     );
   }
 
-  // Modo compact para calendário (5px, centralizado)
+  // Modo compact para calendário (8px, centralizado)
   if (compact) {
     return (
       <span className={`${className} ${colorClass} flex flex-col items-center`}>
-        <span className="text-[5px]">
+        <span className="text-[8px]">
           {sign}{currencySymbols[currency]}{Math.abs(convertedValue).toLocaleString('pt-BR', { 
             minimumFractionDigits: 2, 
             maximumFractionDigits: 2 
           })}
         </span>
-        <span className="text-[5px]">
+        <span className="text-[8px]">
           {sign}{currencySymbols[from]}{Math.abs(originalValue).toLocaleString('pt-BR', { 
             minimumFractionDigits: 2, 
             maximumFractionDigits: 2 
