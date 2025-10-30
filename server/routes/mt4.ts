@@ -420,4 +420,74 @@ router.post("/trades", async (req: Request, res: Response) => {
 
 
 
+//====================================================
+// POST /profit
+// Recebe atualização de profit/balance da conta
+//====================================================
+router.post("/profit", async (req: Request, res: Response) => {
+  try {
+    const { user_email, account_number, balance, equity, profit, margin_free } = req.body;
+    
+    console.log("[MT4] Profit update recebido:", {
+      user_email,
+      account_number,
+      balance,
+      equity,
+      profit
+    });
+    
+    if (!user_email || !account_number) {
+      return res.status(400).json({ error: "user_email e account_number são obrigatórios" });
+    }
+    
+    const db = getDb();
+    
+    // Buscar usuário
+    const [users] = await db.execute(
+      "SELECT id FROM users WHERE email = ?",
+      [user_email]
+    );
+    
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+    
+    const user = users[0] as any;
+    
+    // Buscar conta
+    const [accounts] = await db.execute(
+      "SELECT id FROM trading_accounts WHERE user_id = ? AND account_number = ?",
+      [user.id, account_number]
+    );
+    
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      return res.status(404).json({ error: "Conta não encontrada" });
+    }
+    
+    const account = accounts[0] as any;
+    
+    // Atualizar dados da conta
+    await db.execute(
+      `UPDATE trading_accounts 
+       SET balance = ?, equity = ?, profit = ?, margin_free = ?, last_sync = NOW()
+       WHERE id = ?`,
+      [
+        balance ? Math.round(parseFloat(balance)) : null,
+        equity ? Math.round(parseFloat(equity)) : null,
+        profit ? Math.round(parseFloat(profit)) : null,
+        margin_free ? Math.round(parseFloat(margin_free)) : null,
+        account.id
+      ]
+    );
+    
+    console.log("[MT4] ✅ Profit atualizado para conta", account_number);
+    
+    res.json({ success: true, message: "Profit atualizado" });
+    
+  } catch (error: any) {
+    console.error("[MT4] Erro ao atualizar profit:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
