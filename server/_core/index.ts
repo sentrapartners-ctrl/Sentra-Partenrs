@@ -19,6 +19,7 @@ import settingsRouter from "../routes/settings";
 import copyTradingRouter from "../routes/copy-trading";
 import copyTradingSettingsRouter from "../routes/copy-trading-settings";
 import websocketTestRouter from "../routes/websocket-test";
+import vpsManagementRouter from "../routes/vps-management";
 import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
 
 // import mt4ConnectorRouter from "../routes/mt4-connector";
@@ -81,6 +82,7 @@ async function startServer() {
   app.use("/api/mt/copy", copyTradingRouter);
   app.use("/api/mt/copy", copyTradingSettingsRouter);
   app.use("/api/websocket", websocketTestRouter);
+  app.use("/api/vps", vpsManagementRouter);
   // Wallet authentication endpoints
 
   // tRPC API

@@ -919,3 +919,113 @@ export const copyTradingSettings = mysqlTable("copy_trading_settings", {
 
 export type CopyTradingSettings = typeof copyTradingSettings.$inferSelect;
 export type InsertCopyTradingSettings = typeof copyTradingSettings.$inferInsert;
+
+
+/**
+ * VPS Requests - solicitações de VPS (ForexVPS.net model)
+ */
+export const vpsRequests = mysqlTable("vps_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  userEmail: varchar("user_email", { length: 320 }).notNull(),
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  clientEmail: varchar("client_email", { length: 320 }).notNull(),
+  provider: mysqlEnum("provider", ["forexvps", "fxsvps", "other"]).default("forexvps").notNull(),
+  plan: varchar("plan", { length: 50 }).notNull(), // standard, premium, enterprise
+  datacenter: varchar("datacenter", { length: 50 }), // ny, london, tokyo, etc
+  volumeRequirement: int("volume_requirement"), // Volume mínimo de trading
+  fundsRequirement: decimal("funds_requirement", { precision: 15, scale: 2 }), // Fundos mínimos
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "cancelled"]).default("pending").notNull(),
+  rejectionReason: text("rejection_reason"),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userEmailIdx: index("user_email_idx").on(table.userEmail),
+  statusIdx: index("status_idx").on(table.status),
+  providerIdx: index("provider_idx").on(table.provider),
+}));
+
+export type VpsRequest = typeof vpsRequests.$inferSelect;
+export type InsertVpsRequest = typeof vpsRequests.$inferInsert;
+
+/**
+ * VPS Instances - VPS ativos (FxSVPS model)
+ */
+export const vpsInstances = mysqlTable("vps_instances", {
+  id: int("id").autoincrement().primaryKey(),
+  userEmail: varchar("user_email", { length: 320 }).notNull(),
+  clientEmail: varchar("client_email", { length: 320 }).notNull(),
+  provider: mysqlEnum("provider", ["forexvps", "fxsvps", "other"]).default("fxsvps").notNull(),
+  vpsId: varchar("vps_id", { length: 255 }).unique().notNull(), // ID do VPS no provedor
+  plan: varchar("plan", { length: 50 }).notNull(),
+  ram: int("ram"), // GB
+  storage: int("storage"), // GB
+  cpuCores: int("cpu_cores"),
+  datacenter: varchar("datacenter", { length: 50 }),
+  os: varchar("os", { length: 100 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  status: mysqlEnum("status", ["active", "suspended", "deleted"]).default("active").notNull(),
+  monthlyCost: decimal("monthly_cost", { precision: 10, scale: 2 }), // Custo mensal
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }), // Preço cobrado do cliente
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userEmailIdx: index("user_email_idx").on(table.userEmail),
+  vpsIdIdx: index("vps_id_idx").on(table.vpsId),
+  statusIdx: index("status_idx").on(table.status),
+  providerIdx: index("provider_idx").on(table.provider),
+}));
+
+export type VpsInstance = typeof vpsInstances.$inferSelect;
+export type InsertVpsInstance = typeof vpsInstances.$inferInsert;
+
+/**
+ * VPS Settings - configurações de VPS do usuário
+ */
+export const vpsSettings = mysqlTable("vps_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userEmail: varchar("user_email", { length: 320 }).unique().notNull(),
+  preferredProvider: mysqlEnum("preferred_provider", ["forexvps", "fxsvps"]).default("forexvps"),
+  autoApprove: boolean("auto_approve").default(false).notNull(),
+  defaultDatacenter: varchar("default_datacenter", { length: 50 }).default("ny"),
+  volumeRequirement: int("volume_requirement").default(10), // 10 lotes
+  fundsRequirement: decimal("funds_requirement", { precision: 15, scale: 2 }).default("5000.00"), // $5,000
+  offerFreeVps: boolean("offer_free_vps").default(true).notNull(),
+  vpsPricing: json("vps_pricing"), // { basic: 20, standard: 40, premium: 80 }
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userEmailIdx: index("user_email_idx").on(table.userEmail),
+}));
+
+export type VpsSetting = typeof vpsSettings.$inferSelect;
+export type InsertVpsSetting = typeof vpsSettings.$inferInsert;
+
+/**
+ * VPS Billing - faturamento de VPS
+ */
+export const vpsBilling = mysqlTable("vps_billing", {
+  id: int("id").autoincrement().primaryKey(),
+  userEmail: varchar("user_email", { length: 320 }).notNull(),
+  vpsInstanceId: int("vps_instance_id").notNull(),
+  provider: mysqlEnum("provider", ["forexvps", "fxsvps", "other"]).notNull(),
+  billingPeriodStart: date("billing_period_start").notNull(),
+  billingPeriodEnd: date("billing_period_end").notNull(),
+  daysUsed: int("days_used").notNull(),
+  cost: decimal("cost", { precision: 10, scale: 2 }).notNull(), // Custo do provedor
+  revenue: decimal("revenue", { precision: 10, scale: 2 }).notNull(), // Receita do cliente
+  profit: decimal("profit", { precision: 10, scale: 2 }).notNull(), // Lucro
+  status: mysqlEnum("status", ["pending", "paid", "cancelled"]).default("pending").notNull(),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userEmailIdx: index("user_email_idx").on(table.userEmail),
+  vpsInstanceIdIdx: index("vps_instance_id_idx").on(table.vpsInstanceId),
+  statusIdx: index("status_idx").on(table.status),
+  billingPeriodIdx: index("billing_period_idx").on(table.billingPeriodStart, table.billingPeriodEnd),
+}));
+
+export type VpsBilling = typeof vpsBilling.$inferSelect;
+export type InsertVpsBilling = typeof vpsBilling.$inferInsert;

@@ -28,6 +28,7 @@ import MarketplaceEAs from "./pages/MarketplaceEAs";
 import EALicenses from "./pages/EALicenses";
 import ExpertAdvisors from "./pages/ExpertAdvisors";
 import ApiKeys from "./pages/ApiKeys";
+import VPS from "./pages/VPS";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import CheckoutCancel from "./pages/CheckoutCancel";
@@ -92,6 +93,7 @@ function Router() {
       <Route path="/ea-licenses">{() => <ProtectedRoute component={EALicenses} />}</Route>
       <Route path="/expert-advisors">{() => <ProtectedRoute component={ExpertAdvisors} />}</Route>
       <Route path="/api-keys">{() => <ProtectedRoute component={ApiKeys} />}</Route>
+      <Route path="/vps">{() => <ProtectedRoute component={VPS} />}</Route>
       <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
       <Route path="/checkout/success" component={CheckoutSuccess} />
       <Route path="/checkout/cancel" component={CheckoutCancel} />
