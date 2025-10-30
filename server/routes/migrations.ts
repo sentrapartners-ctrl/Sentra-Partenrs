@@ -9,10 +9,14 @@ const router = Router();
 router.post('/run-all', async (req, res) => {
   try {
     console.log('[Migrations] Iniciando execução de todas as migrations...');
+    console.log('[Migrations] CWD:', process.cwd());
     
     // Ler arquivo SQL consolidado
     const sqlPath = join(process.cwd(), 'server', 'migrations', 'run_all_migrations.sql');
+    console.log('[Migrations] SQL Path:', sqlPath);
+    
     const sql = readFileSync(sqlPath, 'utf-8');
+    console.log('[Migrations] SQL file size:', sql.length, 'bytes');
     
     // Remover comentários de linha
     const cleanSql = sql
