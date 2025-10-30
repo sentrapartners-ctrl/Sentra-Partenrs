@@ -11,7 +11,7 @@
 //====================================================
 // SISTEMA DE LICENCIAMENTO
 //====================================================
-#define LICENSE_EXPIRY_DATE 1767225599
+datetime LICENSE_EXPIRY_DATE = D'2025.12.31';
 #define ALLOWED_ACCOUNTS ""
 
 //====================================================
