@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Key, Plus, Copy, Trash2, RefreshCw, Calendar } from "lucide-react";
 
 interface License {
@@ -28,7 +28,7 @@ export default function LicenseManager() {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { toast } = useToast();
+  // Toast já importado do sonner
 
   // Form state
   const [formData, setFormData] = useState({
