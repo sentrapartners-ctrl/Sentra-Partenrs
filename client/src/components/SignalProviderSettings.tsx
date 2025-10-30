@@ -57,6 +57,8 @@ export default function SignalProviderSettings() {
   const [masterAccounts, setMasterAccounts] = useState<MasterAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     master_account_number: '',
     provider_name: '',
@@ -105,6 +107,9 @@ export default function SignalProviderSettings() {
 
   const handleCreateProvider = async () => {
     try {
+      setIsCreating(true);
+      setError(null);
+      
       const response = await fetch('/api/signal-providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,6 +120,11 @@ export default function SignalProviderSettings() {
       });
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao criar provedor');
+      }
+      
       if (data.success) {
         await fetchProviders();
         setIsDialogOpen(false);
@@ -126,9 +136,14 @@ export default function SignalProviderSettings() {
           subscription_fee: 0,
           currency: 'USD'
         });
+      } else {
+        throw new Error(data.error || 'Erro ao criar provedor');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar provedor:', error);
+      setError(error.message || 'Erro ao criar provedor. Tente novamente.');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -251,12 +266,17 @@ export default function SignalProviderSettings() {
                 </div>
               </div>
             </div>
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isCreating}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateProvider}>
-                Criar Provedor
+              <Button onClick={handleCreateProvider} disabled={isCreating}>
+                {isCreating ? 'Criando...' : 'Criar Provedor'}
               </Button>
             </DialogFooter>
           </DialogContent>
