@@ -207,18 +207,24 @@ export default function Settings() {
             <Button
               variant="secondary"
               className="w-full"
+              disabled={testBark.isLoading}
               onClick={async () => {
                 const key = barkKey || settings?.barkKey;
                 if (!key) {
                   toast.error("Configure sua Bark Key primeiro!");
                   return;
                 }
-                try {
-                  await testBark.mutateAsync({ barkKey: key });
-                  toast.success("🔔 Mensagem de teste enviada!");
-                } catch (error) {
-                  toast.error("Erro ao enviar. Verifique sua Bark Key.");
-                }
+                testBark.mutate(
+                  { barkKey: key },
+                  {
+                    onSuccess: () => {
+                      toast.success("🔔 Mensagem de teste enviada! Verifique seu iPhone.");
+                    },
+                    onError: (error) => {
+                      toast.error("Erro ao enviar: " + error.message);
+                    },
+                  }
+                );
               }}
             >
               Enviar Mensagem de Teste
