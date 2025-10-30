@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { Settings as SettingsIcon, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -32,6 +32,19 @@ export default function Settings() {
   });
 
   const testBark = trpc.settings.testBark.useMutation();
+
+  // Carregar valores salvos quando settings mudar
+  useEffect(() => {
+    if (settings) {
+      if (settings.barkKey) setBarkKey(settings.barkKey);
+      if (settings.barkDailyEnabled !== undefined) setBarkDailyEnabled(settings.barkDailyEnabled);
+      if (settings.barkWeeklyEnabled !== undefined) setBarkWeeklyEnabled(settings.barkWeeklyEnabled);
+      if (settings.barkDailyTime) setBarkDailyTime(settings.barkDailyTime);
+      if (settings.barkWeeklyTime) setBarkWeeklyTime(settings.barkWeeklyTime);
+      if (settings.telegramChatId) setTelegramChatId(settings.telegramChatId);
+      if (settings.telegramEnabled !== undefined) setTelegramEnabled(settings.telegramEnabled);
+    }
+  }, [settings]);
 
   if (loading) {
     return (
@@ -144,7 +157,7 @@ export default function Settings() {
               <Input
                 type="text"
                 placeholder="Cole sua Bark Key aqui"
-                value={barkKey || settings?.barkKey || ""}
+                value={barkKey}
                 onChange={(e) => setBarkKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
@@ -164,7 +177,7 @@ export default function Settings() {
               <div className="flex items-center gap-2">
                 <Input
                   type="time"
-                  value={barkDailyTime}
+                  value={barkDailyTime || "19:00"}
                   onChange={(e) => setBarkDailyTime(e.target.value)}
                   className="w-24"
                   disabled={!barkDailyEnabled}
@@ -189,7 +202,7 @@ export default function Settings() {
               <div className="flex items-center gap-2">
                 <Input
                   type="time"
-                  value={barkWeeklyTime}
+                  value={barkWeeklyTime || "08:00"}
                   onChange={(e) => setBarkWeeklyTime(e.target.value)}
                   className="w-24"
                   disabled={!barkWeeklyEnabled}
@@ -340,13 +353,13 @@ export default function Settings() {
           <Button
             onClick={() => {
               updateSettings.mutate({
-                barkKey: barkKey || settings?.barkKey,
+                barkKey: barkKey || undefined,
                 barkDailyEnabled,
                 barkWeeklyEnabled,
-                barkDailyTime,
-                barkWeeklyTime,
-                telegramChatId: telegramChatId || settings?.telegramChatId,
-                telegramEnabled: telegramEnabled,
+                barkDailyTime: barkDailyTime || "19:00",
+                barkWeeklyTime: barkWeeklyTime || "08:00",
+                telegramChatId: telegramChatId || undefined,
+                telegramEnabled,
               });
             }}
           >
