@@ -19,6 +19,7 @@ import settingsRouter from "../routes/settings";
 import copyTradingRouter from "../routes/copy-trading";
 import copyTradingSettingsRouter from "../routes/copy-trading-settings";
 import signalProvidersRouter from "../routes/signal-providers";
+import migrationsRouter from "../routes/migrations";
 import websocketTestRouter from "../routes/websocket-test";
 import vpsManagementRouter from "../routes/vps-management";
 import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
@@ -83,6 +84,7 @@ async function startServer() {
   app.use("/api/mt/copy", copyTradingRouter);
   app.use("/api/mt/copy", copyTradingSettingsRouter);
   app.use("/api/signal-providers", signalProvidersRouter);
+  app.use("/api/migrations", migrationsRouter);
   app.use("/api/websocket", websocketTestRouter);
   app.use("/api/vps", vpsManagementRouter);
   // Wallet authentication endpoints
