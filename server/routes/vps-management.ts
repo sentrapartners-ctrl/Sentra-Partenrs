@@ -1,222 +1,363 @@
 import { Router } from 'express';
-import { getDb } from '../db';
 
 const router = Router();
 
-/**
- * VPS Management API - FxSVPS Integration
- * 
- * Sistema simplificado para integração com FxSVPS.com
- */
+// Mock data para simular VPS enquanto não temos a API real
+const mockVPSInstances = new Map();
+let nextVPSId = 1;
 
-// ==================== Configurações de VPS ====================
+// Tipos de resposta da API
+interface VPSInstance {
+  id: string;
+  userId: number;
+  hostname: string;
+  ipAddress: string;
+  status: 'active' | 'suspended' | 'terminated' | 'pending';
+  plan: string;
+  os: string;
+  ram: number;
+  disk: number;
+  cpu: number;
+  createdAt: Date;
+  username: string;
+  password: string;
+}
+
+interface APIResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+// ============================================
+// ENDPOINTS MOCK (Enquanto não temos API real)
+// ============================================
 
 /**
- * GET /api/vps/settings
- * 
- * Busca configurações de VPS do usuário
+ * GET /api/vps/instances
+ * Lista todas as instâncias VPS do usuário
  */
-router.get('/settings', async (req, res) => {
+router.get('/instances', async (req, res) => {
   try {
-    const { user_email } = req.query;
-
-    if (!user_email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Campo obrigatório: user_email'
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Usuário não autenticado' 
       });
     }
 
-    // TODO: Buscar do banco quando tabela estiver criada
-    // const db = await getDb();
-    // const settings = await db.query.vpsSettings.findFirst({
-    //   where: eq(vpsSettings.userEmail, user_email as string)
-    // });
+    // Filtrar VPS do usuário
+    const userInstances = Array.from(mockVPSInstances.values())
+      .filter((vps: VPSInstance) => vps.userId === userId);
 
-    // Retornar configurações padrão
-    return res.json({
+    res.json({
       success: true,
-      settings: {
-        preferred_provider: 'fxsvps',
-        auto_approve: false,
-        default_datacenter: 'ny',
-        volume_requirement: 10, // 10 lotes
-        funds_requirement: 5000, // $5,000
-        offer_free_vps: true,
-        vps_pricing: {
-          basic: 20,
-          standard: 40,
-          premium: 80
-        }
-      }
+      data: userInstances
     });
-
-  } catch (error) {
-    console.error('Erro ao buscar configurações VPS:', error);
+  } catch (error: any) {
     res.status(500).json({
       success: false,
-      error: 'Erro ao buscar configurações'
+      error: error.message
     });
   }
 });
 
 /**
- * POST /api/vps/settings
- * 
- * Salva configurações de VPS
+ * POST /api/vps/create
+ * Cria uma nova instância VPS
  */
-router.post('/settings', async (req, res) => {
+router.post('/create', async (req, res) => {
   try {
-    const {
-      user_email,
-      preferred_provider,
-      auto_approve,
-      default_datacenter,
-      volume_requirement,
-      funds_requirement,
-      offer_free_vps,
-      vps_pricing
-    } = req.body;
-
-    if (!user_email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Campo obrigatório: user_email'
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Usuário não autenticado' 
       });
     }
 
-    // TODO: Salvar no banco quando tabela estiver criada
-    // const db = await getDb();
-    // await db.insert(vpsSettings).values({...}).onConflictDoUpdate({...});
+    const { hostname, plan, os, ram, disk, cpu } = req.body;
 
-    res.json({
-      success: true,
-      message: 'Configurações salvas com sucesso'
-    });
-
-  } catch (error) {
-    console.error('Erro ao salvar configurações VPS:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao salvar configurações'
-    });
-  }
-});
-
-// ==================== Estatísticas ====================
-
-/**
- * GET /api/vps/stats
- * 
- * Estatísticas de VPS do usuário
- */
-router.get('/stats', async (req, res) => {
-  try {
-    const { user_email } = req.query;
-
-    if (!user_email) {
+    // Validação básica
+    if (!hostname || !plan || !os) {
       return res.status(400).json({
         success: false,
-        error: 'Campo obrigatório: user_email'
+        error: 'Campos obrigatórios: hostname, plan, os'
       });
     }
 
-    // TODO: Calcular do banco quando tabelas estiverem criadas
-    res.json({
-      success: true,
-      stats: {
-        active_vps: 0,
-        pending_requests: 0,
-        total_cost: 0,
-        total_revenue: 0,
-        profit: 0
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao buscar estatísticas VPS:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao buscar estatísticas'
-    });
-  }
-});
-
-// ==================== FxSVPS Integration ====================
-
-/**
- * POST /api/vps/fxsvps/create
- * 
- * Cria VPS via FxSVPS (placeholder para futura integração)
- */
-router.post('/fxsvps/create', async (req, res) => {
-  try {
-    const {
-      user_email,
-      client_email,
-      plan,
-      ram,
-      storage,
-      cpu_cores,
-      datacenter = 'ny',
-      os = 'windows_2022'
-    } = req.body;
-
-    if (!user_email || !client_email || !plan) {
-      return res.status(400).json({
-        success: false,
-        error: 'Campos obrigatórios: user_email, client_email, plan'
-      });
-    }
-
-    // TODO: Implementar integração real com FxSVPS API
-    const vpsId = `fxsvps_${Date.now()}`;
-
-    res.json({
-      success: true,
-      message: 'VPS criado com sucesso',
-      vps_id: vpsId,
+    // Criar VPS mock
+    const vpsId = `vps_${nextVPSId++}`;
+    const newVPS: VPSInstance = {
+      id: vpsId,
+      userId,
+      hostname,
+      ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
       status: 'active',
-      setup_time: '30 minutes',
-      note: 'Integração com FxSVPS será implementada em breve'
-    });
+      plan,
+      os,
+      ram: ram || 1024,
+      disk: disk || 20,
+      cpu: cpu || 1,
+      createdAt: new Date(),
+      username: 'root',
+      password: Math.random().toString(36).substring(2, 15)
+    };
 
-  } catch (error) {
-    console.error('Erro ao criar VPS FxSVPS:', error);
+    mockVPSInstances.set(vpsId, newVPS);
+
+    res.json({
+      success: true,
+      data: newVPS
+    });
+  } catch (error: any) {
     res.status(500).json({
       success: false,
-      error: 'Erro ao criar VPS'
+      error: error.message
     });
   }
 });
 
 /**
- * GET /api/vps/fxsvps/instances
- * 
- * Lista VPS ativos do usuário
+ * POST /api/vps/:id/suspend
+ * Suspende uma instância VPS
  */
-router.get('/fxsvps/instances', async (req, res) => {
+router.post('/:id/suspend', async (req, res) => {
   try {
-    const { user_email } = req.query;
+    const userId = (req as any).user?.id;
+    const { id } = req.params;
 
-    if (!user_email) {
-      return res.status(400).json({
+    const vps = mockVPSInstances.get(id);
+
+    if (!vps) {
+      return res.status(404).json({
         success: false,
-        error: 'Campo obrigatório: user_email'
+        error: 'VPS não encontrado'
       });
     }
 
-    // TODO: Buscar do banco quando tabela estiver criada
+    if (vps.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Sem permissão para acessar este VPS'
+      });
+    }
+
+    vps.status = 'suspended';
+    mockVPSInstances.set(id, vps);
+
     res.json({
       success: true,
-      instances: []
+      data: vps
     });
-
-  } catch (error) {
-    console.error('Erro ao listar VPS:', error);
+  } catch (error: any) {
     res.status(500).json({
       success: false,
-      error: 'Erro ao listar VPS'
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/vps/:id/unsuspend
+ * Reativa uma instância VPS
+ */
+router.post('/:id/unsuspend', async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { id } = req.params;
+
+    const vps = mockVPSInstances.get(id);
+
+    if (!vps) {
+      return res.status(404).json({
+        success: false,
+        error: 'VPS não encontrado'
+      });
+    }
+
+    if (vps.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Sem permissão para acessar este VPS'
+      });
+    }
+
+    vps.status = 'active';
+    mockVPSInstances.set(id, vps);
+
+    res.json({
+      success: true,
+      data: vps
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/vps/:id
+ * Termina (deleta) uma instância VPS
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { id } = req.params;
+
+    const vps = mockVPSInstances.get(id);
+
+    if (!vps) {
+      return res.status(404).json({
+        success: false,
+        error: 'VPS não encontrado'
+      });
+    }
+
+    if (vps.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Sem permissão para acessar este VPS'
+      });
+    }
+
+    vps.status = 'terminated';
+    mockVPSInstances.set(id, vps);
+
+    res.json({
+      success: true,
+      message: 'VPS terminado com sucesso'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/vps/:id/stats
+ * Obtém estatísticas de uso do VPS
+ */
+router.get('/:id/stats', async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { id } = req.params;
+
+    const vps = mockVPSInstances.get(id);
+
+    if (!vps) {
+      return res.status(404).json({
+        success: false,
+        error: 'VPS não encontrado'
+      });
+    }
+
+    if (vps.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Sem permissão para acessar este VPS'
+      });
+    }
+
+    // Mock stats
+    const stats = {
+      cpu: Math.random() * 100,
+      ram: Math.random() * vps.ram,
+      disk: Math.random() * vps.disk,
+      bandwidth: Math.random() * 1000,
+      uptime: Math.floor(Math.random() * 86400)
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/vps/plans
+ * Lista planos disponíveis
+ */
+router.get('/plans', async (req, res) => {
+  try {
+    const plans = [
+      {
+        id: 'basic',
+        name: 'Basic VPS',
+        ram: 1024,
+        disk: 20,
+        cpu: 1,
+        bandwidth: 1000,
+        price: 5.00
+      },
+      {
+        id: 'standard',
+        name: 'Standard VPS',
+        ram: 2048,
+        disk: 40,
+        cpu: 2,
+        bandwidth: 2000,
+        price: 10.00
+      },
+      {
+        id: 'premium',
+        name: 'Premium VPS',
+        ram: 4096,
+        disk: 80,
+        cpu: 4,
+        bandwidth: 4000,
+        price: 20.00
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: plans
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/vps/os-templates
+ * Lista templates de OS disponíveis
+ */
+router.get('/os-templates', async (req, res) => {
+  try {
+    const templates = [
+      { id: 'ubuntu-22.04', name: 'Ubuntu 22.04 LTS' },
+      { id: 'ubuntu-20.04', name: 'Ubuntu 20.04 LTS' },
+      { id: 'debian-11', name: 'Debian 11' },
+      { id: 'centos-8', name: 'CentOS 8' },
+      { id: 'windows-2019', name: 'Windows Server 2019' },
+      { id: 'windows-2022', name: 'Windows Server 2022' }
+    ];
+
+    res.json({
+      success: true,
+      data: templates
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });

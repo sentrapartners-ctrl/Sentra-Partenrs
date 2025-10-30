@@ -89,7 +89,7 @@ export default function WebSocketTest() {
       type: 'ACCOUNT_HEARTBEAT',
       accountId: testAccountId,
       accountName: testAccountName,
-      type: testAccountType,
+      accountType: testAccountType,
       balance: 10000,
       equity: 10500
     };

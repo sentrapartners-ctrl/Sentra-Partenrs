@@ -40,7 +40,7 @@ router.post('/simulate-account', (req, res) => {
       type: 'ACCOUNT_HEARTBEAT',
       accountId,
       accountName,
-      type,
+      accountType: type,
       balance: 10000,
       equity: 10500
     }
