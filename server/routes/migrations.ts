@@ -14,11 +14,17 @@ router.post('/run-all', async (req, res) => {
     const sqlPath = join(process.cwd(), 'server', 'migrations', 'run_all_migrations.sql');
     const sql = readFileSync(sqlPath, 'utf-8');
     
+    // Remover comentários de linha
+    const cleanSql = sql
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+    
     // Dividir em statements individuais (separados por ;)
-    const statements = sql
+    const statements = cleanSql
       .split(';')
       .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .filter(s => s.length > 0);
     
     console.log(`[Migrations] Encontrados ${statements.length} statements para executar`);
     
