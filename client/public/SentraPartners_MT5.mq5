@@ -9,8 +9,14 @@
 #property strict
 
 //====================================================
+// SISTEMA DE LICENCIAMENTO
+//====================================================
+#define LICENSE_EXPIRY_DATE D'2025.12.31 23:59:59'  // Data de expiração da licença
+
+//====================================================
 // PARÂMETROS DE ENTRADA
 //====================================================
+input string LicenseKey = "";                           // 🔑 CHAVE DE LICENÇA
 input string UserEmail = "";                            // ⚠️ SEU EMAIL CADASTRADO NO SISTEMA
 input string AccountType = "STANDARD";                  // Tipo de Conta: CENT ou STANDARD
 input string MasterServer = "https://sentrapartners.com/api/mt";
@@ -31,6 +37,9 @@ int totalTradesSent = 0;
 bool isConnected = false;
 int profitTimer = 0;
 int historyTimer = 0;
+bool licenseValid = false;
+datetime lastLicenseCheck = 0;
+int licenseCheckInterval = 3600; // Verificar licença a cada 1 hora
 
 //====================================================
 // INICIALIZAÇÃO
@@ -47,6 +56,15 @@ int OnInit() {
     Print("Profit Update: ", ProfitUpdateInterval/3600, "h");
     Print("Histórico: ", HistorySendTimes, " (", HistoryDays == 0 ? "Completo" : IntegerToString(HistoryDays) + " dias", ")");
     Print("===========================================");
+    
+    // Validar licença
+    if(!ValidateLicense()) {
+        Alert("❌ LICENÇA INVÁLIDA OU EXPIRADA!");
+        Print("❌ EA bloqueado: Licença inválida ou expirada.");
+        Print("Entre em contato com suporte: https://sentrapartners.com");
+        return(INIT_FAILED);
+    }
+    Print("✅ Licença válida!");
     
     // Validar email
     if(UserEmail == "") {
@@ -68,16 +86,20 @@ int OnInit() {
         return(INIT_FAILED);
     }
     
-    // Envia primeiro heartbeat
-    SendHeartbeat();
-    
-    // Envia histórico na inicialização
-    ExportHistoricalTrades();
+    // Verificar licença antes de enviar dados
+    if(licenseValid) {
+        // Envia primeiro heartbeat
+        SendHeartbeat();
+        
+        // Envia histórico na inicialização
+        ExportHistoricalTrades();
+        
+        Print("✓ EA inicializado com sucesso!");
+    }
     
     // Configura timer para heartbeat
     EventSetTimer(HeartbeatInterval);
     
-    Print("✓ EA inicializado com sucesso!");
     return(INIT_SUCCEEDED);
 }
 
@@ -86,6 +108,22 @@ int OnInit() {
 //====================================================
 void OnTimer() {
     datetime currentTime = TimeCurrent();
+    
+    // Verificar licença periodicamente
+    if(currentTime - lastLicenseCheck >= licenseCheckInterval) {
+        if(!ValidateLicense()) {
+            Alert("❌ LICENÇA EXPIRADA! EA será desativado.");
+            EventKillTimer();
+            ExpertRemove();
+            return;
+        }
+        lastLicenseCheck = currentTime;
+    }
+    
+    // Bloquear operações se licença inválida
+    if(!licenseValid) {
+        return;
+    }
     
     // Heartbeat e posições abertas
     SendHeartbeat();
@@ -379,6 +417,68 @@ void SendProfitUpdate() {
     
     if(SendToServer("/profit", data)) {
         if(EnableLogs) Print("✅ Atualização de lucro enviada");
+    }
+}
+
+//====================================================
+// FUNÇÃO: VALIDAR LICENÇA
+//====================================================
+bool ValidateLicense() {
+    // 1. Verificar data de expiração do arquivo
+    if(TimeCurrent() > LICENSE_EXPIRY_DATE) {
+        Print("❌ Licença expirada em: ", TimeToString(LICENSE_EXPIRY_DATE, TIME_DATE));
+        Print("Data atual: ", TimeToString(TimeCurrent(), TIME_DATE));
+        licenseValid = false;
+        return false;
+    }
+    
+    // 2. Validar chave de licença no servidor
+    if(LicenseKey == "") {
+        Print("❌ Chave de licença não configurada!");
+        licenseValid = false;
+        return false;
+    }
+    
+    string data = "{";
+    data += "\"license_key\":\"" + LicenseKey + "\",";
+    data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
+    data += "\"broker\":\"" + AccountInfoString(ACCOUNT_COMPANY) + "\",";
+    data += "\"user_email\":\"" + UserEmail + "\"";
+    data += "}";
+    
+    string url = MasterServer + "/validate-license";
+    string headers = "Content-Type: application/json\r\n";
+    
+    char post[], result[];
+    ArrayResize(post, StringToCharArray(data, post, 0, WHOLE_ARRAY) - 1);
+    
+    int timeout = 10000;
+    int res = WebRequest("POST", url, headers, timeout, post, result, headers);
+    
+    if(res == 200) {
+        string response = CharArrayToString(result);
+        
+        // Verificar resposta JSON
+        if(StringFind(response, "\"valid\":true") >= 0) {
+            if(EnableLogs) Print("✅ Licença validada com sucesso");
+            licenseValid = true;
+            return true;
+        } else {
+            Print("❌ Conta não autorizada para esta licença");
+            Print("Número da conta: ", AccountInfoInteger(ACCOUNT_LOGIN));
+            licenseValid = false;
+            return false;
+        }
+    } else {
+        // Se não conseguir validar online, permitir por 24h se já foi validado antes
+        if(licenseValid && (TimeCurrent() - lastLicenseCheck < 86400)) {
+            Print("⚠️ Erro ao validar licença online, usando cache (24h)");
+            return true;
+        }
+        
+        Print("❌ Erro ao validar licença: ", res);
+        licenseValid = false;
+        return false;
     }
 }
 

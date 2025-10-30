@@ -418,4 +418,107 @@ router.post("/trades", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/mt/validate-license
+ * Valida licença e conta autorizada
+ */
+router.post("/validate-license", async (req: Request, res: Response) => {
+  try {
+    const { license_key, account_number, broker, user_email } = req.body;
+
+    console.log('[License] Validação de licença:', {
+      license_key: license_key ? license_key.substring(0, 10) + '...' : 'N/A',
+      account_number,
+      broker,
+      user_email
+    });
+
+    if (!license_key || !account_number) {
+      return res.status(400).json({
+        valid: false,
+        error: "Parâmetros obrigatórios: license_key, account_number",
+      });
+    }
+
+    // Buscar usuário pelo email
+    const user = await getUserByEmail(user_email);
+    if (!user) {
+      console.log('[License] Usuário não encontrado:', user_email);
+      return res.json({
+        valid: false,
+        error: "Usuário não encontrado",
+      });
+    }
+
+    // Buscar licença no banco
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({
+        valid: false,
+        error: "Database not available",
+      });
+    }
+
+    const [licenses]: any = await db.execute(
+      'SELECT * FROM ea_licenses WHERE license_key = ? AND user_id = ? AND status = "active"',
+      [license_key, user.id]
+    );
+
+    if (licenses.length === 0) {
+      console.log('[License] Licença não encontrada ou inativa');
+      return res.json({
+        valid: false,
+        error: "Licença inválida ou inativa",
+      });
+    }
+
+    const license = licenses[0];
+
+    // Verificar data de expiração
+    if (license.expires_at && new Date(license.expires_at) < new Date()) {
+      console.log('[License] Licença expirada:', license.expires_at);
+      return res.json({
+        valid: false,
+        error: "Licença expirada",
+        expires_at: license.expires_at,
+      });
+    }
+
+    // Verificar se a conta está autorizada
+    const allowedAccounts = license.allowed_accounts ? license.allowed_accounts.split(',') : [];
+    
+    // Se allowed_accounts estiver vazio, permitir qualquer conta
+    if (allowedAccounts.length > 0 && !allowedAccounts.includes(account_number)) {
+      console.log('[License] Conta não autorizada:', account_number);
+      console.log('[License] Contas permitidas:', allowedAccounts);
+      return res.json({
+        valid: false,
+        error: "Conta não autorizada para esta licença",
+        allowed_accounts: allowedAccounts,
+      });
+    }
+
+    // Atualizar último uso
+    await db.execute(
+      'UPDATE ea_licenses SET last_used_at = NOW() WHERE id = ?',
+      [license.id]
+    );
+
+    console.log('[License] ✅ Licença válida!');
+
+    res.json({
+      valid: true,
+      license_type: license.license_type,
+      expires_at: license.expires_at,
+      ea_name: license.ea_name,
+    });
+  } catch (error: any) {
+    console.error("[License] Erro ao validar licença:", error);
+    res.status(500).json({
+      valid: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;
