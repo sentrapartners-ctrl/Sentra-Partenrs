@@ -49,6 +49,26 @@ struct SlavePosition {
     string symbol;
 };
 
+struct CopySettings {
+    string slTpMode;
+    double slMultiplier;
+    double tpMultiplier;
+    int slFixedPips;
+    int tpFixedPips;
+    string volumeMode;
+    double volumeMultiplier;
+    double volumeFixed;
+    double maxVolume;
+    bool enableSymbolFilter;
+    string allowedSymbols[];
+    bool enableDirectionFilter;
+    string allowedDirections[];
+    bool enableRiskManagement;
+    double maxDailyLoss;
+    int maxDailyTrades;
+    bool isActive;
+};
+
 //====================================================
 // VARIÁVEIS GLOBAIS
 //====================================================
@@ -59,6 +79,13 @@ SlavePosition slavePositions[];
 int slavePositionsCount = 0;
 MasterPosition masterPositions[];
 int masterPositionsCount = 0;
+
+// Configurações do servidor
+CopySettings serverSettings;
+bool settingsLoaded = false;
+double dailyLoss = 0;
+int dailyTradesCount = 0;
+datetime lastDayReset = 0;
 
 #include <Trade\Trade.mqh>
 CTrade trade;
@@ -93,6 +120,15 @@ int OnInit() {
     
     trade.SetDeviationInPoints(Slippage);
     trade.SetExpertMagicNumber(MagicNumber);
+    
+    // Carregar configurações do servidor
+    Print("🔄 Carregando configurações do servidor...");
+    if(LoadServerSettings()) {
+        Print("✅ Configurações carregadas com sucesso!");
+        PrintSettings();
+    } else {
+        Print("⚠️ Usando configurações padrão (servidor não respondeu)");
+    }
     
     EventSetTimer(1);  // Timer de 1 segundo
     
@@ -215,6 +251,12 @@ void ProcessOpenEvent(string json) {
         return;
     }
     
+    // Validar trade (filtros e limites)
+    if(!ValidateTrade(symbol, type)) {
+        Print("❌ Trade bloqueado por filtros: ", symbol, " ", (type == 0 ? "BUY" : "SELL"));
+        return;
+    }
+    
     // Normalizar símbolo (remover/adicionar sufixos)
     string slaveSymbol = NormalizeSymbol(symbol);
     if(slaveSymbol == "") {
@@ -224,7 +266,21 @@ void ProcessOpenEvent(string json) {
     
     // Ajustar lote para conta Cent/Standard
     lots = AdjustLotForAccountType(lots);
-    lots = lots * LotMultiplier;
+    
+    // Aplicar multiplicador do servidor (se carregado) ou input
+    if(settingsLoaded && serverSettings.volumeMultiplier > 0) {
+        lots = lots * serverSettings.volumeMultiplier;
+        if(EnableLogs) Print("🔄 Volume Multiplier (servidor): ", serverSettings.volumeMultiplier);
+    } else {
+        lots = lots * LotMultiplier;
+    }
+    
+    // Aplicar limite de volume máximo
+    if(settingsLoaded && serverSettings.maxVolume > 0 && lots > serverSettings.maxVolume) {
+        Print("⚠️ Volume limitado: ", lots, " → ", serverSettings.maxVolume);
+        lots = serverSettings.maxVolume;
+    }
+    
     lots = NormalizeLot(slaveSymbol, lots);
     
     // Abrir ordem
@@ -241,6 +297,13 @@ void ProcessOpenEvent(string json) {
     
     if(success) {
         AddSlavePosition(slaveTicket, masterTicket, slaveSymbol);
+        
+        // Atualizar estatísticas diárias
+        if(settingsLoaded && serverSettings.enableRiskManagement) {
+            dailyTradesCount++;
+            Print("📊 Trades hoje: ", dailyTradesCount, " / ", serverSettings.maxDailyTrades);
+        }
+        
         Print("✅ OPEN copiado: ", symbol, " ", (type == 0 ? "BUY" : "SELL"), " ", lots, " lotes (Master: ", masterTicket, " → Slave: ", slaveTicket, ")");
     } else {
         Print("❌ Erro ao copiar OPEN: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
@@ -605,6 +668,153 @@ int SplitString(string str, string sep, string &result[]) {
     }
     
     return count;
+}
+
+//====================================================
+// CARREGAR CONFIGURAÇÕES DO SERVIDOR
+//====================================================
+bool LoadServerSettings() {
+    string url = SlaveServer + "/settings";
+    url += "?user_email=" + UserEmail;
+    url += "&master_account_id=" + MasterAccountNumber;
+    url += "&slave_account_id=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN));
+    
+    char data[];
+    char result[];
+    string headers = "Content-Type: application/json\r\n";
+    
+    int timeout = 5000;
+    int res = WebRequest("GET", url, headers, timeout, data, result, headers);
+    
+    if(res != 200) {
+        Print("⚠️ Erro ao carregar configurações: HTTP ", res);
+        return false;
+    }
+    
+    string response = CharArrayToString(result);
+    if(EnableLogs) Print("📡 Response: ", response);
+    
+    // Parse JSON response
+    if(StringFind(response, "\"success\":true") < 0) {
+        Print("❌ Configurações não encontradas no servidor");
+        return false;
+    }
+    
+    // Extrair configurações
+    serverSettings.volumeMultiplier = StringToDouble(ExtractValue(response, "volumeMultiplier"));
+    serverSettings.maxVolume = StringToDouble(ExtractValue(response, "maxVolume"));
+    serverSettings.enableSymbolFilter = (ExtractValue(response, "enableSymbolFilter") == "true");
+    serverSettings.enableDirectionFilter = (ExtractValue(response, "enableDirectionFilter") == "true");
+    serverSettings.enableRiskManagement = (ExtractValue(response, "enableRiskManagement") == "true");
+    serverSettings.maxDailyLoss = StringToDouble(ExtractValue(response, "maxDailyLoss"));
+    serverSettings.maxDailyTrades = (int)StringToInteger(ExtractValue(response, "maxDailyTrades"));
+    serverSettings.isActive = (ExtractValue(response, "isActive") == "true");
+    
+    // Parse allowed symbols (array)
+    string symbolsStr = ExtractValue(response, "allowedSymbols");
+    if(symbolsStr != "") {
+        StringReplace(symbolsStr, "[", "");
+        StringReplace(symbolsStr, "]", "");
+        StringReplace(symbolsStr, "\"", "");
+        SplitString(symbolsStr, ",", serverSettings.allowedSymbols);
+    }
+    
+    // Parse allowed directions (array)
+    string directionsStr = ExtractValue(response, "allowedDirections");
+    if(directionsStr != "") {
+        StringReplace(directionsStr, "[", "");
+        StringReplace(directionsStr, "]", "");
+        StringReplace(directionsStr, "\"", "");
+        SplitString(directionsStr, ",", serverSettings.allowedDirections);
+    }
+    
+    settingsLoaded = true;
+    return true;
+}
+
+void PrintSettings() {
+    Print("========== CONFIGURAÇÕES ===========");
+    Print("Volume Multiplier: ", serverSettings.volumeMultiplier);
+    Print("Max Volume: ", serverSettings.maxVolume);
+    Print("Symbol Filter: ", serverSettings.enableSymbolFilter ? "ON" : "OFF");
+    if(serverSettings.enableSymbolFilter) {
+        Print("Allowed Symbols: ", ArraySize(serverSettings.allowedSymbols));
+    }
+    Print("Direction Filter: ", serverSettings.enableDirectionFilter ? "ON" : "OFF");
+    Print("Risk Management: ", serverSettings.enableRiskManagement ? "ON" : "OFF");
+    if(serverSettings.enableRiskManagement) {
+        Print("Max Daily Loss: $", serverSettings.maxDailyLoss);
+        Print("Max Daily Trades: ", serverSettings.maxDailyTrades);
+    }
+    Print("Status: ", serverSettings.isActive ? "ATIVO" : "INATIVO");
+    Print("======================================");
+}
+
+bool ValidateTrade(string symbol, int type) {
+    // Verificar se copy trading está ativo
+    if(settingsLoaded && !serverSettings.isActive) {
+        Print("⚠️ Copy Trading INATIVO nas configurações");
+        return false;
+    }
+    
+    // Filtro de símbolos
+    if(settingsLoaded && serverSettings.enableSymbolFilter) {
+        bool symbolAllowed = false;
+        for(int i = 0; i < ArraySize(serverSettings.allowedSymbols); i++) {
+            if(StringFind(symbol, serverSettings.allowedSymbols[i]) >= 0) {
+                symbolAllowed = true;
+                break;
+            }
+        }
+        if(!symbolAllowed) {
+            Print("❌ Símbolo não permitido: ", symbol);
+            return false;
+        }
+    }
+    
+    // Filtro de direção
+    if(settingsLoaded && serverSettings.enableDirectionFilter) {
+        string direction = (type == 0) ? "BUY" : "SELL";
+        bool directionAllowed = false;
+        for(int i = 0; i < ArraySize(serverSettings.allowedDirections); i++) {
+            if(serverSettings.allowedDirections[i] == direction) {
+                directionAllowed = true;
+                break;
+            }
+        }
+        if(!directionAllowed) {
+            Print("❌ Direção não permitida: ", direction);
+            return false;
+        }
+    }
+    
+    // Gerenciamento de risco
+    if(settingsLoaded && serverSettings.enableRiskManagement) {
+        // Reset diário
+        MqlDateTime dt;
+        TimeToStruct(TimeCurrent(), dt);
+        datetime today = StringToTime(IntegerToString(dt.year) + "." + IntegerToString(dt.mon) + "." + IntegerToString(dt.day));
+        
+        if(lastDayReset != today) {
+            dailyLoss = 0;
+            dailyTradesCount = 0;
+            lastDayReset = today;
+            Print("🔄 Reset diário de estatísticas");
+        }
+        
+        // Verificar limites
+        if(dailyLoss >= serverSettings.maxDailyLoss) {
+            Print("❌ Limite de perda diária atingido: $", dailyLoss, " / $", serverSettings.maxDailyLoss);
+            return false;
+        }
+        
+        if(dailyTradesCount >= serverSettings.maxDailyTrades) {
+            Print("❌ Limite de trades diários atingido: ", dailyTradesCount, " / ", serverSettings.maxDailyTrades);
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 //====================================================
