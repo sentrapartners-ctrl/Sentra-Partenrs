@@ -11,7 +11,7 @@
 //====================================================
 // SISTEMA DE LICENCIAMENTO
 //====================================================
-#define LICENSE_EXPIRY_DATE D'2025.12.31 23:59:59'  // Data de expiração
+#define LICENSE_EXPIRY_DATE 1767225599  // Data de expiração
 #define ALLOWED_ACCOUNTS ""  // Contas permitidas (separadas por vírgula) - vazio = todas
 
 //====================================================
@@ -403,8 +403,8 @@ void SendProfitUpdate() {
 bool ValidateLicense() {
     // 1. Verificar data de expiração
     if(TimeCurrent() > LICENSE_EXPIRY_DATE) {
-        Print("❌ Licença expirada em: ", TimeToStr(LICENSE_EXPIRY_DATE, TIME_DATE));
-        Print("Data atual: ", TimeToStr(TimeCurrent(), TIME_DATE));
+        Print("❌ Licença expirada em: ", TimeToString(LICENSE_EXPIRY_DATE, TIME_DATE));
+        Print("Data atual: ", TimeToString(TimeCurrent(), TIME_DATE));
         return false;
     }
     
@@ -446,7 +446,7 @@ bool ValidateLicense() {
         }
     }
     
-    Print("✅ Licença válida até: ", TimeToStr(LICENSE_EXPIRY_DATE, TIME_DATE));
+    Print("✅ Licença válida até: ", TimeToString(LICENSE_EXPIRY_DATE, TIME_DATE));
     if(ALLOWED_ACCOUNTS != "") {
         Print("✅ Conta autorizada: ", AccountNumber());
     } else {
