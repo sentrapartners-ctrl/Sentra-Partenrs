@@ -571,6 +571,8 @@ double AdjustLotForAccountType(double lots) {
 // Normalizar símbolo (buscar no Slave o símbolo correspondente)
 string NormalizeSymbol(string masterSymbol) {
     // 1. Tentar símbolo exato primeiro
+    // IMPORTANTE: Adicionar ao Market Watch antes de verificar
+    SymbolSelect(masterSymbol, true);
     if(SymbolInfoInteger(masterSymbol, SYMBOL_SELECT)) {
         if(EnableLogs) Print("✅ Símbolo encontrado (exato): ", masterSymbol);
         return masterSymbol;
@@ -580,6 +582,7 @@ string NormalizeSymbol(string masterSymbol) {
     string baseSymbol = RemoveSuffix(masterSymbol);
     if(baseSymbol != masterSymbol) {
         // Tentar símbolo sem sufixo
+        SymbolSelect(baseSymbol, true);
         if(SymbolInfoInteger(baseSymbol, SYMBOL_SELECT)) {
             if(EnableLogs) Print("✅ Símbolo encontrado (sem sufixo): ", baseSymbol, " <- ", masterSymbol);
             return baseSymbol;
@@ -590,6 +593,7 @@ string NormalizeSymbol(string masterSymbol) {
     string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn", ".raw", ".lp"};
     for(int i = 0; i < ArraySize(suffixes); i++) {
         string testSymbol = baseSymbol + suffixes[i];
+        SymbolSelect(testSymbol, true);
         if(SymbolInfoInteger(testSymbol, SYMBOL_SELECT)) {
             if(EnableLogs) Print("✅ Símbolo encontrado (com sufixo): ", testSymbol, " <- ", masterSymbol);
             return testSymbol;
