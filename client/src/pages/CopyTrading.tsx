@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { Copy, TrendingUp, Users, Activity, Settings, Share2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function CopyTrading() {
   const { isAuthenticated, loading, user } = useAuth();
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const { data: copyRelations, refetch } = trpc.copyTrading.list.useQuery(
     undefined,
@@ -63,8 +65,9 @@ export default function CopyTrading() {
           </Button>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          {/* Desktop: Tabs horizontais */}
+          <TabsList className="hidden md:flex">
             <TabsTrigger value="dashboard">
               <Activity className="h-4 w-4 mr-2" />
               Dashboard em Tempo Real
@@ -82,6 +85,41 @@ export default function CopyTrading() {
               Compartilhar Sinais
             </TabsTrigger>
           </TabsList>
+
+          {/* Mobile: Select dropdown */}
+          <div className="md:hidden">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dashboard">
+                  <div className="flex items-center">
+                    <Activity className="h-4 w-4 mr-2" />
+                    Dashboard em Tempo Real
+                  </div>
+                </SelectItem>
+                <SelectItem value="relations">
+                  <div className="flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    Relações de Cópia
+                  </div>
+                </SelectItem>
+                <SelectItem value="settings">
+                  <div className="flex items-center">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configurações
+                  </div>
+                </SelectItem>
+                <SelectItem value="share">
+                  <div className="flex items-center">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Compartilhar Sinais
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <TabsContent value="dashboard" className="space-y-6">
             {/* Dashboard em Tempo Real */}
