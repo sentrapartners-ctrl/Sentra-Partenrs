@@ -17,7 +17,6 @@
 // PARÂMETROS
 //====================================================
 input string UserEmail = "";                    // Email da conta Slave
-input string MasterEmail = "";                  // Email da conta Master
 input string MasterAccountNumber = "";          // Número da conta Master
 input string SlaveServer = "https://sentrapartners.com/api/mt/copy";
 input int CheckInterval = 1;                    // Intervalo de verificação (segundos)
@@ -165,9 +164,6 @@ void OnTimer() {
 //====================================================
 void CheckMasterSignals() {
     string url = SlaveServer + "/slave-signals?master_account_id=" + MasterAccountNumber;
-    if(MasterEmail != "") {
-        url += "&master_email=" + MasterEmail;
-    }
     if(UserEmail != "") {
         url += "&slave_email=" + UserEmail;
     }
