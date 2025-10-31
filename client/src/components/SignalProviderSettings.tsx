@@ -8,6 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Share2, 
   Eye, 
@@ -18,6 +24,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Plus,
+  MoreVertical,
   Edit,
   Trash2,
   Clock
@@ -380,22 +387,35 @@ export default function SignalProviderSettings() {
                     checked={provider.is_active}
                     onCheckedChange={() => handleToggleActive(provider.id, provider.is_active)}
                   />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleTogglePublic(provider.id, provider.is_public)}
-                    title={provider.is_public ? "Tornar privado" : "Tornar público"}
-                  >
-                    {provider.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteProvider(provider.id)}
-                    title="Excluir provedor"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleTogglePublic(provider.id, provider.is_public)}>
+                        {provider.is_public ? (
+                          <>
+                            <EyeOff className="mr-2 h-4 w-4" />
+                            Tornar Privado
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Tornar Público
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteProvider(provider.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir Provedor
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardHeader>

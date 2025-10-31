@@ -454,6 +454,76 @@ router.get("/my/subscriptions", async (req, res) => {
 });
 
 //====================================================
+// PUT /api/signal-providers/:id
+// Atualizar um provedor (is_active, is_public, etc)
+//====================================================
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active, is_public, provider_name, description, subscription_fee } = req.body;
+    
+    const connection = await getRawConnection();
+    if (!connection) {
+      throw new Error('Conexão com banco não disponível');
+    }
+    
+    // Construir query dinâmica baseada nos campos enviados
+    const updates = [];
+    const values = [];
+    
+    if (is_active !== undefined) {
+      updates.push('is_active = ?');
+      values.push(is_active);
+    }
+    if (is_public !== undefined) {
+      updates.push('is_public = ?');
+      values.push(is_public);
+    }
+    if (provider_name !== undefined) {
+      updates.push('provider_name = ?');
+      values.push(provider_name);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description);
+    }
+    if (subscription_fee !== undefined) {
+      updates.push('subscription_fee = ?');
+      values.push(subscription_fee);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhum campo para atualizar'
+      });
+    }
+    
+    updates.push('updated_at = NOW()');
+    values.push(id);
+    
+    await connection.execute(
+      `UPDATE signal_providers SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    console.log(`[Signal Providers] ✅ Provedor ${id} atualizado:`, { is_active, is_public, provider_name });
+    
+    res.json({
+      success: true,
+      message: 'Provedor atualizado com sucesso'
+    });
+    
+  } catch (error: any) {
+    console.error('[Signal Providers] Erro ao atualizar provedor:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+//====================================================
 // POST /api/signal-providers/admin/update-all-stats
 // Atualizar estatísticas de todos os provedores (admin)
 //====================================================
