@@ -45,6 +45,7 @@ const menuItems = [
   { icon: Bell, label: "Alertas", path: "/alerts" },
   { icon: CreditCard, label: "Assinaturas", path: "/subscriptions" },
   { icon: Server, label: "VPS", path: "/marketplace/vps" },
+  { icon: Server, label: "Minhas VMs", path: "/my-vms" },
   { icon: Bot, label: "Expert Advisors", path: "/marketplace/eas" },
 
   { icon: Settings, label: "Configurações", path: "/settings" },

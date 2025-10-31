@@ -987,10 +987,9 @@ function VPSTab() {
               <CardTitle>VMs dos Clientes</CardTitle>
               <CardDescription>Gerencie as VMs contratadas pelos clientes</CardDescription>
             </div>
-            <Button onClick={() => window.location.href = '/admin/vms'}>
-              <Server className="h-4 w-4 mr-2" />
-              Gerenciar VMs
-            </Button>
+            <div className="text-sm text-muted-foreground">
+              Use o botão "Adicionar VM" abaixo para criar VMs manualmente
+            </div>
           </div>
         </CardHeader>
         <CardContent>
