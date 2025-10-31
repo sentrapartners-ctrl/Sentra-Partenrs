@@ -163,6 +163,10 @@ async function startServer() {
 
       startHeartbeatChecker();
       console.log("💓 Heartbeat Checker iniciado (sistema robusto de conexão)");
+
+      const { scheduleDataCleanup } = require("../services/subscription-data-manager");
+      scheduleDataCleanup();
+      console.log("🧹 Limpeza automática de dados sem assinatura iniciada (30 dias)");
     }, 5000);
   });
 }

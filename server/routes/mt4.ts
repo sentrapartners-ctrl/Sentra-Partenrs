@@ -53,6 +53,21 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
       });
     }
 
+    // Verificar assinatura (admin e gerentes sempre podem conectar)
+    if (user.role !== 'admin' && user.role !== 'manager') {
+      const { checkSubscription } = await import('../middleware/subscription-check');
+      const hasAccess = await checkSubscription(user.id);
+      
+      if (!hasAccess) {
+        console.log("[MT4] Usuário sem assinatura ativa:", user_email);
+        return res.status(403).json({
+          success: false,
+          error: "Assinatura necessária",
+          message: "Você precisa de uma assinatura ativa para conectar contas. Acesse a plataforma e escolha um plano.",
+        });
+      }
+    }
+
     // Detectar tipo de conta
     let isCentAccount = false;
     let accountTypeStr = "STANDARD";

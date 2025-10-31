@@ -193,6 +193,12 @@ router.post("/webhook", async (req: Request, res: Response) => {
             // For now, password is logged above
           } else {
             console.log("ℹ️ [USER EXISTS]", customerEmail);
+            
+            // Restaurar dados se usuário já existe e está renovando assinatura
+            const { restoreAccountData } = await import('../services/subscription-data-manager');
+            const userId = existingUser[0].id;
+            await restoreAccountData(userId);
+            console.log("✅ [DADOS RESTAURADOS]", customerEmail);
           }
         } catch (error: any) {
           console.error("❌ [USER CREATION ERROR]", error.message);
