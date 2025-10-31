@@ -596,8 +596,29 @@ string NormalizeSymbol(string masterSymbol) {
         }
     }
     
-    // 4. Não encontrado
+    // 4. Listar símbolos similares disponíveis para diagnóstico
     Print("❌ Símbolo não encontrado: ", masterSymbol, " (base testada: ", baseSymbol, ")");
+    Print("🔍 Procurando símbolos similares...");
+    
+    int totalSymbols = SymbolsTotal(false);
+    int foundSimilar = 0;
+    
+    for(int i = 0; i < totalSymbols && foundSimilar < 10; i++) {
+        string symbolName = SymbolName(i, false);
+        // Procurar símbolos que contenham a base
+        if(StringFind(symbolName, baseSymbol) >= 0) {
+            Print("   📊 Similar encontrado: ", symbolName);
+            foundSimilar++;
+        }
+    }
+    
+    if(foundSimilar == 0) {
+        Print("   ⚠️ Nenhum símbolo similar encontrado. Listando primeiros 20 símbolos:");
+        for(int i = 0; i < MathMin(20, totalSymbols); i++) {
+            Print("   📊 ", SymbolName(i, false));
+        }
+    }
+    
     return "";
 }
 
