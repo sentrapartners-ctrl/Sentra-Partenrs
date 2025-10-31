@@ -22,9 +22,14 @@ import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useState, useMemo } from "react";
 import { InlineCurrencyValue } from "@/components/CurrencyValue";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Strategies() {
   const { isAuthenticated, loading } = useAuth();
+  const { data: dashboardData } = trpc.dashboard.summary.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -299,8 +304,8 @@ export default function Strategies() {
                 </div>
               </CardContent>
               
-              {/* Lucro Total do Mês */}
-              <div className="mt-6 flex justify-center items-center">
+              {/* Estatísticas do Mês */}
+              <div className="mt-6 flex justify-center items-center gap-4">
                 <div className="text-center px-6 py-4 rounded-lg border bg-card">
                   <p className="text-sm text-muted-foreground mb-2">Lucro Total do Mês</p>
                   <div className={`text-3xl font-bold ${
@@ -311,6 +316,17 @@ export default function Strategies() {
                         : 'text-muted-foreground'
                   }`}>
                     <InlineCurrencyValue value={monthlyProfit} />
+                  </div>
+                </div>
+                
+                <div className="text-center px-6 py-4 rounded-lg border bg-card">
+                  <p className="text-sm text-muted-foreground mb-2">Drawdown do Mês</p>
+                  <div className={`text-3xl font-bold ${
+                    (dashboardData?.summary?.monthlyDrawdown || 0) > 5 
+                      ? 'text-red-600 dark:text-red-400' 
+                      : 'text-green-600 dark:text-green-400'
+                  }`}>
+                    {(dashboardData?.summary?.monthlyDrawdown || 0).toFixed(2)}%
                   </div>
                 </div>
               </div>

@@ -618,11 +618,12 @@ function SystemTab() {
   
   const totalProfit = totalEquity - totalBalance;
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, accountType?: string) => {
+    const finalValue = accountType === 'CENT' ? value / 100 : value;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'USD',
-    }).format(value);
+    }).format(finalValue);
   };
 
   return (
@@ -760,7 +761,7 @@ function SystemTab() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{formatCurrency(account.balance || 0)}</div>
+                    <div className="font-bold">{formatCurrency(account.balance || 0, account.accountType)}</div>
                     <Badge variant={account.status === 'connected' ? 'default' : 'secondary'}>
                       {account.status}
                     </Badge>
