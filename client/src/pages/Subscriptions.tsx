@@ -1,83 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Zap } from "lucide-react";
+import { Check, Crown, Zap, Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 
 interface Plan {
-  id: string;
+  id: number;
   name: string;
   slug: string;
   price: number;
-  description: string;
   features: string[];
-  icon: React.ReactNode;
-  popular?: boolean;
-  color: string;
+  active: boolean;
 }
 
-const plans: Plan[] = [
-  {
-    id: "1",
-    name: "Básico",
-    slug: "basico",
-    price: 49.00,
-    description: "Plano ideal para iniciantes no trading",
-    features: [
-      "Dashboard completo",
-      "Até 2 contas MT4/MT5",
-      "Análises básicas",
-      "Histórico de trades",
-      "Suporte por email"
-    ],
-    icon: <Zap className="h-6 w-6" />,
-    color: "from-blue-500 to-blue-600"
-  },
-  {
-    id: "2",
-    name: "Pro",
-    slug: "pro",
-    price: 99.00,
-    description: "Para traders profissionais que precisam de copy trading",
-    features: [
-      "Tudo do plano Básico",
-      "Até 5 contas MT4/MT5",
-      "Copy Trading ilimitado",
-      "Análises avançadas",
-      "Alertas personalizados",
-      "Suporte prioritário"
-    ],
-    icon: <Crown className="h-6 w-6" />,
-    popular: true,
-    color: "from-green-500 to-green-600"
-  },
-  {
-    id: "3",
-    name: "Premium",
-    slug: "premium",
-    price: 199.00,
-    description: "Plano completo com VPS grátis e todos os recursos",
-    features: [
-      "Tudo do plano Pro",
-      "Contas ilimitadas",
-      "VPS GRÁTIS (2GB RAM)",
-      "Copy Trading avançado",
-      "API de integração",
-      "Suporte VIP 24/7",
-      "Consultoria mensal"
-    ],
-    icon: <Crown className="h-6 w-6" />,
-    color: "from-purple-500 to-purple-600"
-  }
-];
-
 export default function Subscriptions() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch("/api/subscription-plans");
+      if (response.ok) {
+        const data = await response.json();
+        setPlans(data.plans.filter((p: Plan) => p.active));
+      }
+    } catch (error) {
+      console.error("Erro ao carregar planos:", error);
+      toast.error("Erro ao carregar planos de assinatura");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubscribe = async (plan: Plan) => {
-    setIsLoading(true);
+    setIsProcessing(true);
 
     try {
       const response = await fetch("/api/checkout/create-payment", {
@@ -98,124 +61,118 @@ export default function Subscriptions() {
           window.location.href = data.payment_url;
         }
       } else {
-        throw new Error("Erro ao criar pagamento");
+        toast.error("Erro ao processar pagamento");
       }
     } catch (error) {
-      console.error("Erro:", error);
-      toast.error("Erro ao processar. Tente novamente.");
-      setIsLoading(false);
+      console.error("Erro ao criar pagamento:", error);
+      toast.error("Erro ao processar pagamento");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
+  const getIcon = (index: number) => {
+    const icons = [
+      <Zap className="h-6 w-6" />,
+      <Crown className="h-6 w-6" />,
+      <Crown className="h-6 w-6" />
+    ];
+    return icons[index % icons.length];
+  };
+
+  const getColor = (index: number) => {
+    const colors = [
+      "from-blue-500 to-blue-600",
+      "from-green-500 to-green-600",
+      "from-purple-500 to-purple-600"
+    ];
+    return colors[index % colors.length];
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Escolha seu Plano</h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Selecione o plano ideal para suas necessidades de trading. Todos os planos incluem acesso completo ao dashboard.
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold">Escolha seu Plano</h1>
+          <p className="text-xl text-muted-foreground">
+            Selecione o plano ideal para suas necessidades de trading
           </p>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan) => (
-            <Card 
-              key={plan.id} 
-              className={`relative overflow-hidden ${plan.popular ? 'border-primary shadow-2xl scale-105' : ''}`}
-            >
-              {plan.popular && (
-                <div className="absolute top-0 right-0">
-                  <Badge className="rounded-none rounded-bl-lg">Mais Popular</Badge>
-                </div>
-              )}
-
-              <CardHeader>
-                <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${plan.color} flex items-center justify-center text-white mb-4`}>
-                  {plan.icon}
-                </div>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription className="text-sm mt-2">
-                  {plan.description}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Price */}
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">R$ {plan.price.toFixed(2)}</span>
-                    <span className="text-muted-foreground">/ mês</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    R$ {plan.price.toFixed(2)}/mês
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div className="space-y-3">
-                  {plan.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  variant={plan.popular ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => handleSubscribe(plan)}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Processando..." : "Assinar Agora"}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-
-        {/* FAQ */}
-        <div className="mt-16 max-w-3xl mx-auto space-y-8">
-          <h2 className="text-3xl font-bold text-center mb-8">Perguntas Frequentes</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">O que acontece após o período de assinatura?</h3>
-              <p className="text-muted-foreground">
-                Sua assinatura será renovada automaticamente no final do período mensal, a menos que você cancele antes.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Posso mudar de plano depois?</h3>
-              <p className="text-muted-foreground">
-                Sim! Você pode fazer upgrade ou downgrade do seu plano a qualquer momento. O valor será ajustado proporcionalmente.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">A VPS grátis do plano Premium é permanente?</h3>
-              <p className="text-muted-foreground">
-                Sim! Enquanto você mantiver sua assinatura Premium ativa, a VPS de 2GB RAM continuará gratuita.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Quais formas de pagamento são aceitas?</h3>
-              <p className="text-muted-foreground">
-                Aceitamos pagamentos via criptomoedas: Bitcoin (BTC), USDT (Ethereum e Polygon), Polygon (MATIC) e Ethereum (ETH). 
-                O pagamento é processado automaticamente após confirmação na blockchain.
-              </p>
-            </div>
+        {plans.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Nenhum plano disponível no momento.</p>
           </div>
-        </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {plans.map((plan, index) => (
+              <Card 
+                key={plan.id} 
+                className={`relative overflow-hidden ${index === 1 ? 'border-primary shadow-lg scale-105' : ''}`}
+              >
+                {index === 1 && (
+                  <Badge className="absolute top-4 right-4 bg-primary">
+                    Mais Popular
+                  </Badge>
+                )}
+
+                <CardHeader>
+                  <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getColor(index)} flex items-center justify-center text-white mb-4`}>
+                    {getIcon(index)}
+                  </div>
+                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <CardDescription>
+                    <span className="text-3xl font-bold text-foreground">
+                      R$ {plan.price.toFixed(2)}
+                    </span>
+                    <span className="text-muted-foreground">/mês</span>
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {plan.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    size="lg"
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={isProcessing}
+                    variant={index === 1 ? "default" : "outline"}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Assinar Agora"
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
 }
-
