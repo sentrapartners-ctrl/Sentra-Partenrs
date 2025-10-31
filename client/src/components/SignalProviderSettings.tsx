@@ -195,14 +195,25 @@ export default function SignalProviderSettings() {
 
   const handleTogglePublic = async (providerId: number, currentStatus: boolean) => {
     try {
-      await fetch(`/api/signal-providers/${providerId}`, {
+      console.log('[Frontend] Toggling public status:', { providerId, currentStatus, newStatus: !currentStatus });
+      
+      const response = await fetch(`/api/signal-providers/${providerId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_public: !currentStatus })
       });
+      
+      const data = await response.json();
+      console.log('[Frontend] Response from server:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar status público');
+      }
+      
       await fetchProviders();
     } catch (error) {
-      console.error('Erro ao atualizar provedor:', error);
+      console.error('[Frontend] Erro ao atualizar provedor:', error);
+      alert('Erro ao atualizar status público. Verifique o console.');
     }
   };
 

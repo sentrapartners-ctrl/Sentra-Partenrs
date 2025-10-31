@@ -462,6 +462,8 @@ router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { is_active, is_public, provider_name, description, subscription_fee } = req.body;
     
+    console.log('[Backend] PUT /api/signal-providers/:id - Request:', { id, is_active, is_public, provider_name, description, subscription_fee });
+    
     const connection = await getRawConnection();
     if (!connection) {
       throw new Error('Conexão com banco não disponível');
@@ -473,11 +475,11 @@ router.put("/:id", async (req, res) => {
     
     if (is_active !== undefined) {
       updates.push('is_active = ?');
-      values.push(is_active);
+      values.push(is_active ? 1 : 0);
     }
     if (is_public !== undefined) {
       updates.push('is_public = ?');
-      values.push(is_public);
+      values.push(is_public ? 1 : 0);
     }
     if (provider_name !== undefined) {
       updates.push('provider_name = ?');
@@ -502,11 +504,13 @@ router.put("/:id", async (req, res) => {
     updates.push('updated_at = NOW()');
     values.push(id);
     
-    await connection.execute(
-      `UPDATE signal_providers SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
+    const query = `UPDATE signal_providers SET ${updates.join(', ')} WHERE id = ?`;
+    console.log('[Backend] Executing query:', query);
+    console.log('[Backend] With values:', values);
     
+    const [result]: any = await connection.execute(query, values);
+    
+    console.log('[Backend] Query result:', result);
     console.log(`[Signal Providers] ✅ Provedor ${id} atualizado:`, { is_active, is_public, provider_name });
     
     res.json({
