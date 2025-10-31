@@ -155,7 +155,7 @@ router.post('/claim-free', async (req, res) => {
     }
 
     // Criar purchase com amount = 0 (grátis)
-    const [purchase] = await db
+    await db
       .insert(userPurchases)
       .values({
         userId,
@@ -172,7 +172,6 @@ router.post('/claim-free', async (req, res) => {
     res.json({
       success: true,
       data: {
-        purchaseId: purchase.insertId,
         message: 'VPS grátis ativada com sucesso!'
       }
     });
