@@ -31,6 +31,7 @@ export function ManualPermissionsDialog({
   const updatePermissionsMutation = trpc.admin.updateManualPermissions.useMutation();
 
   const [permissions, setPermissions] = useState({
+    dashboard: false,
     copy_trading: false,
     signal_provider: false,
     vps: false,
@@ -45,6 +46,7 @@ export function ManualPermissionsDialog({
           ? JSON.parse(user.manual_permissions) 
           : user.manual_permissions;
         setPermissions({
+          dashboard: parsed.dashboard || false,
           copy_trading: parsed.copy_trading || false,
           signal_provider: parsed.signal_provider || false,
           vps: parsed.vps || false,
@@ -56,6 +58,7 @@ export function ManualPermissionsDialog({
       }
     } else {
       setPermissions({
+        dashboard: false,
         copy_trading: false,
         signal_provider: false,
         vps: false,
@@ -106,6 +109,26 @@ export function ManualPermissionsDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Dashboard */}
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="dashboard"
+              checked={permissions.dashboard}
+              onCheckedChange={() => handleToggle("dashboard")}
+            />
+            <div className="space-y-1">
+              <Label
+                htmlFor="dashboard"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Dashboard
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Permite visualizar dados do Dashboard (balanço, equity, trades)
+              </p>
+            </div>
+          </div>
+
           {/* Copy Trading */}
           <div className="flex items-start space-x-3">
             <Checkbox

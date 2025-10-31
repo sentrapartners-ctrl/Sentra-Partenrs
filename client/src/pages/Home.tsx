@@ -20,11 +20,11 @@ export default function Home() {
   });
   
   const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
-  const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
+  const hasDashboardPermission = subscriptionData?.manualPermissions?.dashboard || false;
   const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
   
-  // Apenas carregar dados se tiver assinatura, permissões ou for admin/gerente
-  const canAccessData = hasActiveSubscription || hasManualPermissions || isAdminOrManager;
+  // Apenas carregar dados se tiver assinatura, permissão de Dashboard ou for admin/gerente
+  const canAccessData = hasActiveSubscription || hasDashboardPermission || isAdminOrManager;
   
   const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
     undefined,

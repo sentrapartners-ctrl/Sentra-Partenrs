@@ -616,16 +616,55 @@ export const appRouter = router({
 
   // ===== CALENDAR =====
   calendar: router({
-    getEvents: publicProcedure.query(async (): Promise<Array<{
-      date: string;
-      time: string;
-      country: string;
-      impact: string;
-      title: string;
-      forecast?: string;
-      previous?: string;
-    }>> => {
+    events: publicProcedure.query(async () => {
       return await getForexFactoryEvents();
+    }),
+  }),
+
+  // ===== SUBSCRIPTIONS =====
+  subscriptions: router({
+    current: protectedProcedure.query(async ({ ctx }) => {
+      const { checkSubscription } = await import('./middleware/subscription-check');
+      const hasAccess = await checkSubscription(ctx.user.id);
+      
+      // Buscar assinatura ativa
+      const database = await db.getDb();
+      const { userSubscriptions, subscriptionPlans, users } = await import('../drizzle/schema');
+      const { eq, and, gt } = await import('drizzle-orm');
+      
+      const [subscription] = await database
+        .select({
+          subscription: userSubscriptions,
+          plan: subscriptionPlans,
+        })
+        .from(userSubscriptions)
+        .leftJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.id))
+        .where(
+          and(
+            eq(userSubscriptions.userId, ctx.user.id),
+            eq(userSubscriptions.status, 'active'),
+            gt(userSubscriptions.endDate, new Date())
+          )
+        )
+        .limit(1);
+      
+      // Buscar permissões manuais
+      const [user] = await database
+        .select()
+        .from(users)
+        .where(eq(users.id, ctx.user.id))
+        .limit(1);
+      
+      const manualPermissions = user?.manual_permissions ? JSON.parse(user.manual_permissions) : null;
+      const hasManualPermissions = manualPermissions && Object.values(manualPermissions).some(v => v === true);
+      
+      return {
+        hasActiveSubscription: hasAccess,
+        subscription: subscription?.subscription || null,
+        plan: subscription?.plan || null,
+        hasManualPermissions,
+        manualPermissions,
+      };
     }),
   }),
 });
