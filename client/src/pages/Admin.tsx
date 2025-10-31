@@ -739,7 +739,7 @@ function SubscriptionsTab() {
           <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
           <p className="text-muted-foreground">Gerencie os planos disponíveis</p>
         </div>
-        <Button onClick={() => setEditingPlan({}))}>
+        <Button onClick={() => setEditingPlan({})}>
           <CreditCard className="h-4 w-4 mr-2" />
           Novo Plano
         </Button>
@@ -830,7 +830,7 @@ function VPSTab() {
           <h2 className="text-2xl font-bold">Produtos VPS</h2>
           <p className="text-muted-foreground">Gerencie os servidores VPS disponíveis</p>
         </div>
-        <Button onClick={() => setEditingVPS({}))}>
+        <Button onClick={() => setEditingVPS({})}>
           <Server className="h-4 w-4 mr-2" />
           Nova VPS
         </Button>
@@ -930,7 +930,7 @@ function EAsTab() {
           <h2 className="text-2xl font-bold">Expert Advisors</h2>
           <p className="text-muted-foreground">Gerencie os EAs disponíveis para venda</p>
         </div>
-        <Button onClick={() => setEditingEA({}))}>
+        <Button onClick={() => setEditingEA({})}>
           <Bot className="h-4 w-4 mr-2" />
           Novo EA
         </Button>
