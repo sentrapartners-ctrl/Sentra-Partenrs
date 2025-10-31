@@ -292,7 +292,7 @@ export default function CopyTradingDashboard() {
         if (isAuthenticated && user) {
           connectWebSocket();
         }
-      }, 5000);
+      }, 15 * 60 * 1000); // 15 minutos
     };
   };
 
@@ -317,8 +317,8 @@ export default function CopyTradingDashboard() {
     // Buscar imediatamente
     fetchAccounts();
 
-    // Polling a cada 5 segundos
-    const intervalId = setInterval(fetchAccounts, 5000);
+    // Polling a cada 15 minutos (backup)
+    const intervalId = setInterval(fetchAccounts, 15 * 60 * 1000);
 
     return () => clearInterval(intervalId);
   }, [isAuthenticated, user]);
@@ -360,7 +360,9 @@ export default function CopyTradingDashboard() {
           <AlertDescription>
             {wsStatus === 'connecting' 
               ? 'Conectando ao servidor em tempo real...' 
-              : 'Desconectado. Tentando reconectar...'}
+              : connectedAccounts.length > 0 
+                ? 'Usando dados em cache. Próxima atualização em 15 minutos.'
+                : 'Aguardando conexão com o servidor...'}
           </AlertDescription>
         </Alert>
       )}
