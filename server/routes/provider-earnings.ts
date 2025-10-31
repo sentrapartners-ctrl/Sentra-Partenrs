@@ -1,6 +1,6 @@
 import express from "express";
-import { pool } from "../_core/database";
-import { RowDataPacket } from "mysql2";
+import { getDb } from "../db";
+import { sql } from "drizzle-orm";
 
 const router = express.Router();
 
@@ -13,78 +13,76 @@ router.get("/", async (req, res) => {
       return res.status(401).json({ success: false, error: "Não autenticado" });
     }
 
-    const connection = await pool.getConnection();
-
-    try {
-      // Buscar signal provider do usuário
-      const [providers] = await connection.execute<RowDataPacket[]>(
-        "SELECT id FROM signal_providers WHERE user_id = ?",
-        [userId]
-      );
-
-      if (providers.length === 0) {
-        return res.json({
-          success: true,
-          isProvider: false,
-          earnings: {
-            total: 0,
-            pending: 0,
-            paid: 0,
-            subscribers: 0
-          },
-          wallet: null,
-          commissions: []
-        });
-      }
-
-      const providerId = providers[0].id;
-
-      // Buscar estatísticas de ganhos
-      const [stats] = await connection.execute<RowDataPacket[]>(`
-        SELECT 
-          SUM(provider_earnings) as total_earnings,
-          SUM(CASE WHEN status = 'pending' THEN provider_earnings ELSE 0 END) as pending_earnings,
-          SUM(CASE WHEN status = 'paid' THEN provider_earnings ELSE 0 END) as paid_earnings,
-          COUNT(DISTINCT subscriber_id) as total_subscribers
-        FROM provider_commissions
-        WHERE provider_id = ?
-      `, [providerId]);
-
-      // Buscar carteira do provedor
-      const [wallets] = await connection.execute<RowDataPacket[]>(
-        "SELECT * FROM provider_wallets WHERE provider_id = ?",
-        [providerId]
-      );
-
-      // Buscar histórico de comissões
-      const [commissions] = await connection.execute<RowDataPacket[]>(`
-        SELECT 
-          pc.*,
-          u.username as subscriber_username,
-          u.email as subscriber_email
-        FROM provider_commissions pc
-        LEFT JOIN users u ON pc.subscriber_id = u.id
-        WHERE pc.provider_id = ?
-        ORDER BY pc.created_at DESC
-        LIMIT 50
-      `, [providerId]);
-
-      res.json({
-        success: true,
-        isProvider: true,
-        earnings: {
-          total: parseFloat(stats[0]?.total_earnings || 0),
-          pending: parseFloat(stats[0]?.pending_earnings || 0),
-          paid: parseFloat(stats[0]?.paid_earnings || 0),
-          subscribers: stats[0]?.total_subscribers || 0
-        },
-        wallet: wallets[0] || null,
-        commissions
-      });
-
-    } finally {
-      connection.release();
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: "Database not available" });
     }
+
+    // Buscar signal provider do usuário
+    const providers = await db.execute(
+      sql`SELECT id FROM signal_providers WHERE user_id = ${userId}`
+    );
+
+    if (!providers.rows || providers.rows.length === 0) {
+      return res.json({
+        success: true,
+        isProvider: false,
+        earnings: {
+          total: 0,
+          pending: 0,
+          paid: 0,
+          subscribers: 0
+        },
+        wallet: null,
+        commissions: []
+      });
+    }
+
+    const providerId = (providers.rows[0] as any).id;
+
+    // Buscar estatísticas de ganhos
+    const stats = await db.execute(sql`
+      SELECT 
+        SUM(provider_earnings) as total_earnings,
+        SUM(CASE WHEN status = 'pending' THEN provider_earnings ELSE 0 END) as pending_earnings,
+        SUM(CASE WHEN status = 'paid' THEN provider_earnings ELSE 0 END) as paid_earnings,
+        COUNT(DISTINCT subscriber_id) as total_subscribers
+      FROM provider_commissions
+      WHERE provider_id = ${providerId}
+    `);
+
+    // Buscar carteira do provedor
+    const wallets = await db.execute(
+      sql`SELECT * FROM provider_wallets WHERE provider_id = ${providerId}`
+    );
+
+    // Buscar histórico de comissões
+    const commissions = await db.execute(sql`
+      SELECT 
+        pc.*,
+        u.username as subscriber_username,
+        u.email as subscriber_email
+      FROM provider_commissions pc
+      LEFT JOIN users u ON pc.subscriber_id = u.id
+      WHERE pc.provider_id = ${providerId}
+      ORDER BY pc.created_at DESC
+      LIMIT 50
+    `);
+
+    const statsRow = stats.rows?.[0] as any;
+
+    res.json({
+      success: true,
+      isProvider: true,
+      earnings: {
+        total: parseFloat(statsRow?.total_earnings || 0),
+        pending: parseFloat(statsRow?.pending_earnings || 0),
+        paid: parseFloat(statsRow?.paid_earnings || 0),
+        subscribers: statsRow?.total_subscribers || 0
+      },
+      wallet: wallets.rows?.[0] || null,
+      commissions: commissions.rows || []
+    });
 
   } catch (error) {
     console.error("Erro ao buscar ganhos:", error);
@@ -109,43 +107,40 @@ router.post("/wallet", async (req, res) => {
       });
     }
 
-    const connection = await pool.getConnection();
-
-    try {
-      // Buscar signal provider do usuário
-      const [providers] = await connection.execute<RowDataPacket[]>(
-        "SELECT id FROM signal_providers WHERE user_id = ?",
-        [userId]
-      );
-
-      if (providers.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          error: "Você precisa ser um provedor de sinais" 
-        });
-      }
-
-      const providerId = providers[0].id;
-
-      // Inserir ou atualizar carteira
-      await connection.execute(`
-        INSERT INTO provider_wallets (provider_id, wallet_address, network, currency)
-        VALUES (?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-          wallet_address = VALUES(wallet_address),
-          network = VALUES(network),
-          currency = VALUES(currency),
-          verified = FALSE
-      `, [providerId, wallet_address, network, currency || 'USDT']);
-
-      res.json({ 
-        success: true, 
-        message: "Carteira cadastrada com sucesso! Aguarde verificação." 
-      });
-
-    } finally {
-      connection.release();
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: "Database not available" });
     }
+
+    // Buscar signal provider do usuário
+    const providers = await db.execute(
+      sql`SELECT id FROM signal_providers WHERE user_id = ${userId}`
+    );
+
+    if (!providers.rows || providers.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Você precisa ser um provedor de sinais" 
+      });
+    }
+
+    const providerId = (providers.rows[0] as any).id;
+
+    // Inserir ou atualizar carteira
+    await db.execute(sql`
+      INSERT INTO provider_wallets (provider_id, wallet_address, network, currency)
+      VALUES (${providerId}, ${wallet_address}, ${network}, ${currency || 'USDT'})
+      ON DUPLICATE KEY UPDATE 
+        wallet_address = VALUES(wallet_address),
+        network = VALUES(network),
+        currency = VALUES(currency),
+        verified = FALSE
+    `);
+
+    res.json({ 
+      success: true, 
+      message: "Carteira cadastrada com sucesso! Aguarde verificação." 
+    });
 
   } catch (error) {
     console.error("Erro ao cadastrar carteira:", error);
@@ -165,23 +160,21 @@ router.post("/record", async (req, res) => {
       });
     }
 
-    const connection = await pool.getConnection();
-
-    try {
-      const platformFee = (amount * 0.10).toFixed(2); // 10% para plataforma
-      const providerEarnings = (amount * 0.90).toFixed(2); // 90% para provedor
-
-      await connection.execute(`
-        INSERT INTO provider_commissions 
-        (provider_id, subscriber_id, subscription_id, amount, platform_fee, provider_earnings, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'pending')
-      `, [provider_id, subscriber_id, subscription_id, amount, platformFee, providerEarnings]);
-
-      res.json({ success: true, message: "Comissão registrada" });
-
-    } finally {
-      connection.release();
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: "Database not available" });
     }
+
+    const platformFee = (amount * 0.10).toFixed(2); // 10% para plataforma
+    const providerEarnings = (amount * 0.90).toFixed(2); // 90% para provedor
+
+    await db.execute(sql`
+      INSERT INTO provider_commissions 
+      (provider_id, subscriber_id, subscription_id, amount, platform_fee, provider_earnings, status)
+      VALUES (${provider_id}, ${subscriber_id}, ${subscription_id}, ${amount}, ${platformFee}, ${providerEarnings}, 'pending')
+    `);
+
+    res.json({ success: true, message: "Comissão registrada" });
 
   } catch (error) {
     console.error("Erro ao registrar comissão:", error);
