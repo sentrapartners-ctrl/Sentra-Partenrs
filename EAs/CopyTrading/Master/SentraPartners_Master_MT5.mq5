@@ -19,7 +19,7 @@ datetime LICENSE_EXPIRY_DATE = D'2025.12.31';  // 31/12/2025 23:59:59
 //====================================================
 input string UserEmail = "";                        // ⚠️ SEU EMAIL CADASTRADO
 input string MasterServer = "https://sentrapartners.com/api/mt/copy";
-input int HeartbeatInterval = 30;                   // Intervalo de heartbeat (segundos)
+input int HeartbeatInterval = 1;                    // Intervalo de heartbeat (segundos)
 input int MaxRetries = 3;                           // Máximo de tentativas de retry
 input bool EnableLogs = true;                       // Habilitar logs
 
