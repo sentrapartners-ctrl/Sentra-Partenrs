@@ -27,6 +27,7 @@ import vpsProductsRouter from "../routes/vps-products";
 import expertAdvisorsRouter from "../routes/expert-advisors";
 import landingPageRouter from "../routes/landing-page";
 import ensureTablesRouter from "../routes/ensure-tables";
+import executeSqlRouter from "../routes/execute-sql";
 import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
 
 // import mt4ConnectorRouter from "../routes/mt4-connector";
@@ -36,6 +37,7 @@ import { scheduleNotificationCleanup } from "../services/notification-cleanup";
 import { scheduleAutomatedReports } from "../services/automated-reports";
 import { initNotificationCron } from "../notification-cron";
 import { scheduleProviderCleanup } from "../services/cleanup-inactive-providers";
+import { scheduleSubscriptionChecks } from "../services/subscription-manager";
 // import { runMigrations } from "../scripts/runMigrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -98,6 +100,7 @@ async function startServer() {
   app.use("/api/expert-advisors", expertAdvisorsRouter);
   app.use("/api/landing-page", landingPageRouter);
   app.use("/api/ensure-tables", ensureTablesRouter);
+  app.use("/api/execute-sql", executeSqlRouter);
   // Wallet authentication endpoints
 
   // tRPC API
@@ -144,6 +147,9 @@ async function startServer() {
       console.log("📊 Relatórios automáticos iniciados");
 
       initNotificationCron();
+      
+      scheduleSubscriptionChecks();
+      console.log("💳 Gerenciador de assinaturas iniciado");
       console.log("🔔 Notificações Bark agendadas iniciadas");
 
       scheduleProviderCleanup();

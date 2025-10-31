@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { getDb, createOrUpdateAccount, getAccountByNumberAndUser, createOrUpdateTrade, recordBalanceSnapshot } from "../db";
 import { getUserByEmail } from "../auth";
+import { checkAccountLimit } from "../middleware/subscription-check";
 
 const router = express.Router();
 
@@ -70,6 +71,24 @@ router.post("/heartbeat", async (req: Request, res: Response) => {
     const balanceInt = Math.round(parseFloat(balance));
     const equityInt = Math.round(parseFloat(equity));
     const marginFreeInt = margin_free ? Math.round(parseFloat(margin_free)) : 0;
+
+    // Verificar se conta já existe
+    const existingAccount = await getAccountByNumberAndUser(account_number.toString(), user.id);
+    
+    // Se conta não existe, verificar limite
+    if (!existingAccount) {
+      const limitCheck = await checkAccountLimit(user.id);
+      if (!limitCheck.canAddAccount) {
+        console.log("[MT4] Limite de contas atingido:", limitCheck.message);
+        return res.status(403).json({
+          success: false,
+          error: "Limite de contas atingido",
+          message: limitCheck.message,
+          currentCount: limitCheck.currentCount,
+          maxAccounts: limitCheck.maxAccounts,
+        });
+      }
+    }
 
     // Criar ou atualizar conta
     const accountData = {

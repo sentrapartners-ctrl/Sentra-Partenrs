@@ -3,6 +3,7 @@ import { getRawConnection } from "../db";
 import { broadcastToUser } from "../websocket/copyTradingWs";
 import { updateProviderStatistics } from "../services/update-provider-statistics";
 import { getUserByEmail } from "../db";
+import { checkAccountLimit } from "../middleware/subscription-check";
 
 const router = express.Router();
 
