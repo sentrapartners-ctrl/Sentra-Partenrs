@@ -12,6 +12,7 @@ export default function Settings() {
   const { isAuthenticated, loading } = useAuth();
 
   const [barkKey, setBarkKey] = useState("");
+  const [barkServerUrl, setBarkServerUrl] = useState("");
   const [barkDailyEnabled, setBarkDailyEnabled] = useState(true);
   const [barkWeeklyEnabled, setBarkWeeklyEnabled] = useState(true);
   const [barkDailyTime, setBarkDailyTime] = useState("19:00");
@@ -35,12 +36,12 @@ export default function Settings() {
   // Carregar valores salvos quando settings mudar
   useEffect(() => {
     if (settings) {
-      if (settings.barkKey) setBarkKey(settings.barkKey);
-      if (settings.barkDailyEnabled !== undefined) setBarkDailyEnabled(settings.barkDailyEnabled);
-      if (settings.barkWeeklyEnabled !== undefined) setBarkWeeklyEnabled(settings.barkWeeklyEnabled);
-      if (settings.barkDailyTime) setBarkDailyTime(settings.barkDailyTime);
-      if (settings.barkWeeklyTime) setBarkWeeklyTime(settings.barkWeeklyTime);
-
+      setBarkKey(settings.barkKey || "");
+      setBarkServerUrl(settings.barkServerUrl || "");
+      setBarkDailyEnabled(settings.barkDailyEnabled ?? true);
+      setBarkWeeklyEnabled(settings.barkWeeklyEnabled ?? true);
+      setBarkDailyTime(settings.barkDailyTime || "19:00");
+      setBarkWeeklyTime(settings.barkWeeklyTime || "08:00");
     }
   }, [settings]);
 
@@ -151,6 +152,19 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">URL do Servidor Bark</label>
+              <Input
+                type="url"
+                placeholder="https://bark.seudominio.com"
+                value={barkServerUrl}
+                onChange={(e) => setBarkServerUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                URL do seu servidor Bark (Render, VPS, etc). Obrigatório para receber notificações.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Bark Key</label>
               <Input
                 type="text"
@@ -221,12 +235,13 @@ export default function Settings() {
               disabled={testBark.isLoading}
               onClick={async () => {
                 const key = barkKey || settings?.barkKey;
-                if (!key) {
-                  toast.error("Configure sua Bark Key primeiro!");
+                const serverUrl = barkServerUrl || settings?.barkServerUrl;
+                if (!key || !serverUrl) {
+                  toast.error("Configure URL do Servidor e Bark Key primeiro!");
                   return;
                 }
                 testBark.mutate(
-                  { barkKey: key },
+                  { barkKey: key, barkServerUrl: serverUrl },
                   {
                     onSuccess: () => {
                       toast.success("🔔 Mensagem de teste enviada! Verifique seu iPhone.");
@@ -284,11 +299,16 @@ export default function Settings() {
           <Button 
             variant="outline"
             onClick={() => {
-              setBarkKey("");
-              setBarkDailyEnabled(true);
-              setBarkWeeklyEnabled(true);
-              setBarkDailyTime("19:00");
-              setBarkWeeklyTime("08:00");
+              // Recarregar valores do banco de dados
+              if (settings) {
+                setBarkKey(settings.barkKey || "");
+                setBarkServerUrl(settings.barkServerUrl || "");
+                setBarkDailyEnabled(settings.barkDailyEnabled ?? true);
+                setBarkWeeklyEnabled(settings.barkWeeklyEnabled ?? true);
+                setBarkDailyTime(settings.barkDailyTime || "19:00");
+                setBarkWeeklyTime(settings.barkWeeklyTime || "08:00");
+              }
+              toast.info("Alterações descartadas");
             }}
           >
             Cancelar
@@ -297,6 +317,7 @@ export default function Settings() {
             onClick={() => {
               updateSettings.mutate({
                 barkKey: barkKey || undefined,
+                barkServerUrl: barkServerUrl || undefined,
                 barkDailyEnabled,
                 barkWeeklyEnabled,
                 barkDailyTime: barkDailyTime || "19:00",
