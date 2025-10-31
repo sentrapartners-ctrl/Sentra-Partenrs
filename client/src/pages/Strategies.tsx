@@ -283,7 +283,7 @@ export default function Strategies() {
                             {day.getDate()}
                           </span>
                           {hasProfit && (
-                            <div className={`font-semibold leading-tight ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            <div className={`font-semibold leading-tight text-[10px] sm:text-xs md:text-sm lg:text-base ${profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                               <InlineCurrencyValue value={profit} compact={true} />
                             </div>
                           )}
