@@ -2,7 +2,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 interface SubscriptionWarningBannerProps {
   hasActiveSubscription: boolean;
@@ -14,7 +14,7 @@ export function SubscriptionWarningBanner({
   hasManualPermissions 
 }: SubscriptionWarningBannerProps) {
   const [dismissed, setDismissed] = useState(false);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   // Não mostrar se tem assinatura ativa ou permissões manuais
   if (hasActiveSubscription || hasManualPermissions || dismissed) {
@@ -33,7 +33,7 @@ export function SubscriptionWarningBanner({
             size="sm"
             variant="outline"
             className="bg-white text-red-600 hover:bg-red-50"
-            onClick={() => navigate("/subscriptions")}
+            onClick={() => setLocation("/subscriptions")}
           >
             Ver Planos
           </Button>
