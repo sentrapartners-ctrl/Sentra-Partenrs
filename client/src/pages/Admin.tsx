@@ -602,15 +602,27 @@ function SystemTab() {
 
   const activeUsers = allUsers?.filter(u => u.isActive).length || 0;
   const connectedAccounts = allAccounts?.filter(a => a.status === 'connected').length || 0;
-  const totalBalance = allAccounts?.reduce((sum, a) => sum + (a.balance || 0), 0) || 0;
-  const totalEquity = allAccounts?.reduce((sum, a) => sum + (a.equity || 0), 0) || 0;
+  
+  // Calcular balance e equity considerando tipo de conta
+  const totalBalance = allAccounts?.reduce((sum, a) => {
+    const balance = a.balance || 0;
+    // CENT: dividir por 100, STANDARD: usar direto
+    return sum + (a.accountType === 'CENT' ? balance / 100 : balance);
+  }, 0) || 0;
+  
+  const totalEquity = allAccounts?.reduce((sum, a) => {
+    const equity = a.equity || 0;
+    // CENT: dividir por 100, STANDARD: usar direto
+    return sum + (a.accountType === 'CENT' ? equity / 100 : equity);
+  }, 0) || 0;
+  
   const totalProfit = totalEquity - totalBalance;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'USD',
-    }).format(value / 100);
+    }).format(value);
   };
 
   return (
