@@ -536,12 +536,12 @@ router.get("/connected-accounts", async (req, res) => {
 
     // Buscar contas normais do usuário (trading_accounts)
     const [regularAccounts]: any = await connection.execute(
-      `SELECT ta.account_number, ta.broker, ta.balance, ta.equity, ta.last_heartbeat, ta.is_connected, ta.failed_attempts,
+      `SELECT ta.accountNumber as account_number, ta.broker, ta.balance, ta.equity, ta.lastHeartbeat as last_heartbeat, ta.is_connected, ta.failed_attempts,
               u.email
        FROM trading_accounts ta
-       JOIN users u ON ta.user_id = u.id
+       JOIN users u ON ta.userId = u.id
        WHERE u.email = ?
-       ORDER BY ta.last_heartbeat DESC`,
+       ORDER BY ta.lastHeartbeat DESC`,
       [email]
     );
 

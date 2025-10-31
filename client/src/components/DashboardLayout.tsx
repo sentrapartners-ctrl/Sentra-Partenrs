@@ -30,6 +30,8 @@ import { CurrencySelector } from "./CurrencySelector";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SupportChat } from "./SupportChat";
 import { NotificationBell } from "./NotificationBell";
+import { SubscriptionWarningBanner } from "./SubscriptionWarningBanner";
+import { trpc } from "@/lib/trpc";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -162,6 +164,15 @@ function DashboardLayoutContent({
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
+  
+  // Verificar assinatura do usuário
+  const { data: subscriptionData } = trpc.subscriptions.current.useQuery(undefined, {
+    enabled: !!user,
+  });
+  
+  const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
+  // Verificar se tem permissões manuais via subscription data
+  const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
@@ -351,7 +362,13 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4">
+          <SubscriptionWarningBanner 
+            hasActiveSubscription={hasActiveSubscription}
+            hasManualPermissions={hasManualPermissions}
+          />
+          {children}
+        </main>
       </SidebarInset>
       <SupportChat />
     </>
