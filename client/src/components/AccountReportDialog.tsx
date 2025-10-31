@@ -25,10 +25,12 @@ export function AccountReportDialog({ account, open, onOpenChange }: AccountRepo
   if (!account) return null;
 
   const formatCurrency = (value: number) => {
+    // CENT: dividir por 100, STANDARD: usar direto
+    const finalValue = account.accountType === 'CENT' ? value / 100 : value;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: account.currency || 'USD',
-    }).format(value / 100);
+    }).format(finalValue);
   };
 
   const formatPercent = (value: number) => {

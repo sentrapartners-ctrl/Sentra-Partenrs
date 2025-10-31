@@ -866,12 +866,32 @@ export async function getAccountSummary(userId: number) {
   const totalOpenPositions = accounts.reduce((sum, acc) => sum + (acc.openPositions || 0), 0);
   const connectedAccounts = accounts.filter(acc => acc.status === "connected").length;
 
+  // Calcular drawdown do mês
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  
+  // Buscar pico de balance do mês
+  const monthBalanceHistory = await db.select()
+    .from(balanceHistory)
+    .where(
+      and(
+        inArray(balanceHistory.accountId, accounts.map(a => a.id)),
+        gte(balanceHistory.timestamp, monthStart)
+      )
+    )
+    .orderBy(desc(balanceHistory.balance))
+    .limit(1);
+  
+  const peakBalance = monthBalanceHistory[0]?.balance || totalBalance;
+  const monthlyDrawdown = peakBalance > 0 ? ((peakBalance - totalEquity) / peakBalance) * 100 : 0;
+
   return {
     totalAccounts: accounts.length,
     connectedAccounts,
     totalBalance,
     totalEquity,
     totalOpenPositions,
+    monthlyDrawdown: Number(monthlyDrawdown.toFixed(2)),
     accounts,
   };
 }
