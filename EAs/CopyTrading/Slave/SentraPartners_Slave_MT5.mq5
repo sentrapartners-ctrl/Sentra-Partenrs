@@ -235,8 +235,15 @@ void ProcessMasterSignals(string json) {
 // PROCESSAR EVENTO DE ABERTURA
 //====================================================
 void ProcessOpenEvent(string json) {
+    // DEBUG: Ver o JSON completo
+    if(EnableLogs) Print("🔍 DEBUG ProcessOpenEvent - JSON recebido: ", json);
+    
     string masterTicket = ExtractValue(json, "ticket");
     string symbol = ExtractValue(json, "symbol");
+    
+    // DEBUG: Ver o que foi extraído
+    if(EnableLogs) Print("🔍 DEBUG - Ticket extraído: '", masterTicket, "'");
+    if(EnableLogs) Print("🔍 DEBUG - Symbol extraído: '", symbol, "'");
     int type = (int)StringToInteger(ExtractValue(json, "type"));
     double lots = StringToDouble(ExtractValue(json, "lots"));
     double openPrice = StringToDouble(ExtractValue(json, "open_price"));
@@ -429,7 +436,7 @@ void ParseMasterPositions(string positionsStr) {
 // SINCRONIZAR POSIÇÕES
 //====================================================
 void SyncPositions() {
-    // Fechar posições do Slave que não existem mais no Master
+    // 1. Fechar posições do Slave que não existem mais no Master
     for(int i = slavePositionsCount - 1; i >= 0; i--) {
         bool found = false;
         
@@ -450,6 +457,60 @@ void SyncPositions() {
             }
             
             RemoveSlavePosition(i);
+        }
+    }
+    
+    // 2. Abrir posições do Master que não existem no Slave
+    for(int j = 0; j < masterPositionsCount; j++) {
+        bool exists = false;
+        
+        // Verificar se já existe no Slave
+        for(int i = 0; i < slavePositionsCount; i++) {
+            if(slavePositions[i].master_ticket == masterPositions[j].ticket) {
+                exists = true;
+                break;
+            }
+        }
+        
+        if(!exists) {
+            // Posição não existe no Slave, abrir
+            if(EnableLogs) Print("🔄 Sincronização: Abrindo posição nova do Master: ", masterPositions[j].ticket);
+            
+            // Normalizar símbolo
+            string slaveSymbol = NormalizeSymbol(masterPositions[j].symbol);
+            if(slaveSymbol == "") {
+                Print("❌ Símbolo não encontrado no Slave: ", masterPositions[j].symbol);
+                continue;
+            }
+            
+            // Validar trade
+            if(!ValidateTrade(slaveSymbol, masterPositions[j].type)) {
+                Print("❌ Trade bloqueado por filtros: ", slaveSymbol);
+                continue;
+            }
+            
+            // Ajustar lote
+            double lots = AdjustLotSize(masterPositions[j].lots);
+            if(lots < SymbolInfoDouble(slaveSymbol, SYMBOL_VOLUME_MIN)) {
+                Print("❌ Lote muito pequeno: ", lots);
+                continue;
+            }
+            
+            // Abrir posição
+            bool success = false;
+            if(masterPositions[j].type == 0) {
+                success = trade.Buy(lots, slaveSymbol, 0, masterPositions[j].stop_loss, masterPositions[j].take_profit, "Copy: " + masterPositions[j].ticket);
+            } else {
+                success = trade.Sell(lots, slaveSymbol, 0, masterPositions[j].stop_loss, masterPositions[j].take_profit, "Copy: " + masterPositions[j].ticket);
+            }
+            
+            if(success) {
+                ulong slaveTicket = trade.ResultOrder();
+                AddSlavePosition(slaveTicket, masterPositions[j].ticket, slaveSymbol);
+                Print("✅ Posição aberta via sincronização: ", slaveSymbol, " ", (masterPositions[j].type == 0 ? "BUY" : "SELL"), " ", lots, " lotes (Master: ", masterPositions[j].ticket, " → Slave: ", slaveTicket, ")");
+            } else {
+                Print("❌ Erro ao abrir posição via sincronização: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+            }
         }
     }
 }
