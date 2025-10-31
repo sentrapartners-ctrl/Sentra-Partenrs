@@ -203,6 +203,32 @@ export type UserPurchase = typeof userPurchases.$inferSelect;
 export type InsertUserPurchase = typeof userPurchases.$inferInsert;
 
 /**
+ * Client VMs - VMs contratadas pelos clientes
+ */
+export const clientVMs = mysqlTable("client_vms", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  productName: varchar("productName", { length: 255 }).notNull(),
+  hostname: varchar("hostname", { length: 255 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }).notNull(),
+  username: varchar("username", { length: 255 }).notNull(),
+  password: varchar("password", { length: 255 }).notNull(),
+  status: mysqlEnum("status", ["active", "suspended", "terminated"]).default("active").notNull(),
+  cpu: varchar("cpu", { length: 100 }),
+  ram: varchar("ram", { length: 100 }),
+  storage: varchar("storage", { length: 100 }),
+  os: varchar("os", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  statusIdx: index("status_idx").on(table.status),
+}));
+
+export type ClientVM = typeof clientVMs.$inferSelect;
+export type InsertClientVM = typeof clientVMs.$inferInsert;
+
+/**
  * Product Reviews - user reviews for EAs
  */
 export const productReviews = mysqlTable("product_reviews", {

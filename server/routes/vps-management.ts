@@ -34,6 +34,44 @@ interface APIResponse {
 // ============================================
 
 /**
+ * GET /api/vps-management/my-vms
+ * Lista VMs do cliente autenticado
+ */
+router.get('/my-vms', async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Usuário não autenticado' 
+      });
+    }
+
+    const { getDb } = await import('../db');
+    const db = getDb();
+    const { clientVMs } = await import('../../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+
+    const vms = await db
+      .select()
+      .from(clientVMs)
+      .where(eq(clientVMs.userId, userId));
+
+    res.json({
+      success: true,
+      vms
+    });
+  } catch (error: any) {
+    console.error('[VPS] Erro ao listar VMs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/vps/instances
  * Lista todas as instâncias VPS do usuário
  */

@@ -37,6 +37,7 @@ import { TransferClientDialog } from "@/components/TransferClientDialog";
 import { formatPrice } from "@/lib/formatPrice";
 import AdminProviderEarnings from "@/components/AdminProviderEarnings";
 import { ManualPermissionsDialog } from "@/components/ManualPermissionsDialog";
+import { ClientVMsSection } from "@/components/ClientVMsSection";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -981,13 +982,19 @@ function VPSTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>VPS Ativas</CardTitle>
-          <CardDescription>Servidores VPS atualmente em uso</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>VMs dos Clientes</CardTitle>
+              <CardDescription>Gerencie as VMs contratadas pelos clientes</CardDescription>
+            </div>
+            <Button onClick={() => window.location.href = '/admin/vms'}>
+              <Server className="h-4 w-4 mr-2" />
+              Gerenciar VMs
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhuma VPS ativa no momento
-          </div>
+          <ClientVMsSection />
         </CardContent>
       </Card>
 
