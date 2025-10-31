@@ -35,10 +35,11 @@ import { EditCryptoAddressDialog } from "@/components/EditCryptoAddressDialog";
 import { AccountReportDialog } from "@/components/AccountReportDialog";
 import { TransferClientDialog } from "@/components/TransferClientDialog";
 import { formatPrice } from "@/lib/formatPrice";
+import ProviderEarnings from "@/components/ProviderEarnings";
 
 export default function Admin() {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<"users" | "accounts" | "system" | "subscriptions" | "vps" | "eas" | "payments" | "landing">("users");
+  const [selectedTab, setSelectedTab] = useState<"users" | "accounts" | "system" | "subscriptions" | "vps" | "eas" | "payments" | "landing" | "commissions">("users");
 
   // Verificar se é admin ou manager
   if (user?.role !== "admin" && user?.role !== "manager") {
@@ -131,6 +132,14 @@ export default function Admin() {
             <Globe className="h-4 w-4 mr-2" />
             Landing Page
           </Button>
+          <Button
+            variant={selectedTab === "commissions" ? "default" : "ghost"}
+            onClick={() => setSelectedTab("commissions")}
+            className="rounded-b-none"
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Comissões
+          </Button>
         </div>
 
         {/* Content */}
@@ -142,6 +151,7 @@ export default function Admin() {
         {selectedTab === "eas" && <EAsTab />}
         {selectedTab === "payments" && <PaymentsTab />}
         {selectedTab === "landing" && <LandingPageTab />}
+        {selectedTab === "commissions" && <ProviderEarningsTab />}
       </div>
     </DashboardLayout>
   );
@@ -1568,4 +1578,9 @@ function LandingPageTab() {
       </Card>
     </div>
   );
+}
+
+// Tab: Comissões de Provedores
+function ProviderEarningsTab() {
+  return <ProviderEarnings />;
 }

@@ -3,13 +3,14 @@ import DashboardLayout from "@/components/DashboardLayout";
 import CopyTradingDashboard from "@/components/CopyTradingDashboard";
 import CopyTradingSettings from "@/components/CopyTradingSettings";
 import SignalProviderSettings from "@/components/SignalProviderSettings";
+import ProviderEarnings from "@/components/ProviderEarnings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Copy, TrendingUp, Users, Activity, Settings, Share2 } from "lucide-react";
+import { Copy, TrendingUp, Users, Activity, Settings, Share2, DollarSign } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function CopyTrading() {
@@ -84,6 +85,10 @@ export default function CopyTrading() {
               <Share2 className="h-4 w-4 mr-2" />
               Compartilhar Sinais
             </TabsTrigger>
+            <TabsTrigger value="earnings">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Minhas Comissões
+            </TabsTrigger>
           </TabsList>
 
           {/* Mobile: Select dropdown */}
@@ -115,6 +120,12 @@ export default function CopyTrading() {
                   <div className="flex items-center">
                     <Share2 className="h-4 w-4 mr-2" />
                     Compartilhar Sinais
+                  </div>
+                </SelectItem>
+                <SelectItem value="earnings">
+                  <div className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Minhas Comissões
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -290,6 +301,11 @@ export default function CopyTrading() {
           <TabsContent value="share" className="space-y-6">
             {/* Compartilhar Sinais */}
             <SignalProviderSettings />
+          </TabsContent>
+
+          <TabsContent value="earnings" className="space-y-6">
+            {/* Minhas Comissões */}
+            <ProviderEarnings />
           </TabsContent>
         </Tabs>
       </div>

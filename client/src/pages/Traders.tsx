@@ -40,6 +40,7 @@ interface Provider {
   active_subscribers: number;
   avg_rating: number;
   review_count: number;
+  isCentAccount?: boolean;
 }
 
 interface SlaveAccount {
@@ -91,11 +92,12 @@ export default function Traders() {
       const response = await fetch(`/api/mt/copy/connected-accounts?email=${encodeURIComponent(user?.email || '')}`);
       const data = await response.json();
       if (data.success) {
-        const slaves = data.accounts.filter((acc: any) => acc.type === 'slave');
-        setSlaveAccounts(slaves);
+        // Aceitar contas slave e regular (excluir apenas master)
+        const availableAccounts = data.accounts.filter((acc: any) => acc.type !== 'master');
+        setSlaveAccounts(availableAccounts);
       }
     } catch (error) {
-      console.error('Erro ao buscar contas Slave:', error);
+      console.error('Erro ao buscar contas disponíveis:', error);
     }
   };
 
@@ -271,7 +273,7 @@ export default function Traders() {
                         Lucro Total
                       </div>
                       <p className="text-lg font-bold text-green-600">
-                        ${formatProfit(provider.total_profit, false)}
+                        ${formatProfit(provider.total_profit, provider.isCentAccount || false)}
                       </p>
                     </div>
                     <div className="space-y-1">

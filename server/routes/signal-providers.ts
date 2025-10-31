@@ -41,11 +41,13 @@ router.get("/", async (req, res) => {
         ps.total_subscribers,
         ps.active_subscribers,
         ps.last_trade_at,
+        ta.is_cent_account as isCentAccount,
         COALESCE(AVG(pr.rating), 0) as avg_rating,
         COUNT(DISTINCT pr.id) as review_count
       FROM signal_providers sp
       LEFT JOIN provider_statistics ps ON sp.id = ps.provider_id
       LEFT JOIN provider_reviews pr ON sp.id = pr.provider_id
+      LEFT JOIN trading_accounts ta ON sp.master_account_number = ta.account_number
       WHERE 1=1
     `;
     

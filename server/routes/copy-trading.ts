@@ -542,6 +542,37 @@ router.get("/connected-accounts", async (req, res) => {
       });
     }
 
+    // Buscar contas normais do usuário (trading_accounts)
+    const [regularAccounts]: any = await connection.execute(
+      `SELECT ta.account_number, ta.broker, ta.balance, ta.equity, ta.last_heartbeat,
+              TIMESTAMPDIFF(SECOND, ta.last_heartbeat, NOW()) as seconds_since_heartbeat,
+              u.email
+       FROM trading_accounts ta
+       JOIN users u ON ta.user_id = u.id
+       WHERE u.email = ?
+       AND ta.last_heartbeat IS NOT NULL
+       AND ta.last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+       ORDER BY ta.last_heartbeat DESC`,
+      [email]
+    );
+
+    for (const acc of regularAccounts) {
+      // Não adicionar se já está na lista como master ou slave
+      const alreadyAdded = accounts.find(a => a.accountId === acc.account_number);
+      if (!alreadyAdded) {
+        const isOnline = acc.seconds_since_heartbeat < 60;
+        accounts.push({
+          accountId: acc.account_number,
+          accountName: `Conta ${acc.account_number}`,
+          type: 'regular',
+          status: isOnline ? 'online' : 'offline',
+          lastHeartbeat: acc.last_heartbeat,
+          balance: parseFloat(acc.balance) || 0,
+          equity: parseFloat(acc.equity) || 0
+        });
+      }
+    }
+
     console.log(`📊 HTTP: Contas encontradas para ${email}: ${accounts.length} (${accounts.filter(a => a.status === 'online').length} online)`);
 
     res.json({
