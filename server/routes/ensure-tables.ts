@@ -112,14 +112,15 @@ router.post("/", async (req: Request, res: Response) => {
     } catch (error: any) {
       results.errors.push(error.message);
       console.error('[Ensure Tables] ❌ Erro:', error);
-    } finally {
-      await connection.end();
     }
 
     const allSuccess = results.subscription_plans && 
                       results.vps_products && 
                       results.expert_advisors &&
                       results.landing_page_content;
+
+    // Fechar conexão DEPOIS de enviar resposta
+    connection.end().catch(err => console.error('Erro ao fechar conexão:', err));
 
     res.json({
       success: allSuccess,

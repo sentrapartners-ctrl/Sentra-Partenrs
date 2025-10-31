@@ -1,5 +1,6 @@
 import express from 'express';
 import { getRawConnection } from '../db';
+import { ensureProductTables } from '../lib/ensure-tables';
 
 const router = express.Router();
 
@@ -10,6 +11,9 @@ router.get("/", async (req, res) => {
     if (!connection) {
       throw new Error('Conexão com banco não disponível');
     }
+
+    // Garantir que tabelas existam
+    await ensureProductTables(connection);
 
     const [plans]: any = await connection.execute(
       `SELECT * FROM subscription_plans ORDER BY price ASC`
@@ -50,6 +54,9 @@ router.post("/", async (req, res) => {
     if (!connection) {
       throw new Error('Conexão com banco não disponível');
     }
+
+    // Garantir que tabelas existam
+    await ensureProductTables(connection);
 
     // Converter array de features para TEXT
     const featuresText = Array.isArray(features) ? features.join('\n') : features || '';
