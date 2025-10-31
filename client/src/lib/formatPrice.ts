@@ -1,17 +1,17 @@
 /**
  * Formata um valor de preço para exibição
  * Lida com valores que podem ser number ou string (DECIMAL do MySQL)
- * IMPORTANTE: Divide por 100 pois o backend armazena valores em centavos
+ * IMPORTANTE: Por padrão NÃO divide por 100 (produtos já vêm em reais)
  * 
- * @param value - Valor do preço em centavos (number ou string)
+ * @param value - Valor do preço (number ou string)
  * @param decimals - Número de casas decimais (padrão: 2)
- * @param divideByCents - Se true, divide por 100 para converter centavos em reais (padrão: true)
+ * @param divideByCents - Se true, divide por 100 para converter centavos em reais (padrão: false)
  * @returns String formatada com o preço
  */
 export function formatPrice(
   value: number | string | null | undefined, 
   decimals: number = 2,
-  divideByCents: boolean = true
+  divideByCents: boolean = false
 ): string {
   if (value === null || value === undefined) {
     return '0.00';
