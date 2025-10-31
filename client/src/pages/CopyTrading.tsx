@@ -17,9 +17,21 @@ export default function CopyTrading() {
   const { isAuthenticated, loading, user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  // Verificar assinatura
+  const { data: subscriptionData } = trpc.subscriptions.current.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  
+  const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
+  const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  
+  // Apenas carregar dados se tiver assinatura, permissões ou for admin/gerente
+  const canAccessData = hasActiveSubscription || hasManualPermissions || isAdminOrManager;
+
   const { data: copyRelations, refetch } = trpc.copyTrading.list.useQuery(
     undefined,
-    { enabled: isAuthenticated }
+    { enabled: isAuthenticated && canAccessData }
   );
 
   useEffect(() => {

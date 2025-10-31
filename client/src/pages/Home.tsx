@@ -12,11 +12,23 @@ import { useAccountConnectionNotifications } from "@/hooks/useAccountConnectionN
 export default function Home() {
   // Hook para notificações de conexão de contas
   useAccountConnectionNotifications();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  
+  // Verificar assinatura
+  const { data: subscriptionData } = trpc.subscriptions.current.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  
+  const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
+  const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  
+  // Apenas carregar dados se tiver assinatura, permissões ou for admin/gerente
+  const canAccessData = hasActiveSubscription || hasManualPermissions || isAdminOrManager;
   
   const { data: dashboardData, isLoading } = trpc.dashboard.summary.useQuery(
     undefined,
-    { enabled: isAuthenticated, refetchInterval: 5000 }
+    { enabled: isAuthenticated && canAccessData, refetchInterval: 5000 }
   );
 
   const stats = useMemo(() => {

@@ -16,7 +16,10 @@ export function SubscriptionWarningBanner({
   const [dismissed, setDismissed] = useState(false);
   const [, setLocation] = useLocation();
 
-  // Não mostrar se tem assinatura ativa ou permissões manuais
+  // Não mostrar se:
+  // - Tem assinatura ativa
+  // - Tem permissões manuais
+  // - Foi fechado
   if (hasActiveSubscription || hasManualPermissions || dismissed) {
     return null;
   }

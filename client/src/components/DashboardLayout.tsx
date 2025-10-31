@@ -173,6 +173,10 @@ function DashboardLayoutContent({
   const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
   // Verificar se tem permissões manuais via subscription data
   const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
+  
+  // Admin e gerentes não devem ver o banner
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const shouldShowBanner = !isAdminOrManager && !hasActiveSubscription && !hasManualPermissions;
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
@@ -363,10 +367,12 @@ function DashboardLayoutContent({
           </div>
         )}
         <main className="flex-1 p-4">
-          <SubscriptionWarningBanner 
-            hasActiveSubscription={hasActiveSubscription}
-            hasManualPermissions={hasManualPermissions}
-          />
+          {shouldShowBanner && (
+            <SubscriptionWarningBanner 
+              hasActiveSubscription={hasActiveSubscription}
+              hasManualPermissions={hasManualPermissions}
+            />
+          )}
           {children}
         </main>
       </SidebarInset>
