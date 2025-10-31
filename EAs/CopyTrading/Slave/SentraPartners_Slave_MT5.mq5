@@ -670,21 +670,30 @@ string ExtractValue(string json, string key) {
     
     start = StringFind(json, ":", start) + 1;
     
-    // Pular espaços e aspas
-    while(start < StringLen(json) && (StringGetCharacter(json, start) == ' ' || StringGetCharacter(json, start) == '\"')) start++;
+    // Pular espaços
+    while(start < StringLen(json) && StringGetCharacter(json, start) == ' ') start++;
+    
+    // Verificar se o valor está entre aspas
+    bool isString = (StringGetCharacter(json, start) == '\"');
+    if(isString) start++; // Pular aspas de abertura
     
     int end = start;
-    bool inQuotes = false;
     
-    while(end < StringLen(json)) {
-        ushort ch = StringGetCharacter(json, end);
-        if(ch == '\"') inQuotes = !inQuotes;
-        if(!inQuotes && (ch == ',' || ch == '}')) break;
-        end++;
+    if(isString) {
+        // Procurar aspas de fechamento
+        while(end < StringLen(json) && StringGetCharacter(json, end) != '\"') {
+            end++;
+        }
+    } else {
+        // Procurar vírgula ou fecha chave
+        while(end < StringLen(json)) {
+            ushort ch = StringGetCharacter(json, end);
+            if(ch == ',' || ch == '}' || ch == ' ') break;
+            end++;
+        }
     }
     
     string value = StringSubstr(json, start, end - start);
-    StringReplace(value, "\"", "");
     StringTrimLeft(value);
     StringTrimRight(value);
     return value;
