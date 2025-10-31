@@ -570,38 +570,56 @@ double AdjustLotForAccountType(double lots) {
 
 // Normalizar símbolo (buscar no Slave o símbolo correspondente)
 string NormalizeSymbol(string masterSymbol) {
-    // Remover sufixos comuns do símbolo Master
-    string baseSymbol = masterSymbol;
-    StringReplace(baseSymbol, "c", "");
-    StringReplace(baseSymbol, "m", "");
-    StringReplace(baseSymbol, ".", "");
-    StringReplace(baseSymbol, "_", "");
-    
-    // Tentar encontrar símbolo exato no Slave
+    // 1. Tentar símbolo exato primeiro
     if(SymbolInfoInteger(masterSymbol, SYMBOL_SELECT)) {
         if(EnableLogs) Print("✅ Símbolo encontrado (exato): ", masterSymbol);
         return masterSymbol;
     }
     
-    // Tentar base symbol
-    if(SymbolInfoInteger(baseSymbol, SYMBOL_SELECT)) {
-        if(EnableLogs) Print("✅ Símbolo encontrado (base): ", baseSymbol);
-        return baseSymbol;
+    // 2. Remover sufixos comuns do final do símbolo
+    string baseSymbol = RemoveSuffix(masterSymbol);
+    if(baseSymbol != masterSymbol) {
+        // Tentar símbolo sem sufixo
+        if(SymbolInfoInteger(baseSymbol, SYMBOL_SELECT)) {
+            if(EnableLogs) Print("✅ Símbolo encontrado (sem sufixo): ", baseSymbol, " <- ", masterSymbol);
+            return baseSymbol;
+        }
     }
     
-    // Tentar com sufixos comuns
-    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn"};
+    // 3. Tentar adicionar sufixos comuns ao símbolo base
+    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn", ".raw", ".lp"};
     for(int i = 0; i < ArraySize(suffixes); i++) {
         string testSymbol = baseSymbol + suffixes[i];
         if(SymbolInfoInteger(testSymbol, SYMBOL_SELECT)) {
-            if(EnableLogs) Print("✅ Símbolo encontrado (sufixo): ", testSymbol);
+            if(EnableLogs) Print("✅ Símbolo encontrado (com sufixo): ", testSymbol, " <- ", masterSymbol);
             return testSymbol;
         }
     }
     
-    // Não encontrado
-    Print("❌ Símbolo não encontrado: ", masterSymbol, " (base: ", baseSymbol, ")");
+    // 4. Não encontrado
+    Print("❌ Símbolo não encontrado: ", masterSymbol, " (base testada: ", baseSymbol, ")");
     return "";
+}
+
+// Função auxiliar para remover sufixos conhecidos do final do símbolo
+string RemoveSuffix(string symbol) {
+    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn", ".raw", ".lp"};
+    
+    for(int i = 0; i < ArraySize(suffixes); i++) {
+        int suffixLen = StringLen(suffixes[i]);
+        int symbolLen = StringLen(symbol);
+        
+        // Verificar se o símbolo termina com este sufixo
+        if(symbolLen > suffixLen) {
+            string ending = StringSubstr(symbol, symbolLen - suffixLen, suffixLen);
+            if(ending == suffixes[i]) {
+                // Remover o sufixo
+                return StringSubstr(symbol, 0, symbolLen - suffixLen);
+            }
+        }
+    }
+    
+    return symbol; // Retorna inalterado se não encontrar sufixo
 }
 
 double NormalizeLot(string symbol, double lots) {
