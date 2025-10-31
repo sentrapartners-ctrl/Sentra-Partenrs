@@ -204,25 +204,21 @@ async function handleGetConnectedAccounts(ws: WebSocket, data: any) {
 
     const userAccounts: ConnectedAccount[] = [];
 
-    // Buscar contas Master (copy_signals com heartbeat recente)
+    // Buscar contas Master (copy_signals)
     const [masterAccounts]: any = await connection.execute(
-      `SELECT master_email, account_number, broker, last_heartbeat, 
-              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+      `SELECT master_email, account_number, broker, last_heartbeat, is_connected, failed_attempts
        FROM copy_signals 
        WHERE master_email = ?
-       AND last_heartbeat IS NOT NULL
-       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
        ORDER BY last_heartbeat DESC`,
       [client.email]
     );
 
     for (const master of masterAccounts) {
-      const isOnline = master.seconds_since_heartbeat < 60;
       userAccounts.push({
         accountId: master.account_number,
         accountName: `Master ${master.account_number}`,
         type: 'master',
-        status: isOnline ? 'online' : 'offline',
+        status: master.is_connected ? 'online' : 'offline',
         lastHeartbeat: new Date(master.last_heartbeat),
         balance: 0,
         equity: 0,
@@ -230,25 +226,21 @@ async function handleGetConnectedAccounts(ws: WebSocket, data: any) {
       });
     }
 
-    // Buscar contas Slave (slave_heartbeats com heartbeat recente)
+    // Buscar contas Slave (slave_heartbeats)
     const [slaveAccounts]: any = await connection.execute(
-      `SELECT account_number, master_account_id, broker, balance, equity, last_heartbeat,
-              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+      `SELECT account_number, master_account_id, broker, balance, equity, last_heartbeat, is_connected, failed_attempts
        FROM slave_heartbeats 
        WHERE slave_email = ?
-       AND last_heartbeat IS NOT NULL
-       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
        ORDER BY last_heartbeat DESC`,
       [client.email]
     );
 
     for (const slave of slaveAccounts) {
-      const isOnline = slave.seconds_since_heartbeat < 60;
       userAccounts.push({
         accountId: slave.account_number,
         accountName: `Slave ${slave.account_number}`,
         type: 'slave',
-        status: isOnline ? 'online' : 'offline',
+        status: slave.is_connected ? 'online' : 'offline',
         lastHeartbeat: new Date(slave.last_heartbeat),
         balance: parseFloat(slave.balance) || 0,
         equity: parseFloat(slave.equity) || 0,

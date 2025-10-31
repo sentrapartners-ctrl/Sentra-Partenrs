@@ -39,6 +39,7 @@ import { scheduleAutomatedReports } from "../services/automated-reports";
 import { initNotificationCron } from "../notification-cron";
 import { scheduleProviderCleanup } from "../services/cleanup-inactive-providers";
 import { scheduleSubscriptionChecks } from "../services/subscription-manager";
+import { startHeartbeatChecker } from "../heartbeat-checker";
 // import { runMigrations } from "../scripts/runMigrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -156,6 +157,9 @@ async function startServer() {
 
       scheduleProviderCleanup();
       console.log("🧹 Limpeza automática de provedores inativos iniciada");
+
+      startHeartbeatChecker();
+      console.log("💓 Heartbeat Checker iniciado (sistema robusto de conexão)");
     }, 5000);
   });
 }

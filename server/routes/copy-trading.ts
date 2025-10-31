@@ -214,12 +214,12 @@ async function processHeartbeat(connection: any, email: string, accountNumber: s
   
   if (existing && existing.length > 0) {
     await connection.execute(
-      "UPDATE copy_signals SET positions = ?, positions_count = ?, broker = ?, last_heartbeat = NOW(), updated_at = NOW() WHERE master_email = ? AND account_number = ?",
+      "UPDATE copy_signals SET positions = ?, positions_count = ?, broker = ?, last_heartbeat = NOW(), failed_attempts = 0, is_connected = TRUE, updated_at = NOW() WHERE master_email = ? AND account_number = ?",
       [positionsJson, positionsCount || 0, broker || "", email, accountNumber]
     );
   } else {
     await connection.execute(
-      "INSERT INTO copy_signals (master_email, account_number, broker, positions, positions_count, last_heartbeat) VALUES (?, ?, ?, ?, ?, NOW())",
+      "INSERT INTO copy_signals (master_email, account_number, broker, positions, positions_count, last_heartbeat, failed_attempts, is_connected) VALUES (?, ?, ?, ?, ?, NOW(), 0, TRUE)",
       [email, accountNumber, broker || "", positionsJson, positionsCount || 0]
     );
   }
@@ -492,50 +492,42 @@ router.get("/connected-accounts", async (req, res) => {
 
     const accounts: any[] = [];
 
-    // Buscar contas Master (copy_signals com heartbeat recente)
+    // Buscar contas Master (copy_signals)
     const [masterAccounts]: any = await connection.execute(
-      `SELECT master_email, account_number, broker, last_heartbeat, 
-              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+      `SELECT master_email, account_number, broker, last_heartbeat, is_connected, failed_attempts
        FROM copy_signals 
        WHERE master_email = ?
-       AND last_heartbeat IS NOT NULL
-       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
        ORDER BY last_heartbeat DESC`,
       [email]
     );
 
     for (const master of masterAccounts) {
-      const isOnline = master.seconds_since_heartbeat < 60;
       accounts.push({
         accountId: master.account_number,
         accountName: `Master ${master.account_number}`,
         type: 'master',
-        status: isOnline ? 'online' : 'offline',
+        status: master.is_connected ? 'online' : 'offline',
         lastHeartbeat: master.last_heartbeat,
         balance: 0,
         equity: 0
       });
     }
 
-    // Buscar contas Slave (slave_heartbeats com heartbeat recente)
+    // Buscar contas Slave (slave_heartbeats)
     const [slaveAccounts]: any = await connection.execute(
-      `SELECT account_number, master_account_id, broker, balance, equity, last_heartbeat,
-              TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) as seconds_since_heartbeat
+      `SELECT account_number, master_account_id, broker, balance, equity, last_heartbeat, is_connected, failed_attempts
        FROM slave_heartbeats 
        WHERE slave_email = ?
-       AND last_heartbeat IS NOT NULL
-       AND last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
        ORDER BY last_heartbeat DESC`,
       [email]
     );
 
     for (const slave of slaveAccounts) {
-      const isOnline = slave.seconds_since_heartbeat < 60;
       accounts.push({
         accountId: slave.account_number,
         accountName: `Slave ${slave.account_number}`,
         type: 'slave',
-        status: isOnline ? 'online' : 'offline',
+        status: slave.is_connected ? 'online' : 'offline',
         lastHeartbeat: slave.last_heartbeat,
         balance: parseFloat(slave.balance) || 0,
         equity: parseFloat(slave.equity) || 0
@@ -544,14 +536,11 @@ router.get("/connected-accounts", async (req, res) => {
 
     // Buscar contas normais do usuário (trading_accounts)
     const [regularAccounts]: any = await connection.execute(
-      `SELECT ta.account_number, ta.broker, ta.balance, ta.equity, ta.last_heartbeat,
-              TIMESTAMPDIFF(SECOND, ta.last_heartbeat, NOW()) as seconds_since_heartbeat,
+      `SELECT ta.account_number, ta.broker, ta.balance, ta.equity, ta.last_heartbeat, ta.is_connected, ta.failed_attempts,
               u.email
        FROM trading_accounts ta
        JOIN users u ON ta.user_id = u.id
        WHERE u.email = ?
-       AND ta.last_heartbeat IS NOT NULL
-       AND ta.last_heartbeat >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
        ORDER BY ta.last_heartbeat DESC`,
       [email]
     );
@@ -560,12 +549,11 @@ router.get("/connected-accounts", async (req, res) => {
       // Não adicionar se já está na lista como master ou slave
       const alreadyAdded = accounts.find(a => a.accountId === acc.account_number);
       if (!alreadyAdded) {
-        const isOnline = acc.seconds_since_heartbeat < 60;
         accounts.push({
           accountId: acc.account_number,
           accountName: `Conta ${acc.account_number}`,
           type: 'regular',
-          status: isOnline ? 'online' : 'offline',
+          status: acc.is_connected ? 'online' : 'offline',
           lastHeartbeat: acc.last_heartbeat,
           balance: parseFloat(acc.balance) || 0,
           equity: parseFloat(acc.equity) || 0
