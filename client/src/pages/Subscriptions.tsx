@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Zap, Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface Plan {
   id: number;
@@ -133,7 +134,7 @@ export default function Subscriptions() {
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <CardDescription>
                     <span className="text-3xl font-bold text-foreground">
-                      R$ {plan.price.toFixed(2)}
+                      R$ {formatPrice(plan.price)}
                     </span>
                     <span className="text-muted-foreground">/mês</span>
                   </CardDescription>
