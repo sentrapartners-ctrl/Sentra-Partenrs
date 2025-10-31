@@ -78,7 +78,10 @@ void OnTick() {
 // VERIFICAR SINAIS DO MASTER
 //====================================================
 void CheckMasterSignals() {
-    string url = SlaveServer + "/slave-signals?user_id=" + UserEmail + "&master_account=" + MasterAccountNumber;
+    string url = SlaveServer + "/slave-signals?master_account_id=" + MasterAccountNumber;
+    if(UserEmail != "") {
+        url += "&slave_email=" + UserEmail;
+    }
     
     char post[];
     char result[];
