@@ -105,11 +105,12 @@ export default function SignalProviderSettings() {
       const response = await fetch(`/api/mt/copy/connected-accounts?email=${encodeURIComponent(user?.email || '')}`);
       const data = await response.json();
       if (data.success) {
-        const masters = data.accounts.filter((acc: any) => acc.type === 'master');
-        setMasterAccounts(masters);
+        // Aceitar contas master e regular (excluir apenas slave)
+        const availableAccounts = data.accounts.filter((acc: any) => acc.type !== 'slave');
+        setMasterAccounts(availableAccounts);
       }
     } catch (error) {
-      console.error('Erro ao buscar contas Master:', error);
+      console.error('Erro ao buscar contas disponíveis:', error);
     }
   };
 

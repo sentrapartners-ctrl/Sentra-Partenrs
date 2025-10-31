@@ -183,3 +183,170 @@ router.post("/record", async (req, res) => {
 });
 
 export default router;
+
+// GET /api/admin/provider-earnings - Admin: Obter ganhos de todos os provedores
+router.get("/admin/provider-earnings", async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Não autenticado" });
+    }
+
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: "Database not available" });
+    }
+
+    // Verificar se é admin ou manager
+    const userCheck = await db.execute(
+      sql`SELECT role FROM users WHERE id = ${userId}`
+    );
+    
+    const userRole = (userCheck.rows[0] as any)?.role;
+    if (userRole !== 'admin' && userRole !== 'manager') {
+      return res.status(403).json({ success: false, error: "Acesso negado" });
+    }
+
+    // Buscar earnings de todos os provedores
+    const providersData = await db.execute(sql`
+      SELECT 
+        sp.id as provider_id,
+        sp.provider_name,
+        sp.master_account_number,
+        COALESCE(SUM(pc.provider_earnings), 0) as total_earnings,
+        COALESCE(SUM(CASE WHEN pc.status = 'pending' THEN pc.provider_earnings ELSE 0 END), 0) as pending_earnings,
+        COALESCE(SUM(CASE WHEN pc.status = 'paid' THEN pc.provider_earnings ELSE 0 END), 0) as paid_earnings,
+        COUNT(DISTINCT ss.subscriber_user_id) as active_subscribers,
+        pw.wallet_address,
+        pw.network as wallet_network
+      FROM signal_providers sp
+      LEFT JOIN provider_commissions pc ON sp.id = pc.provider_id
+      LEFT JOIN signal_subscriptions ss ON sp.id = ss.provider_id AND ss.status = 'active'
+      LEFT JOIN provider_wallets pw ON sp.user_id = pw.user_id
+      GROUP BY sp.id, sp.provider_name, sp.master_account_number, pw.wallet_address, pw.network
+      HAVING COALESCE(SUM(pc.provider_earnings), 0) > 0
+      ORDER BY pending_earnings DESC
+    `);
+
+    // Estatísticas gerais
+    const statsData = await db.execute(sql`
+      SELECT 
+        COALESCE(SUM(CASE WHEN status = 'pending' THEN provider_earnings ELSE 0 END), 0) as total_pending,
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN provider_earnings ELSE 0 END), 0) as total_paid,
+        COUNT(DISTINCT provider_id) as total_providers,
+        COUNT(DISTINCT subscriber_id) as total_subscribers
+      FROM provider_commissions
+    `);
+
+    const stats = statsData.rows[0] as any;
+
+    res.json({
+      success: true,
+      providers: providersData.rows,
+      stats: {
+        totalPending: parseFloat(stats.total_pending || 0),
+        totalPaid: parseFloat(stats.total_paid || 0),
+        totalProviders: parseInt(stats.total_providers || 0),
+        totalSubscribers: parseInt(stats.total_subscribers || 0)
+      }
+    });
+
+  } catch (error: any) {
+    console.error("[Admin Provider Earnings] Erro:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/admin/provider-commissions - Admin: Obter todas as comissões
+router.get("/admin/provider-commissions", async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Não autenticado" });
+    }
+
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: "Database not available" });
+    }
+
+    // Verificar se é admin ou manager
+    const userCheck = await db.execute(
+      sql`SELECT role FROM users WHERE id = ${userId}`
+    );
+    
+    const userRole = (userCheck.rows[0] as any)?.role;
+    if (userRole !== 'admin' && userRole !== 'manager') {
+      return res.status(403).json({ success: false, error: "Acesso negado" });
+    }
+
+    // Buscar todas as comissões
+    const commissionsData = await db.execute(sql`
+      SELECT 
+        pc.*,
+        sp.provider_name,
+        u.username as subscriber_username
+      FROM provider_commissions pc
+      JOIN signal_providers sp ON pc.provider_id = sp.id
+      JOIN users u ON pc.subscriber_id = u.id
+      ORDER BY pc.created_at DESC
+      LIMIT 100
+    `);
+
+    res.json({
+      success: true,
+      commissions: commissionsData.rows
+    });
+
+  } catch (error: any) {
+    console.error("[Admin Provider Commissions] Erro:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/provider-commissions/:id/mark-paid - Admin: Marcar comissão como paga
+router.post("/admin/provider-commissions/:id/mark-paid", async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    const { id } = req.params;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Não autenticado" });
+    }
+
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: "Database not available" });
+    }
+
+    // Verificar se é admin ou manager
+    const userCheck = await db.execute(
+      sql`SELECT role FROM users WHERE id = ${userId}`
+    );
+    
+    const userRole = (userCheck.rows[0] as any)?.role;
+    if (userRole !== 'admin' && userRole !== 'manager') {
+      return res.status(403).json({ success: false, error: "Acesso negado" });
+    }
+
+    // Atualizar status da comissão
+    await db.execute(sql`
+      UPDATE provider_commissions 
+      SET status = 'paid', paid_at = NOW()
+      WHERE id = ${id}
+    `);
+
+    res.json({
+      success: true,
+      message: "Comissão marcada como paga"
+    });
+
+  } catch (error: any) {
+    console.error("[Admin Mark Paid] Erro:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+export default router;

@@ -35,7 +35,7 @@ import { EditCryptoAddressDialog } from "@/components/EditCryptoAddressDialog";
 import { AccountReportDialog } from "@/components/AccountReportDialog";
 import { TransferClientDialog } from "@/components/TransferClientDialog";
 import { formatPrice } from "@/lib/formatPrice";
-import ProviderEarnings from "@/components/ProviderEarnings";
+import AdminProviderEarnings from "@/components/AdminProviderEarnings";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -1582,5 +1582,5 @@ function LandingPageTab() {
 
 // Tab: Comissões de Provedores
 function ProviderEarningsTab() {
-  return <ProviderEarnings />;
+  return <AdminProviderEarnings />;
 }
