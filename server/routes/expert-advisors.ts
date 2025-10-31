@@ -1,6 +1,5 @@
 import express from 'express';
 import { getRawConnection } from '../db';
-import { ensureProductTables } from '../lib/ensure-tables';
 
 const router = express.Router();
 
@@ -11,9 +10,6 @@ router.get("/", async (req, res) => {
     if (!connection) {
       throw new Error('Conexão com banco não disponível');
     }
-
-    // Garantir que tabelas existam
-    await ensureProductTables(connection);
 
     const [eas]: any = await connection.execute(
       `SELECT * FROM expert_advisors ORDER BY name ASC`
@@ -55,9 +51,6 @@ router.post("/", async (req, res) => {
     if (!connection) {
       throw new Error('Conexão com banco não disponível');
     }
-
-    // Garantir que tabelas existam
-    await ensureProductTables(connection);
 
     const [result]: any = await connection.execute(
       `INSERT INTO expert_advisors 
