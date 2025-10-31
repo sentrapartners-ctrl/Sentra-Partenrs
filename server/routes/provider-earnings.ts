@@ -182,8 +182,6 @@ router.post("/record", async (req, res) => {
   }
 });
 
-export default router;
-
 // GET /api/admin/provider-earnings - Admin: Obter ganhos de todos os provedores
 router.get("/admin/provider-earnings", async (req, res) => {
   try {
