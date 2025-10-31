@@ -86,6 +86,32 @@ export const adminRouter = router({
       return { success: true };
     }),
 
+  updateManualPermissions: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      permissions: z.object({
+        copy_trading: z.boolean(),
+        signal_provider: z.boolean(),
+        vps: z.boolean(),
+        expert_advisors: z.boolean(),
+        notes: z.string().optional(),
+      }),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const database = await getDb();
+      const permissionsData = {
+        ...input.permissions,
+        granted_by: ctx.user.email,
+        granted_at: new Date().toISOString(),
+      };
+      
+      await database.update(users)
+        .set({ manual_permissions: JSON.stringify(permissionsData) })
+        .where(eq(users.id, input.userId));
+      
+      return { success: true };
+    }),
+
   deleteUser: adminProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ input }) => {

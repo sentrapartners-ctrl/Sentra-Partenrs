@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getDb } from '../db';
-import { userSubscriptions, subscriptionPlans } from '../../drizzle/schema';
+import { userSubscriptions, subscriptionPlans, users } from '../../drizzle/schema';
 import { eq, and, gt } from 'drizzle-orm';
 
 export interface SubscriptionInfo {
@@ -44,6 +44,25 @@ export async function checkSubscription(
 
     const db = getDb();
 
+    // Buscar usuário para verificar permissões manuais
+    const [userRecord] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    // Verificar permissões manuais
+    let manualPermissions: any = null;
+    if (userRecord?.manual_permissions) {
+      try {
+        manualPermissions = typeof userRecord.manual_permissions === 'string'
+          ? JSON.parse(userRecord.manual_permissions)
+          : userRecord.manual_permissions;
+      } catch (e) {
+        console.error('[Subscription Check] Erro ao parsear permissões manuais:', e);
+      }
+    }
+
     // Buscar assinatura ativa do usuário
     const [activeSubscription] = await db
       .select({
@@ -65,16 +84,30 @@ export async function checkSubscription(
       .limit(1);
 
     if (!activeSubscription) {
-      req.subscription = {
-        hasActiveSubscription: false,
-        limits: {
-          maxAccounts: 0,
-          copyTradingEnabled: false,
-          advancedAnalyticsEnabled: false,
-          freeVpsEnabled: false,
-          prioritySupport: false,
-        },
-      };
+      // Se não tem assinatura, verificar permissões manuais
+      if (manualPermissions) {
+        req.subscription = {
+          hasActiveSubscription: true, // Consideramos como "ativo" se tem permissões manuais
+          limits: {
+            maxAccounts: -1, // Ilimitado para permissões manuais
+            copyTradingEnabled: manualPermissions.copy_trading || false,
+            advancedAnalyticsEnabled: true, // Sempre habilitado para permissões manuais
+            freeVpsEnabled: manualPermissions.vps || false,
+            prioritySupport: true, // Sempre habilitado para permissões manuais
+          },
+        };
+      } else {
+        req.subscription = {
+          hasActiveSubscription: false,
+          limits: {
+            maxAccounts: 0,
+            copyTradingEnabled: false,
+            advancedAnalyticsEnabled: false,
+            freeVpsEnabled: false,
+            prioritySupport: false,
+          },
+        };
+      }
     } else {
       req.subscription = {
         hasActiveSubscription: true,
@@ -159,6 +192,25 @@ export async function checkAccountLimit(userId: number): Promise<{
   try {
     const db = getDb();
 
+    // Buscar usuário para verificar permissões manuais
+    const [userRecord] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    // Verificar permissões manuais
+    let manualPermissions: any = null;
+    if (userRecord?.manual_permissions) {
+      try {
+        manualPermissions = typeof userRecord.manual_permissions === 'string'
+          ? JSON.parse(userRecord.manual_permissions)
+          : userRecord.manual_permissions;
+      } catch (e) {
+        console.error('[Check Account Limit] Erro ao parsear permissões manuais:', e);
+      }
+    }
+
     // Buscar assinatura ativa
     const [activeSubscription] = await db
       .select({
@@ -179,6 +231,21 @@ export async function checkAccountLimit(userId: number): Promise<{
       .limit(1);
 
     if (!activeSubscription) {
+      // Se tem permissões manuais, permitir contas ilimitadas
+      if (manualPermissions) {
+        const { tradingAccounts } = await import('../../drizzle/schema');
+        const accounts = await db
+          .select()
+          .from(tradingAccounts)
+          .where(eq(tradingAccounts.userId, userId));
+        
+        return {
+          canAddAccount: true,
+          currentCount: accounts.length,
+          maxAccounts: -1, // Ilimitado
+        };
+      }
+      
       return {
         canAddAccount: false,
         currentCount: 0,

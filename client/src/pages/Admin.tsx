@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye, ArrowRightLeft, Globe } from "lucide-react";
+import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye, ArrowRightLeft, Globe, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { EditPlanDialog } from "@/components/EditPlanDialog";
 import { EditVPSDialog } from "@/components/EditVPSDialog";
@@ -36,6 +36,7 @@ import { AccountReportDialog } from "@/components/AccountReportDialog";
 import { TransferClientDialog } from "@/components/TransferClientDialog";
 import { formatPrice } from "@/lib/formatPrice";
 import AdminProviderEarnings from "@/components/AdminProviderEarnings";
+import { ManualPermissionsDialog } from "@/components/ManualPermissionsDialog";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -166,6 +167,7 @@ function UsersTab() {
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" });
   const [deletingUser, setDeletingUser] = useState<any>(null);
   const [transferringClient, setTransferringClient] = useState<any>(null);
+  const [permissionsUser, setPermissionsUser] = useState<any>(null);
 
   const handleEdit = (user: any) => {
     setEditingUser(user);
@@ -248,6 +250,14 @@ function UsersTab() {
                       <ArrowRightLeft className="h-4 w-4" />
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant={user.manual_permissions ? "default" : "outline"}
+                    onClick={() => setPermissionsUser(user)}
+                    title="Gerenciar permissões manuais"
+                  >
+                    <Shield className="h-4 w-4" />
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -370,6 +380,14 @@ function UsersTab() {
         client={transferringClient}
         open={!!transferringClient}
         onOpenChange={(open) => !open && setTransferringClient(null)}
+        onSuccess={refetch}
+      />
+
+      {/* Dialog: Permissões Manuais */}
+      <ManualPermissionsDialog
+        user={permissionsUser}
+        open={!!permissionsUser}
+        onOpenChange={(open) => !open && setPermissionsUser(null)}
         onSuccess={refetch}
       />
 
