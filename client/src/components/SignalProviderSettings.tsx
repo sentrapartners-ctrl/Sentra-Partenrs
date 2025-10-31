@@ -87,13 +87,11 @@ export default function SignalProviderSettings() {
 
   const fetchProviders = async () => {
     try {
-      // Buscar provedores do usuário
-      const response = await fetch('/api/signal-providers');
+      // Buscar provedores do usuário com filtro de user_id
+      const response = await fetch(`/api/signal-providers?user_id=${user?.id}`);
       const data = await response.json();
       if (data.success) {
-        // Filtrar apenas provedores do usuário atual
-        const userProviders = data.providers.filter((p: Provider) => p.user_id === user?.id);
-        setProviders(userProviders);
+        setProviders(data.providers);
       }
     } catch (error) {
       console.error('Erro ao buscar provedores:', error);

@@ -16,6 +16,8 @@ router.get("/", async (req, res) => {
       throw new Error('Conexão com banco não disponível');
     }
 
+    const params: any[] = [];
+    
     let query = `
       SELECT 
         sp.id,
@@ -25,6 +27,8 @@ router.get("/", async (req, res) => {
         sp.description,
         sp.subscription_fee,
         sp.currency,
+        sp.is_public,
+        sp.is_active,
         sp.created_at,
         ps.total_trades,
         ps.winning_trades,
@@ -42,10 +46,18 @@ router.get("/", async (req, res) => {
       FROM signal_providers sp
       LEFT JOIN provider_statistics ps ON sp.id = ps.provider_id
       LEFT JOIN provider_reviews pr ON sp.id = pr.provider_id
-      WHERE sp.is_public = true AND sp.is_active = true
+      WHERE 1=1
     `;
-
-    const params: any[] = [];
+    
+    // Se não estiver filtrando por usuário específico, mostrar apenas públicos e ativos
+    // Isso permite que o frontend busque os próprios provedores sem filtro
+    const userId = req.query.user_id;
+    if (!userId) {
+      query += ` AND sp.is_public = true AND sp.is_active = true`;
+    } else {
+      query += ` AND sp.user_id = ?`;
+      params.push(userId);
+    }
 
     if (search) {
       query += ` AND (sp.provider_name LIKE ? OR sp.description LIKE ?)`;
