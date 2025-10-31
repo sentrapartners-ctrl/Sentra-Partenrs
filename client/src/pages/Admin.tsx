@@ -725,12 +725,28 @@ function SystemTab() {
 
 // Tab: Gerenciar Planos de Assinatura
 function SubscriptionsTab() {
-  const [plans, setPlans] = useState([
-    { id: 1, name: "Básico", slug: "basico", price: 49, features: ["Dashboard", "2 contas"], active: true },
-    { id: 2, name: "Pro", slug: "pro", price: 99, features: ["Copy Trading", "5 contas"], active: true },
-    { id: 3, name: "Premium", slug: "premium", price: 199, features: ["VPS Grátis", "Ilimitado"], active: true },
-  ]);
+  const [plans, setPlans] = useState<any[]>([]);
   const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const loadPlans = async () => {
+    try {
+      const response = await fetch('/api/subscription-plans');
+      const data = await response.json();
+      if (data.success) {
+        setPlans(data.plans);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar planos:', error);
+      toast.error('Erro ao carregar planos');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -805,8 +821,30 @@ function SubscriptionsTab() {
         plan={editingPlan}
         open={!!editingPlan}
         onOpenChange={(open) => !open && setEditingPlan(null)}
-        onSave={(updatedPlan) => {
-          setPlans(plans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p)));
+        onSave={async (updatedPlan) => {
+          try {
+            const isNew = !updatedPlan.id || updatedPlan.id === 0;
+            const url = isNew ? '/api/subscription-plans' : `/api/subscription-plans/${updatedPlan.id}`;
+            const method = isNew ? 'POST' : 'PUT';
+            
+            const response = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedPlan)
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+              toast.success(isNew ? 'Plano criado com sucesso!' : 'Plano atualizado com sucesso!');
+              loadPlans();
+              setEditingPlan(null);
+            } else {
+              toast.error(data.error || 'Erro ao salvar plano');
+            }
+          } catch (error) {
+            console.error('Erro ao salvar plano:', error);
+            toast.error('Erro ao salvar plano');
+          }
         }}
       />
     </div>
@@ -815,13 +853,28 @@ function SubscriptionsTab() {
 
 // Tab: Gerenciar Produtos VPS
 function VPSTab() {
-  const [vpsProducts, setVpsProducts] = useState([
-    { id: 1, name: "VPS Starter", price: 29, ram: "1GB", cpu: "1 vCore", active: true },
-    { id: 2, name: "VPS Professional", price: 49, ram: "2GB", cpu: "2 vCores", active: true },
-    { id: 3, name: "VPS Premium", price: 0, ram: "2GB", cpu: "2 vCores", active: true, free: true },
-    { id: 4, name: "VPS Enterprise", price: 99, ram: "4GB", cpu: "4 vCores", active: true },
-  ]);
+  const [vpsProducts, setVpsProducts] = useState<any[]>([]);
   const [editingVPS, setEditingVPS] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadVPSProducts();
+  }, []);
+
+  const loadVPSProducts = async () => {
+    try {
+      const response = await fetch('/api/vps-products');
+      const data = await response.json();
+      if (data.success) {
+        setVpsProducts(data.products);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar produtos VPS:', error);
+      toast.error('Erro ao carregar produtos VPS');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -904,8 +957,30 @@ function VPSTab() {
         vps={editingVPS}
         open={!!editingVPS}
         onOpenChange={(open) => !open && setEditingVPS(null)}
-        onSave={(updatedVPS) => {
-          setVpsProducts(vpsProducts.map((v) => (v.id === updatedVPS.id ? updatedVPS : v)));
+        onSave={async (updatedVPS) => {
+          try {
+            const isNew = !updatedVPS.id || updatedVPS.id === 0;
+            const url = isNew ? '/api/vps-products' : `/api/vps-products/${updatedVPS.id}`;
+            const method = isNew ? 'POST' : 'PUT';
+            
+            const response = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedVPS)
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+              toast.success(isNew ? 'Produto VPS criado com sucesso!' : 'Produto VPS atualizado com sucesso!');
+              loadVPSProducts();
+              setEditingVPS(null);
+            } else {
+              toast.error(data.error || 'Erro ao salvar produto VPS');
+            }
+          } catch (error) {
+            console.error('Erro ao salvar produto VPS:', error);
+            toast.error('Erro ao salvar produto VPS');
+          }
         }}
       />
     </div>
@@ -914,14 +989,28 @@ function VPSTab() {
 
 // Tab: Gerenciar Expert Advisors
 function EAsTab() {
-  const [eas, setEas] = useState([
-    { id: 1, name: "Scalper Pro EA", price: 299, platform: "MT4/MT5", downloads: 0, active: true },
-    { id: 2, name: "Trend Master EA", price: 399, platform: "MT4/MT5", downloads: 0, active: true },
-    { id: 3, name: "Grid Trading EA", price: 249, platform: "MT5", downloads: 0, active: true },
-    { id: 4, name: "News Trader EA", price: 349, platform: "MT4", downloads: 0, active: true },
-    { id: 5, name: "AI Predictor EA", price: 799, platform: "MT4/MT5", downloads: 0, active: true },
-  ]);
+  const [eas, setEas] = useState<any[]>([]);
   const [editingEA, setEditingEA] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadEAs();
+  }, []);
+
+  const loadEAs = async () => {
+    try {
+      const response = await fetch('/api/expert-advisors');
+      const data = await response.json();
+      if (data.success) {
+        setEas(data.eas);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar EAs:', error);
+      toast.error('Erro ao carregar EAs');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1002,8 +1091,30 @@ function EAsTab() {
         ea={editingEA}
         open={!!editingEA}
         onOpenChange={(open) => !open && setEditingEA(null)}
-        onSave={(updatedEA) => {
-          setEas(eas.map((e) => (e.id === updatedEA.id ? updatedEA : e)));
+        onSave={async (updatedEA) => {
+          try {
+            const isNew = !updatedEA.id || updatedEA.id === 0;
+            const url = isNew ? '/api/expert-advisors' : `/api/expert-advisors/${updatedEA.id}`;
+            const method = isNew ? 'POST' : 'PUT';
+            
+            const response = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedEA)
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+              toast.success(isNew ? 'EA criado com sucesso!' : 'EA atualizado com sucesso!');
+              loadEAs();
+              setEditingEA(null);
+            } else {
+              toast.error(data.error || 'Erro ao salvar EA');
+            }
+          } catch (error) {
+            console.error('Erro ao salvar EA:', error);
+            toast.error('Erro ao salvar EA');
+          }
         }}
       />
     </div>

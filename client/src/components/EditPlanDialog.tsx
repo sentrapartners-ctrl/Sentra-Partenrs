@@ -34,7 +34,7 @@ export function EditPlanDialog({ plan, open, onOpenChange, onSave }: EditPlanDia
   const [formData, setFormData] = useState<Plan>(
     plan || { id: 0, name: "", slug: "", price: 0, features: [], active: true }
   );
-  const [featuresText, setFeaturesText] = useState(plan?.features.join("\n") || "");
+  const [featuresText, setFeaturesText] = useState(plan?.features?.join("\n") || "");
 
   const handleSave = () => {
     if (!formData.name || !formData.slug || formData.price <= 0) {

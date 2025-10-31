@@ -77,6 +77,14 @@ export async function getDb() {
           }).catch(err => {
             console.error('[Database] Failed to import migration:', err);
           });
+          
+          import('./migrations/create-admin-products-tables').then(({ createAdminProductsTables }) => {
+            createAdminProductsTables().catch(err => {
+              console.error('[Database] Admin products tables migration failed:', err);
+            });
+          }).catch(err => {
+            console.error('[Database] Failed to import admin products migration:', err);
+          });
         }
       } catch (error) {
         console.warn("[Database] Failed to connect:", error);

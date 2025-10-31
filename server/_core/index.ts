@@ -22,6 +22,9 @@ import signalProvidersRouter from "../routes/signal-providers";
 import migrationsRouter from "../routes/migrations";
 import websocketTestRouter from "../routes/websocket-test";
 import vpsManagementRouter from "../routes/vps-management";
+import subscriptionPlansRouter from "../routes/subscription-plans";
+import vpsProductsRouter from "../routes/vps-products";
+import expertAdvisorsRouter from "../routes/expert-advisors";
 import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
 
 // import mt4ConnectorRouter from "../routes/mt4-connector";
@@ -88,6 +91,9 @@ async function startServer() {
   app.use("/api/migrations", migrationsRouter);
   app.use("/api/websocket", websocketTestRouter);
   app.use("/api/vps", vpsManagementRouter);
+  app.use("/api/subscription-plans", subscriptionPlansRouter);
+  app.use("/api/vps-products", vpsProductsRouter);
+  app.use("/api/expert-advisors", expertAdvisorsRouter);
   // Wallet authentication endpoints
 
   // tRPC API
