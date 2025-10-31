@@ -61,7 +61,19 @@ router.post("/", async (req, res) => {
       `INSERT INTO vps_products 
        (name, price, ram, cpu, storage, bandwidth, max_mt4_instances, max_mt5_instances, is_free, is_recommended, active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, price, ram, cpu, storage, bandwidth, max_mt4_instances, max_mt5_instances, is_free, is_recommended, active]
+      [
+        name, 
+        price, 
+        ram || null, 
+        cpu || null, 
+        storage || null, 
+        bandwidth || null, 
+        max_mt4_instances || null, 
+        max_mt5_instances || null, 
+        is_free ? 1 : 0, 
+        is_recommended ? 1 : 0, 
+        active ? 1 : 0
+      ]
     );
 
     res.json({

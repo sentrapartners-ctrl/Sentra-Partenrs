@@ -56,7 +56,14 @@ router.post("/", async (req, res) => {
       `INSERT INTO expert_advisors 
        (name, description, price, platform, file_url, active)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, description, price, platform, file_url, active]
+      [
+        name, 
+        description || null, 
+        price, 
+        platform, 
+        file_url || null, 
+        active ? 1 : 0
+      ]
     );
 
     res.json({
