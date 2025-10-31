@@ -28,7 +28,9 @@ router.post("/master-signal", async (req, res) => {
       take_profit,
       open_time,
       comment,
-      timestamp
+      timestamp,
+      profit,
+      close_price
     } = req.body;
     
     const email = user_email || master_email;
@@ -70,7 +72,7 @@ router.post("/master-signal", async (req, res) => {
       }, user.id);
     }
     else if (action === "close") {
-      await processCloseEvent(connection, email, account_number, ticket, user.id);
+      await processCloseEvent(connection, email, account_number, ticket, user.id, profit, close_price);
     }
     else if (action === "modify") {
       await processModifyEvent(connection, email, account_number, ticket, stop_loss, take_profit, user.id);
@@ -133,15 +135,20 @@ async function processOpenEvent(connection: any, email: string, accountNumber: s
 //====================================================
 // Processar Evento de Fechamento
 //====================================================
-async function processCloseEvent(connection: any, email: string, accountNumber: string, ticket: string, userId: number) {
-  // Atualizar status do trade
+async function processCloseEvent(connection: any, email: string, accountNumber: string, ticket: string, userId: number, profit?: number, closePrice?: number) {
+  // Atualizar status do trade com profit e close_price
   await connection.execute(
-    `UPDATE copy_trades SET status = 'closed', closed_at = NOW(), updated_at = NOW()
+    `UPDATE copy_trades 
+     SET status = 'closed', 
+         closed_at = NOW(), 
+         profit = ?, 
+         close_price = ?, 
+         updated_at = NOW()
      WHERE master_email = ? AND account_number = ? AND ticket = ?`,
-    [email, accountNumber, ticket]
+    [profit || 0, closePrice || 0, email, accountNumber, ticket]
   );
   
-  console.log(`[Copy Trading] ✅ CLOSE: ticket ${ticket}`);
+  console.log(`[Copy Trading] ✅ CLOSE: ticket ${ticket}, profit ${profit || 0}, close_price ${closePrice || 0}`);
   
   // Atualizar estatísticas do provedor (se houver)
   updateProviderStatistics(accountNumber).catch(err => 

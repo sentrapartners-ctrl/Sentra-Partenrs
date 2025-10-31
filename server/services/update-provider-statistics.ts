@@ -25,12 +25,15 @@ export async function updateProviderStatistics(masterAccountNumber: string) {
 
     const providerId = providers[0].id;
 
-    // Calcular estatísticas baseadas nos trades
-    // Nota: Por enquanto apenas contamos trades. Quando o EA enviar profit, podemos calcular win_rate real
+    // Calcular estatísticas baseadas nos trades com profit real
     const [stats]: any = await connection.execute(
       `SELECT 
         COUNT(*) as total_trades,
         COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed_trades,
+        COUNT(CASE WHEN status = 'closed' AND profit > 0 THEN 1 END) as winning_trades,
+        COUNT(CASE WHEN status = 'closed' AND profit <= 0 THEN 1 END) as losing_trades,
+        COALESCE(SUM(CASE WHEN status = 'closed' THEN profit ELSE 0 END), 0) as total_profit,
+        COALESCE(AVG(CASE WHEN status = 'closed' THEN profit END), 0) as avg_profit,
         MAX(closed_at) as last_trade_at
       FROM copy_trades
       WHERE account_number = ?`,
@@ -44,15 +47,15 @@ export async function updateProviderStatistics(masterAccountNumber: string) {
     const {
       total_trades = 0,
       closed_trades = 0,
+      winning_trades = 0,
+      losing_trades = 0,
+      total_profit = 0,
+      avg_profit = 0,
       last_trade_at = null
     } = stats[0];
 
-    // Por enquanto, win_rate será 0 até implementarmos o campo profit na tabela
-    const win_rate = 0;
-    const winning_trades = 0;
-    const losing_trades = 0;
-    const total_profit = 0;
-    const avg_profit = 0;
+    // Calcular win_rate baseado em trades com profit > 0
+    const win_rate = closed_trades > 0 ? (winning_trades / closed_trades) * 100 : 0;
 
     // Buscar total de assinantes
     const [subscriptions]: any = await connection.execute(

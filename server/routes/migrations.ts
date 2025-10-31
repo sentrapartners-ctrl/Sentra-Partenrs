@@ -129,4 +129,73 @@ router.get('/status', async (req, res) => {
   }
 });
 
+//====================================================
+// POST /api/migrations/007
+// Executa migration 007 (add profit field)
+//====================================================
+router.post('/007', async (req, res) => {
+  try {
+    console.log('[Migration 007] Iniciando...');
+    
+    const sqlPath = join(process.cwd(), 'server', 'migrations', '007_add_profit_to_copy_trades.sql');
+    const sql = readFileSync(sqlPath, 'utf-8');
+    
+    const statements = sql
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && !s.startsWith('--'));
+    
+    console.log(`[Migration 007] Encontrados ${statements.length} statements`);
+    
+    const connection = await getRawConnection();
+    const results = [];
+    
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i];
+      try {
+        console.log(`[Migration 007] Executando statement ${i + 1}...`);
+        await connection.execute(statement);
+        results.push({ index: i + 1, status: 'success' });
+      } catch (error: any) {
+        if (
+          error.code === 'ER_DUP_FIELDNAME' ||
+          error.code === 'ER_DUP_KEYNAME' ||
+          error.message.includes('Duplicate column') ||
+          error.message.includes('Duplicate key')
+        ) {
+          console.log(`[Migration 007] Statement ${i + 1} ignorado (já existe)`);
+          results.push({ index: i + 1, status: 'skipped' });
+        } else {
+          console.error(`[Migration 007] Erro no statement ${i + 1}:`, error);
+          results.push({ index: i + 1, status: 'error', error: error.message });
+        }
+      }
+    }
+    
+    const successCount = results.filter(r => r.status === 'success').length;
+    const skippedCount = results.filter(r => r.status === 'skipped').length;
+    
+    console.log('[Migration 007] Concluída!');
+    console.log(`[Migration 007] Sucesso: ${successCount}, Ignorados: ${skippedCount}`);
+    
+    res.json({
+      success: true,
+      message: 'Migration 007 executada',
+      stats: {
+        total: statements.length,
+        success: successCount,
+        skipped: skippedCount
+      },
+      results
+    });
+    
+  } catch (error: any) {
+    console.error('[Migration 007] Erro:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 export default router;

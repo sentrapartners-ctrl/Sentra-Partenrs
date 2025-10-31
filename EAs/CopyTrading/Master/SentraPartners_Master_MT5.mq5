@@ -168,13 +168,37 @@ void SendOpenEvent(ulong ticket) {
 // ENVIAR EVENTO DE FECHAMENTO
 //====================================================
 void SendCloseEvent(ulong ticket) {
+    // Buscar deal no histórico para obter profit e preço de fechamento
+    double profit = 0.0;
+    double close_price = 0.0;
+    
+    // Selecionar histórico de deals
+    if(HistorySelectByPosition(ticket)) {
+        int total = HistoryDealsTotal();
+        for(int i = total - 1; i >= 0; i--) {
+            ulong deal_ticket = HistoryDealGetTicket(i);
+            if(deal_ticket > 0) {
+                // Verificar se é deal de saída (fechamento)
+                if(HistoryDealGetInteger(deal_ticket, DEAL_ENTRY) == DEAL_ENTRY_OUT) {
+                    profit = HistoryDealGetDouble(deal_ticket, DEAL_PROFIT);
+                    close_price = HistoryDealGetDouble(deal_ticket, DEAL_PRICE);
+                    break;
+                }
+            }
+        }
+    }
+    
     string data = "{";
     data += "\"action\":\"close\",";
     data += "\"master_email\":\"" + UserEmail + "\",";
     data += "\"account_number\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
     data += "\"timestamp\":" + IntegerToString(TimeCurrent()) + ",";
-    data += "\"ticket\":" + IntegerToString(ticket);
+    data += "\"ticket\":" + IntegerToString(ticket) + ",";
+    data += "\"profit\":" + DoubleToString(profit, 2) + ",";
+    data += "\"close_price\":" + DoubleToString(close_price, 5);
     data += "}";
+    
+    if(EnableLogs) Print("✅ CLOSE: ticket=", ticket, " profit=", profit, " close_price=", close_price);
     
     SendToServer(data);
 }
