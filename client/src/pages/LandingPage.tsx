@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, Server, Bot, TrendingUp, Shield, Zap, BarChart3, Users, Clock, Award, ArrowRight, Star } from "lucide-react";
 import { toast } from "sonner";
+import { useLandingPageContent } from "@/hooks/useLandingPageContent";
 
 export default function LandingPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const { content, loading: contentLoading } = useLandingPageContent();
 
   const createPayment = async (planName: string, price: number) => {
     setIsLoading(true);
@@ -179,17 +181,12 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
             <div className="animate-slideInLeft">
               <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-                Tudo que você sempre{" "}
-                <span className="gradient-text">quis saber</span>{" "}
-                sobre seu trading...
+                {content.hero?.title}{" "}
+                <span className="gradient-text">{content.hero?.highlight}</span>
               </h1>
-              
-              <p className="text-xl text-gray-600 mb-8">
-                ...mas suas planilhas nunca te contaram.
-              </p>
 
               <p className="text-lg text-gray-700 mb-8">
-                A Sentra Partners mostra as métricas que importam e os comportamentos que levam ao lucro com o poder do copy trading, expert advisors e análise avançada.
+                {content.hero?.subtitle}
               </p>
 
               <Button 

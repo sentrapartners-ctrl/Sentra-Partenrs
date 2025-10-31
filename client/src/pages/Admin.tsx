@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye, ArrowRightLeft } from "lucide-react";
+import { Users, Database, Activity, Settings, Edit, Trash2, Power, PowerOff, CreditCard, Server, Bot, DollarSign, Eye, ArrowRightLeft, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { EditPlanDialog } from "@/components/EditPlanDialog";
 import { EditVPSDialog } from "@/components/EditVPSDialog";
@@ -37,7 +37,7 @@ import { TransferClientDialog } from "@/components/TransferClientDialog";
 
 export default function Admin() {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<"users" | "accounts" | "system" | "subscriptions" | "vps" | "eas" | "payments">("users");
+  const [selectedTab, setSelectedTab] = useState<"users" | "accounts" | "system" | "subscriptions" | "vps" | "eas" | "payments" | "landing">("users");
 
   // Verificar se é admin ou manager
   if (user?.role !== "admin" && user?.role !== "manager") {
@@ -122,6 +122,14 @@ export default function Admin() {
             <DollarSign className="h-4 w-4 mr-2" />
             Pagamentos
           </Button>
+          <Button
+            variant={selectedTab === "landing" ? "default" : "ghost"}
+            onClick={() => setSelectedTab("landing")}
+            className="rounded-b-none"
+          >
+            <Globe className="h-4 w-4 mr-2" />
+            Landing Page
+          </Button>
         </div>
 
         {/* Content */}
@@ -132,6 +140,7 @@ export default function Admin() {
         {selectedTab === "vps" && <VPSTab />}
         {selectedTab === "eas" && <EAsTab />}
         {selectedTab === "payments" && <PaymentsTab />}
+        {selectedTab === "landing" && <LandingPageTab />}
       </div>
     </DashboardLayout>
   );
@@ -1255,3 +1264,307 @@ function PaymentsTab() {
   );
 }
 
+// Tab: Editar Landing Page
+function LandingPageTab() {
+  const [content, setContent] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadContent();
+  }, []);
+
+  const loadContent = async () => {
+    try {
+      const response = await fetch('/api/landing-page');
+      const data = await response.json();
+      if (data.success) {
+        setContent(data.content);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar conteúdo da LP:', error);
+      toast.error('Erro ao carregar conteúdo da LP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSection = async (section: string, sectionContent: any) => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/landing-page/${section}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: sectionContent })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Seção atualizada com sucesso!');
+        loadContent();
+      } else {
+        toast.error(data.error || 'Erro ao salvar');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar seção:', error);
+      toast.error('Erro ao salvar seção');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-6">Carregando...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Editar Landing Page</h2>
+        <p className="text-muted-foreground">Personalize o conteúdo da página inicial</p>
+      </div>
+
+      {/* Hero Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Seção Hero (Topo)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={content.hero?.title || ''}
+              onChange={(e) => setContent({...content, hero: {...content.hero, title: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Destaque (texto colorido)</Label>
+            <Input
+              value={content.hero?.highlight || ''}
+              onChange={(e) => setContent({...content, hero: {...content.hero, highlight: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <textarea
+              className="w-full p-2 border rounded"
+              rows={3}
+              value={content.hero?.subtitle || ''}
+              onChange={(e) => setContent({...content, hero: {...content.hero, subtitle: e.target.value}})}
+            />
+          </div>
+          <Button onClick={() => saveSection('hero', content.hero)} disabled={saving}>
+            Salvar Hero
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Stats Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Estatísticas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Stat 1 - Valor</Label>
+              <Input
+                value={content.stats?.stat1_value || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat1_value: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 1 - Label</Label>
+              <Input
+                value={content.stats?.stat1_label || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat1_label: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 2 - Valor</Label>
+              <Input
+                value={content.stats?.stat2_value || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat2_value: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 2 - Label</Label>
+              <Input
+                value={content.stats?.stat2_label || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat2_label: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 3 - Valor</Label>
+              <Input
+                value={content.stats?.stat3_value || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat3_value: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 3 - Label</Label>
+              <Input
+                value={content.stats?.stat3_label || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat3_label: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 4 - Valor</Label>
+              <Input
+                value={content.stats?.stat4_value || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat4_value: e.target.value}})}
+              />
+            </div>
+            <div>
+              <Label>Stat 4 - Label</Label>
+              <Input
+                value={content.stats?.stat4_label || ''}
+                onChange={(e) => setContent({...content, stats: {...content.stats, stat4_label: e.target.value}})}
+              />
+            </div>
+          </div>
+          <Button onClick={() => saveSection('stats', content.stats)} disabled={saving}>
+            Salvar Estatísticas
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Copy Trading Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Copy Trading</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={content.copy_trading?.title || ''}
+              onChange={(e) => setContent({...content, copy_trading: {...content.copy_trading, title: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <Input
+              value={content.copy_trading?.subtitle || ''}
+              onChange={(e) => setContent({...content, copy_trading: {...content.copy_trading, subtitle: e.target.value}})}
+            />
+          </div>
+          <Button onClick={() => saveSection('copy_trading', content.copy_trading)} disabled={saving}>
+            Salvar Copy Trading
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Analytics Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Analytics</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={content.analytics?.title || ''}
+              onChange={(e) => setContent({...content, analytics: {...content.analytics, title: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <Input
+              value={content.analytics?.subtitle || ''}
+              onChange={(e) => setContent({...content, analytics: {...content.analytics, subtitle: e.target.value}})}
+            />
+          </div>
+          <Button onClick={() => saveSection('analytics', content.analytics)} disabled={saving}>
+            Salvar Analytics
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* VPS Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>VPS</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={content.vps?.title || ''}
+              onChange={(e) => setContent({...content, vps: {...content.vps, title: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <Input
+              value={content.vps?.subtitle || ''}
+              onChange={(e) => setContent({...content, vps: {...content.vps, subtitle: e.target.value}})}
+            />
+          </div>
+          <Button onClick={() => saveSection('vps', content.vps)} disabled={saving}>
+            Salvar VPS
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* EAs Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Expert Advisors</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={content.eas?.title || ''}
+              onChange={(e) => setContent({...content, eas: {...content.eas, title: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <Input
+              value={content.eas?.subtitle || ''}
+              onChange={(e) => setContent({...content, eas: {...content.eas, subtitle: e.target.value}})}
+            />
+          </div>
+          <Button onClick={() => saveSection('eas', content.eas)} disabled={saving}>
+            Salvar EAs
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* CTA Final Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>CTA Final (Rodapé)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={content.cta_final?.title || ''}
+              onChange={(e) => setContent({...content, cta_final: {...content.cta_final, title: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <Input
+              value={content.cta_final?.subtitle || ''}
+              onChange={(e) => setContent({...content, cta_final: {...content.cta_final, subtitle: e.target.value}})}
+            />
+          </div>
+          <div>
+            <Label>Texto do Rodapé</Label>
+            <Input
+              value={content.cta_final?.footer_text || ''}
+              onChange={(e) => setContent({...content, cta_final: {...content.cta_final, footer_text: e.target.value}})}
+            />
+          </div>
+          <Button onClick={() => saveSection('cta_final', content.cta_final)} disabled={saving}>
+            Salvar CTA Final
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

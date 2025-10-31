@@ -85,6 +85,14 @@ export async function getDb() {
           }).catch(err => {
             console.error('[Database] Failed to import admin products migration:', err);
           });
+          
+          import('./migrations/create-landing-page-table').then(({ createLandingPageTable }) => {
+            createLandingPageTable().catch(err => {
+              console.error('[Database] Landing page table migration failed:', err);
+            });
+          }).catch(err => {
+            console.error('[Database] Failed to import landing page migration:', err);
+          });
         }
       } catch (error) {
         console.warn("[Database] Failed to connect:", error);
