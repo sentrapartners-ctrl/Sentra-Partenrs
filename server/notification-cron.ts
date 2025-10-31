@@ -3,6 +3,7 @@ import { getDb } from './db';
 import { users, trades, userSettings } from '../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { sendDailyProfitNotification, sendWeeklyProfitNotification } from './bark-notifications';
+import { calculateDailyDrawdown } from './jobs/calculate-drawdown';
 
 /**
  * Calcula lucro e estatísticas de um período
@@ -224,7 +225,14 @@ export function initNotificationCron() {
     timezone: 'America/Sao_Paulo',
   });
 
+  // Cálculo de drawdown diário às 23:59
+  // Cron: 59 23 * * * (23:59 todos os dias)
+  cron.schedule('59 23 * * *', calculateDailyDrawdown, {
+    timezone: 'America/Sao_Paulo',
+  });
+
   console.log('Notification cron jobs initialized:');
   console.log('- Daily: Every day at 19:00 (America/Sao_Paulo)');
   console.log('- Weekly: Every Saturday at 08:00 (America/Sao_Paulo)');
+  console.log('- Drawdown: Every day at 23:59 (America/Sao_Paulo)');
 }

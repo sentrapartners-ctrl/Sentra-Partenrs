@@ -13,6 +13,7 @@ import { passwordResetRouter } from "./password-reset-router";
 import { eaLicenseRouter } from "./ea-license-router";
 import { mt4Router } from "./mt4-router";
 import { notificationsRouter } from "./notifications-router";
+import * as drawdown from "./drawdown-calculator";
 
 // Função para gerar API Key única
 function generateApiKey(): string {
@@ -128,6 +129,82 @@ export const appRouter = router({
         recentTrades,
       };
     }),
+  }),
+
+  // ===== DRAWDOWN =====
+  drawdown: router({
+    // Calcular drawdown consolidado (total)
+    calculateConsolidated: protectedProcedure
+      .input(z.object({
+        date: z.string().optional(), // YYYY-MM-DD
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const date = input.date ? new Date(input.date) : new Date();
+        return await drawdown.calculateConsolidatedDrawdown(ctx.user.id, date, input.period);
+      }),
+
+    // Calcular drawdown individual de uma conta
+    calculateAccount: protectedProcedure
+      .input(z.object({
+        accountId: z.number(),
+        date: z.string().optional(), // YYYY-MM-DD
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const date = input.date ? new Date(input.date) : new Date();
+        return await drawdown.calculateAccountDrawdown(input.accountId, ctx.user.id, date, input.period);
+      }),
+
+    // Buscar drawdown consolidado
+    getConsolidated: protectedProcedure
+      .input(z.object({
+        date: z.string().optional(), // YYYY-MM-DD
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+      }))
+      .query(async ({ ctx, input }) => {
+        const date = input.date ? new Date(input.date) : new Date();
+        return await drawdown.getConsolidatedDrawdown(ctx.user.id, date, input.period);
+      }),
+
+    // Buscar drawdown individual de uma conta
+    getAccount: protectedProcedure
+      .input(z.object({
+        accountId: z.number(),
+        date: z.string().optional(), // YYYY-MM-DD
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+      }))
+      .query(async ({ ctx, input }) => {
+        const date = input.date ? new Date(input.date) : new Date();
+        return await drawdown.getAccountDrawdown(input.accountId, date, input.period);
+      }),
+
+    // Buscar histórico de drawdown consolidado
+    getConsolidatedHistory: protectedProcedure
+      .input(z.object({
+        startDate: z.string(), // YYYY-MM-DD
+        endDate: z.string(), // YYYY-MM-DD
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+      }))
+      .query(async ({ ctx, input }) => {
+        const startDate = new Date(input.startDate);
+        const endDate = new Date(input.endDate);
+        return await drawdown.getConsolidatedDrawdownHistory(ctx.user.id, startDate, endDate, input.period);
+      }),
+
+    // Buscar histórico de drawdown individual de uma conta
+    getAccountHistory: protectedProcedure
+      .input(z.object({
+        accountId: z.number(),
+        startDate: z.string(), // YYYY-MM-DD
+        endDate: z.string(), // YYYY-MM-DD
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+      }))
+      .query(async ({ ctx, input }) => {
+        const startDate = new Date(input.startDate);
+        const endDate = new Date(input.endDate);
+        return await drawdown.getAccountDrawdownHistory(input.accountId, startDate, endDate, input.period);
+      }),
   }),
 
   // ===== ACCOUNTS =====

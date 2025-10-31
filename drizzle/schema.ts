@@ -1057,3 +1057,57 @@ export const vpsBilling = mysqlTable("vps_billing", {
 
 export type VpsBilling = typeof vpsBilling.$inferSelect;
 export type InsertVpsBilling = typeof vpsBilling.$inferInsert;
+
+/**
+ * Account Drawdown - tracks drawdown metrics for each trading account
+ */
+export const accountDrawdown = mysqlTable("account_drawdown", {
+  id: int("id").autoincrement().primaryKey(),
+  accountId: int("accountId").notNull(),
+  userId: int("userId").notNull(),
+  date: date("date").notNull(), // Data do cálculo (YYYY-MM-DD)
+  peakBalance: int("peakBalance").notNull(), // Maior balance do período (em cents)
+  currentBalance: int("currentBalance").notNull(), // Balance atual (em cents)
+  drawdownAmount: int("drawdownAmount").notNull(), // Valor do drawdown (em cents)
+  drawdownPercent: int("drawdownPercent").notNull(), // Percentual * 100 (ex: 540 = 5.40%)
+  isCentAccount: boolean("isCentAccount").default(false).notNull(),
+  period: mysqlEnum("period", ["daily", "weekly", "monthly"]).default("daily").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  accountIdIdx: index("accountId_idx").on(table.accountId),
+  userIdIdx: index("userId_idx").on(table.userId),
+  dateIdx: index("date_idx").on(table.date),
+  periodIdx: index("period_idx").on(table.period),
+  // Unique constraint: uma entrada por conta/data/período
+  uniqueAccountDatePeriod: index("unique_account_date_period").on(table.accountId, table.date, table.period),
+}));
+
+export type AccountDrawdown = typeof accountDrawdown.$inferSelect;
+export type InsertAccountDrawdown = typeof accountDrawdown.$inferInsert;
+
+/**
+ * Consolidated Drawdown - tracks total drawdown across all accounts
+ */
+export const consolidatedDrawdown = mysqlTable("consolidated_drawdown", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  date: date("date").notNull(), // Data do cálculo (YYYY-MM-DD)
+  totalPeakBalance: int("totalPeakBalance").notNull(), // Soma dos peaks (em cents normalizados)
+  totalCurrentBalance: int("totalCurrentBalance").notNull(), // Soma dos balances atuais (em cents normalizados)
+  totalDrawdownAmount: int("totalDrawdownAmount").notNull(), // Valor total do drawdown (em cents)
+  totalDrawdownPercent: int("totalDrawdownPercent").notNull(), // Percentual * 100 (ex: 540 = 5.40%)
+  accountCount: int("accountCount").default(0), // Número de contas consideradas
+  period: mysqlEnum("period", ["daily", "weekly", "monthly"]).default("daily").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  dateIdx: index("date_idx").on(table.date),
+  periodIdx: index("period_idx").on(table.period),
+  // Unique constraint: uma entrada por usuário/data/período
+  uniqueUserDatePeriod: index("unique_user_date_period").on(table.userId, table.date, table.period),
+}));
+
+export type ConsolidatedDrawdown = typeof consolidatedDrawdown.$inferSelect;
+export type InsertConsolidatedDrawdown = typeof consolidatedDrawdown.$inferInsert;

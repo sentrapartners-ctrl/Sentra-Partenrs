@@ -59,6 +59,21 @@ export default function Strategies() {
     { enabled: isAuthenticated }
   );
 
+  // Buscar drawdown consolidado (total)
+  const { data: consolidatedDrawdown } = trpc.drawdown.getConsolidated.useQuery(
+    { period: 'monthly' },
+    { enabled: isAuthenticated }
+  );
+
+  // Buscar drawdown por conta (se uma conta específica estiver selecionada)
+  const { data: accountDrawdown } = trpc.drawdown.getAccount.useQuery(
+    { 
+      accountId: parseInt(selectedAccount),
+      period: 'monthly'
+    },
+    { enabled: isAuthenticated && selectedAccount !== 'all' }
+  );
+
   const saveJournalMutation = trpc.journal.save.useMutation({
     onSuccess: () => {
       refetchJournal();
@@ -320,14 +335,25 @@ export default function Strategies() {
                 </div>
                 
                 <div className="text-center px-6 py-4 rounded-lg border bg-card">
-                  <p className="text-sm text-muted-foreground mb-2">Drawdown do Mês</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {selectedAccount === 'all' ? 'Drawdown Total do Mês' : 'Drawdown da Conta'}
+                  </p>
                   <div className={`text-3xl font-bold ${
-                    (dashboardData?.summary?.monthlyDrawdown || 0) > 5 
+                    ((selectedAccount === 'all' 
+                      ? consolidatedDrawdown?.totalDrawdownPercent 
+                      : accountDrawdown?.drawdownPercent) || 0) > 5 
                       ? 'text-red-600 dark:text-red-400' 
                       : 'text-green-600 dark:text-green-400'
                   }`}>
-                    {(dashboardData?.summary?.monthlyDrawdown || 0).toFixed(2)}%
+                    {((selectedAccount === 'all' 
+                      ? consolidatedDrawdown?.totalDrawdownPercent 
+                      : accountDrawdown?.drawdownPercent) || 0).toFixed(2)}%
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {selectedAccount === 'all' 
+                      ? `${consolidatedDrawdown?.accountCount || 0} contas` 
+                      : 'Conta individual'}
+                  </p>
                 </div>
               </div>
             </Card>
