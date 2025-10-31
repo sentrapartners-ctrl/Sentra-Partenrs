@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatPrice, toNumber } from "@/lib/formatPrice";
 
 interface Provider {
   id: number;
@@ -240,7 +241,7 @@ export default function Traders() {
                     {provider.avg_rating > 0 && (
                       <Badge variant="secondary" className="ml-2">
                         <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-                        {provider.avg_rating.toFixed(1)}
+                        {toNumber(provider.avg_rating).toFixed(1)}
                       </Badge>
                     )}
                   </div>
@@ -261,7 +262,7 @@ export default function Traders() {
                         Win Rate
                       </div>
                       <p className="text-lg font-bold text-green-600">
-                        {provider.win_rate?.toFixed(1) || 0}%
+                        {toNumber(provider.win_rate).toFixed(1)}%
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -270,7 +271,7 @@ export default function Traders() {
                         Lucro Total
                       </div>
                       <p className="text-lg font-bold text-green-600">
-                        ${provider.total_profit?.toFixed(2) || '0.00'}
+                        ${formatPrice(provider.total_profit)}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -279,7 +280,7 @@ export default function Traders() {
                         Drawdown
                       </div>
                       <p className="text-lg font-bold text-red-600">
-                        {provider.max_drawdown?.toFixed(1) || 0}%
+                        {toNumber(provider.max_drawdown).toFixed(1)}%
                       </p>
                     </div>
                   </div>
