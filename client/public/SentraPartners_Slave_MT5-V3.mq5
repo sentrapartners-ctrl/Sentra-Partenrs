@@ -235,8 +235,15 @@ void ProcessMasterSignals(string json) {
 // PROCESSAR EVENTO DE ABERTURA
 //====================================================
 void ProcessOpenEvent(string json) {
+    // DEBUG: Ver o JSON completo
+    if(EnableLogs) Print("🔍 DEBUG ProcessOpenEvent - JSON recebido: ", json);
+    
     string masterTicket = ExtractValue(json, "ticket");
     string symbol = ExtractValue(json, "symbol");
+    
+    // DEBUG: Ver o que foi extraído
+    if(EnableLogs) Print("🔍 DEBUG - Ticket extraído: '", masterTicket, "'");
+    if(EnableLogs) Print("🔍 DEBUG - Symbol extraído: '", symbol, "'");
     int type = (int)StringToInteger(ExtractValue(json, "type"));
     double lots = StringToDouble(ExtractValue(json, "lots"));
     double openPrice = StringToDouble(ExtractValue(json, "open_price"));
@@ -429,7 +436,7 @@ void ParseMasterPositions(string positionsStr) {
 // SINCRONIZAR POSIÇÕES
 //====================================================
 void SyncPositions() {
-    // Fechar posições do Slave que não existem mais no Master
+    // 1. Fechar posições do Slave que não existem mais no Master
     for(int i = slavePositionsCount - 1; i >= 0; i--) {
         bool found = false;
         
@@ -450,6 +457,61 @@ void SyncPositions() {
             }
             
             RemoveSlavePosition(i);
+        }
+    }
+    
+    // 2. Abrir posições do Master que não existem no Slave
+    for(int j = 0; j < masterPositionsCount; j++) {
+        bool exists = false;
+        
+        // Verificar se já existe no Slave
+        for(int i = 0; i < slavePositionsCount; i++) {
+            if(slavePositions[i].master_ticket == masterPositions[j].ticket) {
+                exists = true;
+                break;
+            }
+        }
+        
+        if(!exists) {
+            // Posição não existe no Slave, abrir
+            if(EnableLogs) Print("🔄 Sincronização: Abrindo posição nova do Master: ", masterPositions[j].ticket);
+            
+            // Normalizar símbolo
+            string slaveSymbol = NormalizeSymbol(masterPositions[j].symbol);
+            if(slaveSymbol == "") {
+                Print("❌ Símbolo não encontrado no Slave: ", masterPositions[j].symbol);
+                continue;
+            }
+            
+            // Validar trade
+            if(!ValidateTrade(slaveSymbol, masterPositions[j].type)) {
+                Print("❌ Trade bloqueado por filtros: ", slaveSymbol);
+                continue;
+            }
+            
+            // Ajustar lote
+            double lots = AdjustLotForAccountType(masterPositions[j].lots);
+            lots = NormalizeLot(slaveSymbol, lots);
+            if(lots < SymbolInfoDouble(slaveSymbol, SYMBOL_VOLUME_MIN)) {
+                Print("❌ Lote muito pequeno: ", lots);
+                continue;
+            }
+            
+            // Abrir posição
+            bool success = false;
+            if(masterPositions[j].type == 0) {
+                success = trade.Buy(lots, slaveSymbol, 0, masterPositions[j].stop_loss, masterPositions[j].take_profit, "Copy: " + masterPositions[j].ticket);
+            } else {
+                success = trade.Sell(lots, slaveSymbol, 0, masterPositions[j].stop_loss, masterPositions[j].take_profit, "Copy: " + masterPositions[j].ticket);
+            }
+            
+            if(success) {
+                ulong slaveTicket = trade.ResultOrder();
+                AddSlavePosition(slaveTicket, masterPositions[j].ticket, slaveSymbol);
+                Print("✅ Posição aberta via sincronização: ", slaveSymbol, " ", (masterPositions[j].type == 0 ? "BUY" : "SELL"), " ", lots, " lotes (Master: ", masterPositions[j].ticket, " → Slave: ", slaveTicket, ")");
+            } else {
+                Print("❌ Erro ao abrir posição via sincronização: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+            }
         }
     }
 }
@@ -570,38 +632,81 @@ double AdjustLotForAccountType(double lots) {
 
 // Normalizar símbolo (buscar no Slave o símbolo correspondente)
 string NormalizeSymbol(string masterSymbol) {
-    // Remover sufixos comuns do símbolo Master
-    string baseSymbol = masterSymbol;
-    StringReplace(baseSymbol, "c", "");
-    StringReplace(baseSymbol, "m", "");
-    StringReplace(baseSymbol, ".", "");
-    StringReplace(baseSymbol, "_", "");
-    
-    // Tentar encontrar símbolo exato no Slave
+    // 1. Tentar símbolo exato primeiro
+    // IMPORTANTE: Adicionar ao Market Watch antes de verificar
+    SymbolSelect(masterSymbol, true);
     if(SymbolInfoInteger(masterSymbol, SYMBOL_SELECT)) {
         if(EnableLogs) Print("✅ Símbolo encontrado (exato): ", masterSymbol);
         return masterSymbol;
     }
     
-    // Tentar base symbol
-    if(SymbolInfoInteger(baseSymbol, SYMBOL_SELECT)) {
-        if(EnableLogs) Print("✅ Símbolo encontrado (base): ", baseSymbol);
-        return baseSymbol;
+    // 2. Remover sufixos comuns do final do símbolo
+    string baseSymbol = RemoveSuffix(masterSymbol);
+    if(baseSymbol != masterSymbol) {
+        // Tentar símbolo sem sufixo
+        SymbolSelect(baseSymbol, true);
+        if(SymbolInfoInteger(baseSymbol, SYMBOL_SELECT)) {
+            if(EnableLogs) Print("✅ Símbolo encontrado (sem sufixo): ", baseSymbol, " <- ", masterSymbol);
+            return baseSymbol;
+        }
     }
     
-    // Tentar com sufixos comuns
-    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn"};
+    // 3. Tentar adicionar sufixos comuns ao símbolo base
+    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn", ".raw", ".lp"};
     for(int i = 0; i < ArraySize(suffixes); i++) {
         string testSymbol = baseSymbol + suffixes[i];
+        SymbolSelect(testSymbol, true);
         if(SymbolInfoInteger(testSymbol, SYMBOL_SELECT)) {
-            if(EnableLogs) Print("✅ Símbolo encontrado (sufixo): ", testSymbol);
+            if(EnableLogs) Print("✅ Símbolo encontrado (com sufixo): ", testSymbol, " <- ", masterSymbol);
             return testSymbol;
         }
     }
     
-    // Não encontrado
-    Print("❌ Símbolo não encontrado: ", masterSymbol, " (base: ", baseSymbol, ")");
+    // 4. Listar símbolos similares disponíveis para diagnóstico
+    Print("❌ Símbolo não encontrado: ", masterSymbol, " (base testada: ", baseSymbol, ")");
+    Print("🔍 Procurando símbolos similares...");
+    
+    int totalSymbols = SymbolsTotal(false);
+    int foundSimilar = 0;
+    
+    for(int i = 0; i < totalSymbols && foundSimilar < 10; i++) {
+        string symbolName = SymbolName(i, false);
+        // Procurar símbolos que contenham a base
+        if(StringFind(symbolName, baseSymbol) >= 0) {
+            Print("   📊 Similar encontrado: ", symbolName);
+            foundSimilar++;
+        }
+    }
+    
+    if(foundSimilar == 0) {
+        Print("   ⚠️ Nenhum símbolo similar encontrado. Listando primeiros 20 símbolos:");
+        for(int i = 0; i < MathMin(20, totalSymbols); i++) {
+            Print("   📊 ", SymbolName(i, false));
+        }
+    }
+    
     return "";
+}
+
+// Função auxiliar para remover sufixos conhecidos do final do símbolo
+string RemoveSuffix(string symbol) {
+    string suffixes[] = {"c", "m", ".a", ".b", "_i", "pro", "ecn", ".raw", ".lp"};
+    
+    for(int i = 0; i < ArraySize(suffixes); i++) {
+        int suffixLen = StringLen(suffixes[i]);
+        int symbolLen = StringLen(symbol);
+        
+        // Verificar se o símbolo termina com este sufixo
+        if(symbolLen > suffixLen) {
+            string ending = StringSubstr(symbol, symbolLen - suffixLen, suffixLen);
+            if(ending == suffixes[i]) {
+                // Remover o sufixo
+                return StringSubstr(symbol, 0, symbolLen - suffixLen);
+            }
+        }
+    }
+    
+    return symbol; // Retorna inalterado se não encontrar sufixo
 }
 
 double NormalizeLot(string symbol, double lots) {
@@ -627,21 +732,30 @@ string ExtractValue(string json, string key) {
     
     start = StringFind(json, ":", start) + 1;
     
-    // Pular espaços e aspas
-    while(start < StringLen(json) && (StringGetCharacter(json, start) == ' ' || StringGetCharacter(json, start) == '\"')) start++;
+    // Pular espaços
+    while(start < StringLen(json) && StringGetCharacter(json, start) == ' ') start++;
+    
+    // Verificar se o valor está entre aspas
+    bool isString = (StringGetCharacter(json, start) == '\"');
+    if(isString) start++; // Pular aspas de abertura
     
     int end = start;
-    bool inQuotes = false;
     
-    while(end < StringLen(json)) {
-        ushort ch = StringGetCharacter(json, end);
-        if(ch == '\"') inQuotes = !inQuotes;
-        if(!inQuotes && (ch == ',' || ch == '}')) break;
-        end++;
+    if(isString) {
+        // Procurar aspas de fechamento
+        while(end < StringLen(json) && StringGetCharacter(json, end) != '\"') {
+            end++;
+        }
+    } else {
+        // Procurar vírgula ou fecha chave
+        while(end < StringLen(json)) {
+            ushort ch = StringGetCharacter(json, end);
+            if(ch == ',' || ch == '}' || ch == ' ') break;
+            end++;
+        }
     }
     
     string value = StringSubstr(json, start, end - start);
-    StringReplace(value, "\"", "");
     StringTrimLeft(value);
     StringTrimRight(value);
     return value;

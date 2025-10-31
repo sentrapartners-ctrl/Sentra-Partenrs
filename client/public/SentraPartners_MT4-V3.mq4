@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Sentra Partners"
 #property link      "https://sentrapartners.com"
-#property version   "3.00"
+#property version   "4.00"
 #property strict
 
 //====================================================
@@ -19,21 +19,21 @@
 //====================================================
 input string UserEmail = "";                        // ⚠️ SEU EMAIL CADASTRADO
 input string MasterServer = "https://sentrapartners.com/api/mt/copy";
-input int SendInterval = 2;                         // Intervalo de envio (segundos)
+input int HeartbeatInterval = 1;                    // Intervalo de heartbeat (segundos)
 input bool EnableLogs = true;                       // Habilitar logs
 
 //====================================================
 // VARIÁVEIS GLOBAIS
 //====================================================
-datetime lastSendTime = 0;
-string lastPositionsHash = "";
+datetime lastHeartbeatTime = 0;
+int previousOrdersCount = 0;
 
 //====================================================
 // INICIALIZAÇÃO
 //====================================================
 int OnInit() {
     Print("===========================================");
-    Print("Sentra Partners - Master MT4 v3.0");
+    Print("Sentra Partners - Master MT4 v4.0");
     Print("Conta: ", AccountNumber());
     Print("Email: ", UserEmail);
     Print("===========================================");
@@ -58,26 +58,42 @@ int OnInit() {
         return(INIT_FAILED);
     }
     
+    // Inicializar contador
+    previousOrdersCount = OrdersTotal();
+    
     Print("✅ Master EA inicializado com sucesso!");
+    Print("📡 Heartbeat: ", HeartbeatInterval, "s");
     return(INIT_SUCCEEDED);
 }
 
 //====================================================
-// TICK
+// TICK (DETECTAR MUDANÇAS + HEARTBEAT)
 //====================================================
 void OnTick() {
-    // Enviar posições periodicamente
-    if(TimeCurrent() - lastSendTime >= SendInterval) {
-        SendPositions();
-        lastSendTime = TimeCurrent();
+    datetime now = TimeCurrent();
+    int currentOrdersCount = OrdersTotal();
+    
+    // Detectar mudança no número de ordens (abertura/fechamento)
+    if(currentOrdersCount != previousOrdersCount) {
+        if(EnableLogs) Print("🔔 Mudança detectada: ", previousOrdersCount, " → ", currentOrdersCount);
+        SendHeartbeat();  // Enviar imediatamente
+        previousOrdersCount = currentOrdersCount;
+        lastHeartbeatTime = now;  // Resetar timer
+    }
+    
+    // Enviar heartbeat periódico
+    if(now - lastHeartbeatTime >= HeartbeatInterval) {
+        SendHeartbeat();
+        lastHeartbeatTime = now;
     }
 }
 
 //====================================================
-// ENVIAR POSIÇÕES
+// ENVIAR HEARTBEAT (SINCRONIZAÇÃO)
 //====================================================
-void SendPositions() {
+void SendHeartbeat() {
     string data = "{";
+    data += "\"action\":\"heartbeat\",";
     data += "\"master_email\":\"" + UserEmail + "\",";
     data += "\"account_number\":\"" + IntegerToString(AccountNumber()) + "\",";
     data += "\"broker\":\"" + AccountCompany() + "\",";
@@ -89,22 +105,23 @@ void SendPositions() {
     
     for(int i = 0; i < total; i++) {
         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
-            if(count > 0) data += ",";
-            
-            data += "{";
-            data += "\"ticket\":" + IntegerToString(OrderTicket()) + ",";
-            data += "\"symbol\":\"" + OrderSymbol() + "\",";
-            data += "\"type\":" + IntegerToString(OrderType()) + ",";
-            data += "\"lots\":" + DoubleToString(OrderLots(), 2) + ",";
-            data += "\"open_price\":" + DoubleToString(OrderOpenPrice(), 5) + ",";
-            data += "\"stop_loss\":" + DoubleToString(OrderStopLoss(), 5) + ",";
-            data += "\"take_profit\":" + DoubleToString(OrderTakeProfit(), 5) + ",";
-            data += "\"open_time\":" + IntegerToString(OrderOpenTime()) + ",";
-            data += "\"profit\":" + DoubleToString(OrderProfit(), 2) + ",";
-            data += "\"comment\":\"" + OrderComment() + "\"";
-            data += "}";
-            
-            count++;
+            // Apenas ordens de mercado (BUY/SELL)
+            if(OrderType() <= 1) {
+                if(count > 0) data += ",";
+                
+                data += "{";
+                data += "\"ticket\":" + IntegerToString(OrderTicket()) + ",";
+                data += "\"symbol\":\"" + OrderSymbol() + "\",";
+                data += "\"type\":" + IntegerToString(OrderType()) + ",";
+                data += "\"lots\":" + DoubleToString(OrderLots(), 2) + ",";
+                data += "\"open_price\":" + DoubleToString(OrderOpenPrice(), 5) + ",";
+                data += "\"stop_loss\":" + DoubleToString(OrderStopLoss(), 5) + ",";
+                data += "\"take_profit\":" + DoubleToString(OrderTakeProfit(), 5) + ",";
+                data += "\"open_time\":" + IntegerToString(OrderOpenTime());
+                data += "}";
+                
+                count++;
+            }
         }
     }
     
@@ -112,88 +129,68 @@ void SendPositions() {
     data += "\"positions_count\":" + IntegerToString(count);
     data += "}";
     
-    // Verificar se mudou
-    string currentHash = GetHash(data);
-    if(currentHash == lastPositionsHash && count > 0) {
-        // Nada mudou, não enviar
-        return;
-    }
-    lastPositionsHash = currentHash;
-    
-    // Enviar para servidor
+    if(EnableLogs) Print("💓 Heartbeat enviado: ", count, " posições");
+    SendToServer(data);
+}
+
+//====================================================
+// ENVIAR PARA SERVIDOR
+//====================================================
+void SendToServer(string data) {
     string url = MasterServer + "/master-signal";
     string headers = "Content-Type: application/json\r\n";
     
     char post[], result[];
-    ArrayResize(post, StringToCharArray(data, post, 0, WHOLE_ARRAY) - 1);
+    ArrayResize(post, StringToCharArray(data, post, 0, WHOLE_ARRAY, CP_UTF8) - 1);
     
+    string resultHeaders;
     int timeout = 5000;
-    int res = WebRequest("POST", url, headers, timeout, post, result, headers);
+    int res = WebRequest("POST", url, headers, timeout, post, result, resultHeaders);
     
     if(res == 200) {
-        if(EnableLogs) Print("✅ Posições enviadas: ", count);
+        if(EnableLogs) Print("✅ Sinal enviado com sucesso");
+    } else if(res == -1) {
+        int error = GetLastError();
+        Print("❌ Erro WebRequest: ", error);
+        
+        if(error == 4060) {
+            Print("⚠️ URL não autorizada! Adicione em Ferramentas → Opções → Expert Advisors:");
+            Print("   https://sentrapartners.com");
+        }
     } else {
-        if(EnableLogs) Print("❌ Erro ao enviar: ", res);
+        Print("❌ Erro HTTP: ", res);
     }
 }
 
 //====================================================
-// HASH SIMPLES
-//====================================================
-string GetHash(string str) {
-    int hash = 0;
-    for(int i = 0; i < StringLen(str); i++) {
-        hash = (hash * 31 + StringGetChar(str, i)) & 0x7FFFFFFF;
-    }
-    return IntegerToString(hash);
-}
-
-//====================================================
-// VALIDAÇÃO DE LICENÇA
+// VALIDAR LICENÇA
 //====================================================
 bool ValidateLicense() {
-    // 1. Verificar data de expiração
+    // Verificar data de expiração
     if(TimeCurrent() > LICENSE_EXPIRY_DATE) {
-        Print("❌ Licença expirada em: ", TimeToStr(LICENSE_EXPIRY_DATE, TIME_DATE));
+        Print("❌ Licença expirada em ", TimeToString(LICENSE_EXPIRY_DATE));
         return false;
     }
     
-    // 2. Verificar contas permitidas
-    string allowedAccounts = ALLOWED_ACCOUNTS;
-    if(allowedAccounts != "") {
-        string currentAccount = IntegerToString(AccountNumber());
-        bool accountAllowed = false;
+    // Verificar contas permitidas (se especificado)
+    if(ALLOWED_ACCOUNTS != "") {
+        string accounts[];
+        int count = StringSplit(ALLOWED_ACCOUNTS, ',', accounts);
+        bool found = false;
         
-        int start = 0;
-        int pos = StringFind(allowedAccounts, ",", start);
-        
-        while(pos >= 0 || start < StringLen(allowedAccounts)) {
-            string account;
-            if(pos >= 0) {
-                account = StringSubstr(allowedAccounts, start, pos - start);
-                start = pos + 1;
-                pos = StringFind(allowedAccounts, ",", start);
-            } else {
-                account = StringSubstr(allowedAccounts, start);
-                start = StringLen(allowedAccounts);
-            }
-            
-            StringTrimLeft(account);
-            StringTrimRight(account);
-            
-            if(account == currentAccount) {
-                accountAllowed = true;
+        for(int i = 0; i < count; i++) {
+            if(IntegerToString(AccountNumber()) == accounts[i]) {
+                found = true;
                 break;
             }
         }
         
-        if(!accountAllowed) {
-            Print("❌ Conta não autorizada: ", currentAccount);
+        if(!found) {
+            Print("❌ Conta não autorizada: ", AccountNumber());
             return false;
         }
     }
     
-    Print("✅ Licença válida até: ", TimeToStr(LICENSE_EXPIRY_DATE, TIME_DATE));
     return true;
 }
 
