@@ -101,14 +101,15 @@ async function sendDailyNotifications() {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   
-  // Buscar usuários com barkKey configurado
+  // Buscar usuários com barkKey E barkServerUrl configurados
   const usersWithBark = await db
     .select({
       userId: userSettings.userId,
       barkKey: userSettings.barkKey,
+      barkServerUrl: userSettings.barkServerUrl,
     })
     .from(userSettings)
-    .where(sql`${userSettings.barkKey} IS NOT NULL`);
+    .where(sql`${userSettings.barkKey} IS NOT NULL AND ${userSettings.barkServerUrl} IS NOT NULL`);
   
   const allUsers = usersWithBark;
 
@@ -118,7 +119,7 @@ async function sendDailyNotifications() {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   for (const user of allUsers) {
-    if (!user.barkKey) continue;
+    if (!user.barkKey || !user.barkServerUrl) continue;
 
     try {
       const stats = await calculateProfitStats(user.userId, today, tomorrow);
@@ -132,7 +133,8 @@ async function sendDailyNotifications() {
         user.barkKey,
         stats.profit,
         stats.tradesCount,
-        stats.winRate
+        stats.winRate,
+        user.barkServerUrl
       );
 
       console.log(`Daily notification sent to user ${user.userId}`);
@@ -151,14 +153,15 @@ async function sendWeeklyNotifications() {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   
-  // Buscar usuários com barkKey configurado
+  // Buscar usuários com barkKey E barkServerUrl configurados
   const usersWithBark = await db
     .select({
       userId: userSettings.userId,
       barkKey: userSettings.barkKey,
+      barkServerUrl: userSettings.barkServerUrl,
     })
     .from(userSettings)
-    .where(sql`${userSettings.barkKey} IS NOT NULL`);
+    .where(sql`${userSettings.barkKey} IS NOT NULL AND ${userSettings.barkServerUrl} IS NOT NULL`);
   
   const allUsers = usersWithBark;
 
@@ -176,7 +179,7 @@ async function sendWeeklyNotifications() {
   saturday.setHours(0, 0, 0, 0);
 
   for (const user of allUsers) {
-    if (!user.barkKey) continue;
+    if (!user.barkKey || !user.barkServerUrl) continue;
 
     try {
       const stats = await calculateProfitStats(user.userId, sunday, saturday);
@@ -194,7 +197,8 @@ async function sendWeeklyNotifications() {
         stats.tradesCount,
         stats.winRate,
         bestDay,
-        worstDay
+        worstDay,
+        user.barkServerUrl
       );
 
       console.log(`Weekly notification sent to user ${user.userId}`);

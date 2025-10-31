@@ -360,6 +360,7 @@ export const userSettings = mysqlTable("user_settings", {
   telegramChatId: varchar("telegramChatId", { length: 64 }),
   telegramEnabled: boolean("telegramEnabled").default(false),
   barkKey: varchar("barkKey", { length: 255 }), // Bark notification key
+  barkServerUrl: varchar("barkServerUrl", { length: 255 }), // URL do servidor Bark personalizado
   barkDailyEnabled: boolean("barkDailyEnabled").default(true),
   barkWeeklyEnabled: boolean("barkWeeklyEnabled").default(true),
   barkDailyTime: varchar("barkDailyTime", { length: 5 }).default("19:00"),

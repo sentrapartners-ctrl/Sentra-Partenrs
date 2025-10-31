@@ -536,6 +536,7 @@ export const appRouter = router({
         alertConnection: z.boolean().optional(),
         drawdownThreshold: z.number().optional(),
         barkKey: z.string().optional(),
+        barkServerUrl: z.string().optional(),
         barkDailyEnabled: z.boolean().optional(),
         barkWeeklyEnabled: z.boolean().optional(),
         barkDailyTime: z.string().optional(),
@@ -557,13 +558,19 @@ export const appRouter = router({
     testBark: protectedProcedure
       .input(z.object({
         barkKey: z.string(),
+        barkServerUrl: z.string(),
       }))
       .mutation(async ({ input }) => {
         console.log('[testBark] START');
         console.log('[testBark] Bark Key:', input.barkKey);
+        console.log('[testBark] Bark Server URL:', input.barkServerUrl);
+        
+        if (!input.barkServerUrl) {
+          throw new Error('URL do servidor Bark é obrigatória');
+        }
         
         try {
-          const url = `https://api.day.app/${input.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`;
+          const url = `${input.barkServerUrl}/${input.barkKey}/Teste%20Sentra%20Partners/Sua%20configura%C3%A7%C3%A3o%20est%C3%A1%20funcionando!?group=test&icon=https://sentrapartners.com/icon.png`;
           console.log('[testBark] URL:', url);
           
           const response = await fetch(url);
