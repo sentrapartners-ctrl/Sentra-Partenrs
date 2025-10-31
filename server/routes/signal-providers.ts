@@ -42,12 +42,10 @@ router.get("/", async (req, res) => {
         ps.active_subscribers,
         ps.last_trade_at,
         COALESCE(AVG(pr.rating), 0) as avg_rating,
-        COUNT(DISTINCT pr.id) as review_count,
-        acc.isCentAccount
+        COUNT(DISTINCT pr.id) as review_count
       FROM signal_providers sp
       LEFT JOIN provider_statistics ps ON sp.id = ps.provider_id
       LEFT JOIN provider_reviews pr ON sp.id = pr.provider_id
-      LEFT JOIN accounts acc ON sp.master_account_number = acc.accountNumber
       WHERE 1=1
     `;
     

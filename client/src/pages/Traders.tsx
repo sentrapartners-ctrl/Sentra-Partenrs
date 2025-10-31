@@ -40,7 +40,6 @@ interface Provider {
   active_subscribers: number;
   avg_rating: number;
   review_count: number;
-  isCentAccount: boolean;
 }
 
 interface SlaveAccount {
@@ -272,7 +271,7 @@ export default function Traders() {
                         Lucro Total
                       </div>
                       <p className="text-lg font-bold text-green-600">
-                        ${formatProfit(provider.total_profit, provider.isCentAccount)}
+                        ${formatProfit(provider.total_profit, false)}
                       </p>
                     </div>
                     <div className="space-y-1">
