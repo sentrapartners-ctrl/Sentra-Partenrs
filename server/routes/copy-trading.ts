@@ -2,6 +2,7 @@ import express from "express";
 import { getRawConnection } from "../db";
 import { broadcastToUser } from "../websocket/copyTradingWs";
 import { updateProviderStatistics } from "../services/update-provider-statistics";
+import { getUserByEmail } from "../utils/userUtils";
 
 const router = express.Router();
 
