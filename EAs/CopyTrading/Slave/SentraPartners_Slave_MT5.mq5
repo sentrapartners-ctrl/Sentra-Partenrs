@@ -490,7 +490,8 @@ void SyncPositions() {
             }
             
             // Ajustar lote
-            double lots = AdjustLotSize(masterPositions[j].lots);
+            double lots = AdjustLotForAccountType(masterPositions[j].lots);
+            lots = NormalizeLot(slaveSymbol, lots);
             if(lots < SymbolInfoDouble(slaveSymbol, SYMBOL_VOLUME_MIN)) {
                 Print("❌ Lote muito pequeno: ", lots);
                 continue;
