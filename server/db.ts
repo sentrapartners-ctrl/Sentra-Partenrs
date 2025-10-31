@@ -870,7 +870,18 @@ export async function getAccountSummary(userId: number) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   
-  // Buscar pico de balance do mês
+  // Normalizar balance e equity (CENT: dividir por 100, STANDARD: manter)
+  const normalizedBalance = accounts.reduce((sum, acc) => {
+    const balance = acc.balance || 0;
+    return sum + (acc.accountType === 'CENT' ? balance / 100 : balance);
+  }, 0);
+  
+  const normalizedEquity = accounts.reduce((sum, acc) => {
+    const equity = acc.equity || 0;
+    return sum + (acc.accountType === 'CENT' ? equity / 100 : equity);
+  }, 0);
+  
+  // Buscar pico de balance do mês (normalizado)
   const monthBalanceHistory = await db.select()
     .from(balanceHistory)
     .where(
@@ -882,8 +893,16 @@ export async function getAccountSummary(userId: number) {
     .orderBy(desc(balanceHistory.balance))
     .limit(1);
   
-  const peakBalance = monthBalanceHistory[0]?.balance || totalBalance;
-  const monthlyDrawdown = peakBalance > 0 ? ((peakBalance - totalEquity) / peakBalance) * 100 : 0;
+  // Se não houver histórico, usar balance atual como pico
+  let peakBalance = normalizedBalance;
+  if (monthBalanceHistory.length > 0) {
+    const historyAccount = accounts.find(a => a.id === monthBalanceHistory[0].accountId);
+    peakBalance = historyAccount?.accountType === 'CENT' 
+      ? monthBalanceHistory[0].balance / 100 
+      : monthBalanceHistory[0].balance;
+  }
+  
+  const monthlyDrawdown = peakBalance > 0 ? ((peakBalance - normalizedEquity) / peakBalance) * 100 : 0;
 
   return {
     totalAccounts: accounts.length,
