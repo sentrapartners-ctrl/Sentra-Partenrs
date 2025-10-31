@@ -139,5 +139,114 @@ CREATE TABLE IF NOT EXISTS provider_reviews (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- MIGRATION 008: Admin Products Tables
+-- ============================================
+
+-- Tabela de Planos de Assinatura
+CREATE TABLE IF NOT EXISTS subscription_plans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(50) NOT NULL UNIQUE,
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  features TEXT,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_slug (slug),
+  INDEX idx_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de Produtos VPS
+CREATE TABLE IF NOT EXISTS vps_products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  ram VARCHAR(20),
+  cpu VARCHAR(50),
+  storage VARCHAR(50),
+  bandwidth VARCHAR(50),
+  max_mt4_instances INT DEFAULT 5,
+  max_mt5_instances INT DEFAULT 5,
+  is_free BOOLEAN DEFAULT false,
+  is_recommended BOOLEAN DEFAULT false,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_active (active),
+  INDEX idx_price (price)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de Expert Advisors
+CREATE TABLE IF NOT EXISTS expert_advisors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  platform VARCHAR(20) NOT NULL,
+  file_url VARCHAR(500),
+  downloads INT DEFAULT 0,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_platform (platform),
+  INDEX idx_active (active),
+  INDEX idx_price (price)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- MIGRATION 009: Landing Page Content
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS landing_page_content (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  section VARCHAR(50) NOT NULL UNIQUE,
+  content JSON NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_section (section)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Inserir conteúdo padrão
+INSERT IGNORE INTO landing_page_content (section, content) VALUES
+('hero', JSON_OBJECT(
+  'title', 'Tudo que você sempre quis saber',
+  'highlight', 'sobre trading',
+  'subtitle', 'A Sentra Partners mostra as métricas que importam e os comportamentos que levam ao lucro com o poder do copy trading, expert advisors e análise avançada.',
+  'cta_text', 'Comece Agora Grátis',
+  'cta_secondary', 'Ver Demonstração'
+)),
+('stats', JSON_OBJECT(
+  'stat1_value', '99.9%',
+  'stat1_label', 'Uptime Garantido',
+  'stat2_value', '< 10ms',
+  'stat2_label', 'Latência Média',
+  'stat3_value', '24/7',
+  'stat3_label', 'Suporte Premium',
+  'stat4_value', '1000+',
+  'stat4_label', 'Traders Ativos'
+)),
+('copy_trading', JSON_OBJECT(
+  'title', 'Copy Trading Poderoso e Automatizado',
+  'subtitle', 'Copie as operações dos melhores traders em tempo real'
+)),
+('analytics', JSON_OBJECT(
+  'title', 'Analise suas estatísticas de trading',
+  'subtitle', 'Dashboard completo com métricas avançadas'
+)),
+('vps', JSON_OBJECT(
+  'title', 'Servidores VPS de Alta Performance',
+  'subtitle', 'Mantenha seus robôs rodando 24/7 com baixa latência'
+)),
+('eas', JSON_OBJECT(
+  'title', 'Robôs de Trading Profissionais',
+  'subtitle', 'Expert Advisors otimizados para MT4 e MT5'
+)),
+('cta_final', JSON_OBJECT(
+  'title', 'Pronto para Transformar Seu Trading?',
+  'subtitle', 'Junte-se a milhares de traders que já estão lucrando com a Sentra Partners',
+  'cta_text', 'Começar Agora',
+  'footer_text', '⚡️ 126 pessoas se inscreveram na Sentra Partners nas últimas 4 horas'
+));
+
+-- ============================================
 -- FIM DAS MIGRATIONS
 -- ============================================

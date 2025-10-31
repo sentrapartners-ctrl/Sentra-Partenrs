@@ -780,7 +780,7 @@ function SubscriptionsTab() {
                   {plan.active ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
-              <CardDescription>R$ {plan.price.toFixed(2)}/mês</CardDescription>
+              <CardDescription>R$ {typeof plan.price === 'number' ? plan.price.toFixed(2) : parseFloat(plan.price || '0').toFixed(2)}/mês</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -907,7 +907,7 @@ function VPSTab() {
                 {vps.free && <Badge className="bg-purple-500">Grátis</Badge>}
               </div>
               <CardDescription>
-                {vps.free ? "Incluído no Premium" : `R$ ${vps.price.toFixed(2)}/mês`}
+                {vps.free ? "Incluído no Premium" : `R$ ${typeof vps.price === 'number' ? vps.price.toFixed(2) : parseFloat(vps.price || '0').toFixed(2)}/mês`}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1054,7 +1054,7 @@ function EAsTab() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Preço</p>
-                  <p className="font-bold text-lg">R$ {ea.price.toFixed(2)}</p>
+                  <p className="font-bold text-lg">R$ {typeof ea.price === 'number' ? ea.price.toFixed(2) : parseFloat(ea.price || '0').toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Downloads</p>
