@@ -6,6 +6,7 @@ import { Server, Cpu, HardDrive, Network, Zap, Gift, Loader2 } from "lucide-reac
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/formatPrice";
+import { trpc } from "@/lib/trpc";
 
 interface VPSProduct {
   id: number;
@@ -28,6 +29,10 @@ export default function MarketplaceVPS() {
   const [selectedVPS, setSelectedVPS] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Verificar assinatura do usuário
+  const { data: subscriptionData } = trpc.subscriptions.current.useQuery();
+  const hasFreeVPS = subscriptionData?.plan?.freeVpsEnabled || false;
+
   useEffect(() => {
     fetchVPSProducts();
   }, []);
@@ -48,38 +53,58 @@ export default function MarketplaceVPS() {
   };
 
   const handlePurchase = async (vps: VPSProduct) => {
-    if (vps.is_free) {
-      toast.info("Esta VPS está incluída no plano Premium. Assine o plano Premium para ter acesso!");
-      return;
-    }
-
     setIsProcessing(true);
     setSelectedVPS(vps.id);
 
     try {
-      const response = await fetch("/api/checkout/create-payment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          price_amount: vps.price,
-          price_currency: "usd",
-          order_description: `Sentra Partners - ${vps.name}`,
-        }),
-      });
+      // Se o usuário tem VPS grátis no plano, criar purchase com preço 0
+      if (hasFreeVPS && vps.is_free) {
+        const response = await fetch("/api/vps-management/claim-free", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            vpsProductId: vps.id,
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.payment_url) {
-          window.location.href = data.payment_url;
+        if (response.ok) {
+          toast.success("VPS grátis ativada com sucesso!");
+          // Redirecionar para página de VPS
+          window.location.href = "/vps";
+        } else {
+          const error = await response.json();
+          throw new Error(error.error || "Erro ao ativar VPS grátis");
         }
       } else {
-        throw new Error("Erro ao criar pagamento");
+        // Compra normal com pagamento
+        const response = await fetch("/api/checkout/create-payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            price_amount: vps.price,
+            price_currency: "usd",
+            order_description: `Sentra Partners - ${vps.name}`,
+            product_type: "vps",
+            product_id: vps.id,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.payment_url) {
+            window.location.href = data.payment_url;
+          }
+        } else {
+          throw new Error("Erro ao criar pagamento");
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro:", error);
-      toast.error("Erro ao processar. Tente novamente.");
+      toast.error(error.message || "Erro ao processar. Tente novamente.");
     } finally {
       setIsProcessing(false);
       setSelectedVPS(null);
@@ -107,18 +132,20 @@ export default function MarketplaceVPS() {
           </p>
         </div>
 
-        {/* Info Banner */}
-        <Card className="mb-8 bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-purple-500/20">
-          <CardContent className="flex items-center gap-4 py-4">
-            <Gift className="h-8 w-8 text-purple-500" />
-            <div>
-              <h3 className="font-semibold">VPS Grátis no Plano Premium!</h3>
-              <p className="text-sm text-muted-foreground">
-                Assinantes do plano Premium recebem uma VPS gratuitamente.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Info Banner - Mostrar se tem VPS grátis */}
+        {hasFreeVPS && (
+          <Card className="mb-8 bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-purple-500/20">
+            <CardContent className="flex items-center gap-4 py-4">
+              <Gift className="h-8 w-8 text-purple-500" />
+              <div>
+                <h3 className="font-semibold">Você tem VPS Grátis!</h3>
+                <p className="text-sm text-muted-foreground">
+                  Seu plano inclui uma VPS gratuitamente. Ative agora sem custo adicional.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* VPS Grid */}
         {vpsProducts.length === 0 ? (
@@ -127,95 +154,101 @@ export default function MarketplaceVPS() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {vpsProducts.map((vps) => (
-              <Card 
-                key={vps.id}
-                className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
-                  vps.is_recommended ? 'border-2 border-primary' : ''
-                } ${vps.is_free ? 'border-2 border-purple-500' : ''}`}
-              >
-                {/* Badges */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
-                  {vps.is_recommended && (
-                    <Badge className="bg-primary">Recomendado</Badge>
-                  )}
-                  {vps.is_free && (
-                    <Badge className="bg-purple-500">Grátis Premium</Badge>
-                  )}
-                </div>
+            {vpsProducts.map((vps) => {
+              // Determinar se este VPS é grátis para o usuário
+              const isFreeForUser = hasFreeVPS && vps.is_free;
+              const displayPrice = isFreeForUser ? 0 : vps.price;
 
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white mb-4">
-                    <Server className="h-6 w-6" />
-                  </div>
-                  <CardTitle>{vps.name}</CardTitle>
-                  <CardDescription>
-                    {vps.is_free ? (
-                      <span className="text-2xl font-bold text-purple-600">GRÁTIS</span>
-                    ) : (
-                      <>
-                        <span className="text-2xl font-bold text-foreground">
-                          R$ {formatPrice(vps.price)}
-                        </span>
-                        <span className="text-muted-foreground">/mês</span>
-                      </>
+              return (
+                <Card 
+                  key={vps.id}
+                  className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
+                    vps.is_recommended ? 'border-2 border-primary' : ''
+                  } ${isFreeForUser ? 'border-2 border-purple-500' : ''}`}
+                >
+                  {/* Badges */}
+                  <div className="absolute top-4 right-4 flex flex-col gap-2">
+                    {vps.is_recommended && (
+                      <Badge className="bg-primary">Recomendado</Badge>
                     )}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-3">
-                  {vps.cpu && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Cpu className="h-4 w-4 text-muted-foreground" />
-                      <span>{vps.cpu}</span>
-                    </div>
-                  )}
-                  {vps.ram && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Zap className="h-4 w-4 text-muted-foreground" />
-                      <span>{vps.ram} RAM</span>
-                    </div>
-                  )}
-                  {vps.storage && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <HardDrive className="h-4 w-4 text-muted-foreground" />
-                      <span>{vps.storage}</span>
-                    </div>
-                  )}
-                  {vps.bandwidth && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Network className="h-4 w-4 text-muted-foreground" />
-                      <span>{vps.bandwidth}</span>
-                    </div>
-                  )}
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      Até {vps.max_mt4_instances} instâncias MT4/MT5
-                    </p>
-                  </div>
-                </CardContent>
-
-                <CardFooter>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handlePurchase(vps)}
-                    disabled={isProcessing && selectedVPS === vps.id}
-                    variant={vps.is_recommended ? "default" : "outline"}
-                  >
-                    {isProcessing && selectedVPS === vps.id ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processando...
-                      </>
-                    ) : vps.is_free ? (
-                      "Ver Plano Premium"
-                    ) : (
-                      "Contratar Agora"
+                    {isFreeForUser && (
+                      <Badge className="bg-purple-500">Grátis no seu plano</Badge>
                     )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                  </div>
+
+                  <CardHeader>
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white mb-4">
+                      <Server className="h-6 w-6" />
+                    </div>
+                    <CardTitle>{vps.name}</CardTitle>
+                    <CardDescription>
+                      {isFreeForUser ? (
+                        <span className="text-2xl font-bold text-purple-600">GRÁTIS</span>
+                      ) : (
+                        <>
+                          <span className="text-2xl font-bold text-foreground">
+                            R$ {formatPrice(displayPrice)}
+                          </span>
+                          <span className="text-muted-foreground">/mês</span>
+                        </>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="space-y-3">
+                    {vps.cpu && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Cpu className="h-4 w-4 text-muted-foreground" />
+                        <span>{vps.cpu}</span>
+                      </div>
+                    )}
+                    {vps.ram && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Zap className="h-4 w-4 text-muted-foreground" />
+                        <span>{vps.ram} RAM</span>
+                      </div>
+                    )}
+                    {vps.storage && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <HardDrive className="h-4 w-4 text-muted-foreground" />
+                        <span>{vps.storage}</span>
+                      </div>
+                    )}
+                    {vps.bandwidth && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Network className="h-4 w-4 text-muted-foreground" />
+                        <span>{vps.bandwidth}</span>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        Até {vps.max_mt4_instances} instâncias MT4/MT5
+                      </p>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handlePurchase(vps)}
+                      disabled={isProcessing && selectedVPS === vps.id}
+                      variant={vps.is_recommended || isFreeForUser ? "default" : "outline"}
+                    >
+                      {isProcessing && selectedVPS === vps.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : isFreeForUser ? (
+                        "Ativar Grátis"
+                      ) : (
+                        "Contratar Agora"
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

@@ -65,6 +65,127 @@ router.get('/instances', async (req, res) => {
 });
 
 /**
+ * POST /api/vps/claim-free
+ * Ativa VPS grátis para usuários com plano que inclui freeVpsEnabled
+ */
+router.post('/claim-free', async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Usuário não autenticado' 
+      });
+    }
+
+    const { vpsProductId } = req.body;
+
+    if (!vpsProductId) {
+      return res.status(400).json({
+        success: false,
+        error: 'vpsProductId é obrigatório'
+      });
+    }
+
+    // Verificar se usuário tem plano com VPS grátis
+    const { getDb } = await import('../db');
+    const db = getDb();
+    const { userSubscriptions, subscriptionPlans, userPurchases, vpsProducts } = await import('../../drizzle/schema');
+    const { eq, and, gt } = await import('drizzle-orm');
+
+    // Buscar assinatura ativa
+    const [activeSubscription] = await db
+      .select({
+        subscription: userSubscriptions,
+        plan: subscriptionPlans,
+      })
+      .from(userSubscriptions)
+      .innerJoin(
+        subscriptionPlans,
+        eq(userSubscriptions.planId, subscriptionPlans.id)
+      )
+      .where(
+        and(
+          eq(userSubscriptions.userId, userId),
+          eq(userSubscriptions.status, 'active'),
+          gt(userSubscriptions.endDate, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!activeSubscription || !activeSubscription.plan.freeVpsEnabled) {
+      return res.status(403).json({
+        success: false,
+        error: 'Seu plano não inclui VPS grátis. Faça upgrade para ter acesso.'
+      });
+    }
+
+    // Verificar se já ativou VPS grátis antes
+    const existingPurchases = await db
+      .select()
+      .from(userPurchases)
+      .where(
+        and(
+          eq(userPurchases.userId, userId),
+          eq(userPurchases.productType, 'vps'),
+          eq(userPurchases.amount, 0) // VPS grátis tem amount = 0
+        )
+      );
+
+    if (existingPurchases.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Você já ativou sua VPS grátis. Apenas uma VPS grátis por conta.'
+      });
+    }
+
+    // Buscar produto VPS
+    const [vpsProduct] = await db
+      .select()
+      .from(vpsProducts)
+      .where(eq(vpsProducts.id, vpsProductId))
+      .limit(1);
+
+    if (!vpsProduct) {
+      return res.status(404).json({
+        success: false,
+        error: 'Produto VPS não encontrado'
+      });
+    }
+
+    // Criar purchase com amount = 0 (grátis)
+    const [purchase] = await db
+      .insert(userPurchases)
+      .values({
+        userId,
+        productType: 'vps',
+        productId: vpsProductId,
+        productName: vpsProduct.name,
+        amount: 0, // Grátis!
+        status: 'completed',
+        paymentMethod: 'crypto_btc', // Placeholder
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 ano
+        notes: 'VPS grátis incluída no plano de assinatura'
+      });
+
+    res.json({
+      success: true,
+      data: {
+        purchaseId: purchase.insertId,
+        message: 'VPS grátis ativada com sucesso!'
+      }
+    });
+  } catch (error: any) {
+    console.error('[VPS] Erro ao ativar VPS grátis:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/vps/create
  * Cria uma nova instância VPS
  */
