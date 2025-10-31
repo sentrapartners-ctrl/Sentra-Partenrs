@@ -104,9 +104,11 @@ export default function SignalProviderSettings() {
     try {
       const response = await fetch(`/api/mt/copy/connected-accounts?email=${encodeURIComponent(user?.email || '')}`);
       const data = await response.json();
+      console.log('[SignalProviderSettings] API Response:', data);
       if (data.success) {
         // Aceitar contas master e regular (excluir apenas slave)
         const availableAccounts = data.accounts.filter((acc: any) => acc.type !== 'slave');
+        console.log('[SignalProviderSettings] Available accounts:', availableAccounts);
         setMasterAccounts(availableAccounts);
       }
     } catch (error) {
