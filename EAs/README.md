@@ -1,159 +1,191 @@
-# 📦 Expert Advisors - Sentra Partners
+# 🤖 Expert Advisors - Sentra Partners
 
-Todos os Expert Advisors oficiais da plataforma Sentra Partners.
+**Versão:** 3.0  
+**Data:** 31 de Outubro de 2025
 
 ---
 
-## 📁 Estrutura
+## 📂 Estrutura do Repositório
 
 ```
 EAs/
-├── Conectores/          → Sincronização de contas MT4/MT5
-├── CopyTrading/         → Sistema de cópia de trades (Master/Slave)
-└── Manuais/             → Documentação completa em PDF
+├── Conectores/
+│   ├── MT4/
+│   │   ├── SentraPartners_MT4.mq4
+│   │   ├── Manual_Programador_MT4.md
+│   │   ├── Manual_Usuario_MT4.md
+│   │   └── Manual_Cliente_MT4.md
+│   └── MT5/
+│       ├── SentraPartners_MT5.mq5
+│       ├── Manual_Programador_MT5.md
+│       ├── Manual_Usuario_MT5.md
+│       └── Manual_Cliente_MT5.md
+├── Master/
+│   ├── MT4/
+│   │   ├── SentraPartners_Master_MT4.mq4
+│   │   ├── Manual_Programador_MT4.md
+│   │   ├── Manual_Usuario_MT4.md
+│   │   └── Manual_Cliente_MT4.md
+│   └── MT5/
+│       ├── SentraPartners_Master_MT5.mq5
+│       ├── Manual_Programador_MT5.md
+│       ├── Manual_Usuario_MT5.md
+│       └── Manual_Cliente_MT5.md
+└── Slave/
+    ├── MT4/
+    │   ├── SentraPartners_Slave_MT4.mq4
+    │   ├── Manual_Programador_MT4.md
+    │   ├── Manual_Usuario_MT4.md
+    │   └── Manual_Cliente_MT4.md
+    └── MT5/
+        ├── SentraPartners_Slave_MT5.mq5
+        ├── Manual_Programador_MT5.md
+        ├── Manual_Usuario_MT5.md
+        └── Manual_Cliente_MT5.md
 ```
 
 ---
 
-## 🔌 Conectores
+## 🎯 Expert Advisors Disponíveis
 
-Sincronize suas contas MT4/MT5 com a plataforma web.
+### 1. 🔌 Conectores (MT4 e MT5)
+**Finalidade:** Conectar contas MetaTrader à plataforma web Sentra Partners.
+
+**Funcionalidades:**
+- Envio de informações de saldo e equity
+- Sincronização de posições abertas
+- Transmissão de histórico de trades
+- Heartbeat para status "Online"
 
 **Arquivos:**
-- `Conectores/SentraPartners_MT4.mq4`
-- `Conectores/SentraPartners_MT5.mq5`
+- `EAs/Conectores/MT4/SentraPartners_MT4.mq4`
+- `EAs/Conectores/MT5/SentraPartners_MT5.mq5`
+
+---
+
+### 2. 📡 Master (MT4 e MT5)
+**Finalidade:** Transformar conta em provedora de sinais de trading.
 
 **Funcionalidades:**
-- ✅ Sincronização em tempo real
-- ✅ Suporte a CENT e STANDARD
-- ✅ Histórico completo
-- ✅ Multi-conta
+- Captura de todas as operações em tempo real
+- Envio instantâneo de sinais para a plataforma
+- Sistema de heartbeat com estado completo das posições
+- Suporte a contas Cent e Standard
 
-**Documentação:** [Conectores/README.md](Conectores/README.md)
+**Arquivos:**
+- `EAs/Master/MT4/SentraPartners_Master_MT4.mq4`
+- `EAs/Master/MT5/SentraPartners_Master_MT5.mq5`
 
 ---
 
-## 📊 Copy Trading
-
-Sistema de cópia de trades entre contas.
-
-**Master (Origem):**
-- `CopyTrading/Master/SentraPartners_Master_MT4.mq4`
-- `CopyTrading/Master/SentraPartners_Master_MT5.mq5`
-
-**Slave (Destino):**
-- `CopyTrading/Slave/SentraPartners_Slave_MT4.mq4`
-- `CopyTrading/Slave/SentraPartners_Slave_MT5.mq5`
+### 3. 📥 Slave (MT4 e MT5)
+**Finalidade:** Copiar operações de uma conta Master automaticamente.
 
 **Funcionalidades:**
-- ✅ Cópia em tempo real
-- ✅ Multiplicador de lote
-- ✅ Filtros personalizáveis
-- ✅ Múltiplos slaves
+- Cópia automática de todas as operações do Master
+- Gerenciamento de lote com multiplicador configurável
+- Sincronização automática de posições
+- Suporte a diferentes tipos de conta (Cent/Standard)
+- Normalização automática de símbolos
 
-**Documentação:** [CopyTrading/README.md](CopyTrading/README.md)
-
----
-
-## 📚 Manuais
-
-Documentação completa em PDF:
-
-- **MANUAL_USUARIO.pdf** (496 KB)
-  - Instalação e configuração
-  - Solução de problemas
-  - Perguntas frequentes
-
-- **MANUAL_PROGRAMADOR.pdf** (516 KB)
-  - Documentação da API
-  - Exemplos de código
-  - Boas práticas
+**Arquivos:**
+- `EAs/Slave/MT4/SentraPartners_Slave_MT4.mq4`
+- `EAs/Slave/MT5/SentraPartners_Slave_MT5.mq5`
 
 ---
 
-## 🌐 Downloads
+## 📖 Manuais Incluídos
+
+Cada EA possui **3 manuais completos** na mesma pasta:
+
+### 👨‍💻 Manual do Programador
+- Arquitetura e estrutura do código
+- Documentação técnica completa
+- Fluxo de dados e comunicação com API
+
+### 👤 Manual do Usuário
+- Instalação passo a passo
+- Configuração detalhada
+- Solução de problemas e FAQ
+
+### 🎯 Manual do Cliente
+- Guia rápido de instalação (3 passos)
+- Configuração simplificada
+- Verificação básica
+
+---
+
+## 🚀 Como Usar
+
+1. **Escolha o EA** que você precisa (Conector, Master ou Slave)
+2. **Escolha a plataforma** (MT4 ou MT5)
+3. **Baixe o arquivo** `.mq4` ou `.mq5`
+4. **Consulte o manual** correspondente ao seu perfil
+
+---
+
+## 📊 Informações Técnicas
+
+### Versões
+- **Conectores:** v3.0
+- **Master MT4:** v3.0
+- **Master MT5:** v3.0
+- **Slave MT4:** v3.0
+- **Slave MT5:** v3.0
+
+### Compatibilidade
+- **MetaTrader 4:** Build 600+
+- **MetaTrader 5:** Qualquer build recente
+
+### Requisitos
+- Conexão com internet
+- Autorização de WebRequest para `https://sentrapartners.com`
+- VPS recomendado para operação 24/7
+
+---
+
+## 🔐 Licenciamento
+
+Todos os EAs possuem sistema de licenciamento integrado com:
+- Verificação de data de expiração
+- Controle de contas autorizadas (opcional)
+- Bloqueio automático em caso de licença inválida
+
+---
+
+## 📞 Suporte
+
+**Email:** suporte@sentrapartners.com  
+**Plataforma:** https://sentrapartners.com  
+**GitHub:** https://github.com/sentrapartners-ctrl/Sentra-Partenrs
+
+---
+
+## 📝 Notas da Versão 3.0
+
+### Melhorias Gerais
+- ✅ Código completamente refatorado e otimizado
+- ✅ Sistema de heartbeat aprimorado
+- ✅ Melhor tratamento de erros
+- ✅ Logs mais detalhados e informativos
+- ✅ Documentação completa em português
 
 ### Conectores
-- **MT4:** https://sentrapartners.com/SentraPartners_MT4.mq4
-- **MT5:** https://sentrapartners.com/SentraPartners_MT5.mq5
+- ✅ Sincronização mais rápida e confiável
+- ✅ Melhor tratamento de reconexão
 
-### Copy Trading
-Disponível na plataforma após cadastro.
+### Master
+- ✅ Envio de sinais em menos de 1 segundo
+- ✅ Sistema de retentativas automáticas
+- ✅ Suporte completo a contas Cent/Standard
 
----
-
-## 🚀 Início Rápido
-
-### 1. Conectores (Sincronização)
-
-```bash
-# 1. Baixe o EA
-wget https://sentrapartners.com/SentraPartners_MT4.mq4
-
-# 2. Copie para MetaTrader
-# MT4: MQL4/Experts/
-# MT5: MQL5/Experts/
-
-# 3. Configure WebRequest
-# Ferramentas > Opções > Expert Advisors
-# Adicione: https://sentrapartners.com
-
-# 4. Ative no gráfico
-# Configure email e tipo de conta (CENT/STANDARD)
-```
-
-### 2. Copy Trading
-
-```bash
-# Conta Master (Origem)
-1. Instale Master EA
-2. Configure seu email
-3. Ative
-
-# Contas Slave (Destino)
-1. Instale Slave EA
-2. Configure email do Master
-3. Configure multiplicador
-4. Ative
-```
+### Slave
+- ✅ Sincronização automática de posições
+- ✅ Normalização inteligente de símbolos
+- ✅ Gerenciamento de lote avançado
+- ✅ Configurações remotas via servidor
 
 ---
 
-## 📋 Versões
-
-### v3.0 (Atual) - Outubro 2025
-- ✅ Conectores com suporte CENT/STANDARD
-- ✅ URL padrão configurada
-- ✅ Manuais completos
-- ✅ Copy Trading estável
-
-### v2.1 - Setembro 2025
-- Sistema multi-usuário
-- Suporte a arrays de trades
-
-### v2.0 - Agosto 2025
-- Suporte a MT5
-- Histórico de saldo
-
-### v1.0 - Julho 2025
-- Versão inicial
-- Apenas MT4
-
----
-
-## 🆘 Suporte
-
-- 📧 **Email:** suporte@sentrapartners.com
-- 🌐 **Site:** https://sentrapartners.com
-- 💬 **Chat:** Disponível na plataforma
-- 📚 **Docs:** Veja os manuais em PDF
-
----
-
-## 📝 Licença
-
-© 2025 Sentra Partners - Todos os direitos reservados
-
----
-
-**Última atualização:** Outubro 2025
+**Última atualização:** 31 de Outubro de 2025  
+**Desenvolvido por:** Sentra Partners
