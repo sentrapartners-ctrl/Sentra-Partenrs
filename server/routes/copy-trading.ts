@@ -374,6 +374,8 @@ router.post("/slave-heartbeat", async (req, res) => {
 //====================================================
 router.get("/slave-signals", async (req, res) => {
   try {
+    console.log("[Copy Trading] 🔍 DEBUG - Query params recebidos:", req.query);
+    
     const { master_email, master_account_id, account_number, slave_email } = req.query;
     
     console.log("[Copy Trading] Slave solicitando sinais:", {
