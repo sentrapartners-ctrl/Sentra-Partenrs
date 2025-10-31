@@ -51,3 +51,36 @@ export function toNumber(value: number | string | null | undefined, defaultValue
   
   return numValue;
 }
+
+/**
+ * Formata lucro/profit baseado no tipo de conta
+ * - Contas CENT: divide por 100 (ex: 74225 → $742.25)
+ * - Contas normais: não divide (ex: 742.25 → $742.25)
+ * 
+ * @param value - Valor do lucro
+ * @param isCentAccount - Se true, divide por 100 (conta cent)
+ * @param decimals - Número de casas decimais (padrão: 2)
+ * @returns String formatada com o lucro
+ */
+export function formatProfit(
+  value: number | string | null | undefined,
+  isCentAccount: boolean = false,
+  decimals: number = 2
+): string {
+  if (value === null || value === undefined) {
+    return '0.00';
+  }
+  
+  let numValue = typeof value === 'number' ? value : parseFloat(value);
+  
+  if (isNaN(numValue)) {
+    return '0.00';
+  }
+  
+  // Apenas contas CENT precisam dividir por 100
+  if (isCentAccount) {
+    numValue = numValue / 100;
+  }
+  
+  return numValue.toFixed(decimals);
+}

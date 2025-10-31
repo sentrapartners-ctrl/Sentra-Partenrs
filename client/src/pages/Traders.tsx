@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatPrice, toNumber } from "@/lib/formatPrice";
+import { formatPrice, toNumber, formatProfit } from "@/lib/formatPrice";
 
 interface Provider {
   id: number;
@@ -40,6 +40,7 @@ interface Provider {
   active_subscribers: number;
   avg_rating: number;
   review_count: number;
+  isCentAccount: boolean;
 }
 
 interface SlaveAccount {
@@ -271,7 +272,7 @@ export default function Traders() {
                         Lucro Total
                       </div>
                       <p className="text-lg font-bold text-green-600">
-                        ${formatPrice(provider.total_profit)}
+                        ${formatProfit(provider.total_profit, provider.isCentAccount)}
                       </p>
                     </div>
                     <div className="space-y-1">
