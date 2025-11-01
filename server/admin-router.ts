@@ -78,7 +78,9 @@ export const adminRouter = router({
   updateUser: adminProcedure
     .input(z.object({ 
       userId: z.number(), 
+      name: z.string().optional(),
       email: z.string().email().optional(),
+      role: z.enum(['client', 'vip', 'manager', 'admin']).optional(),
       isActive: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {

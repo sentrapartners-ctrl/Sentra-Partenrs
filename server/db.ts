@@ -1049,12 +1049,14 @@ export async function updateUserStatus(userId: number, isActive: boolean) {
 
 
 
-export async function updateUser(userId: number, data: { email?: string; isActive?: boolean }) {
+export async function updateUser(userId: number, data: { name?: string; email?: string; role?: string; isActive?: boolean }) {
   const db = await getDb();
   if (!db) return;
   
   const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name;
   if (data.email !== undefined) updateData.email = data.email;
+  if (data.role !== undefined) updateData.role = data.role;
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
   
   await db.update(users).set(updateData).where(eq(users.id, userId));
