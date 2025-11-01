@@ -94,7 +94,7 @@ export async function registerUser(
       email,
       password: hashedPassword,
       name: name || null,
-      role: 'user',
+      role: 'client',
       isActive: true,
       lastSignedIn: new Date(),
     };
