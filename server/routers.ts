@@ -115,6 +115,21 @@ export const appRouter = router({
   // ===== DASHBOARD =====
   dashboard: router({
     summary: protectedProcedure.query(async ({ ctx }) => {
+      // Verificar se usuário tem acesso aos dados
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      
+      // Se não tiver acesso, retornar dados vazios
+      if (!canAccess) {
+        return {
+          summary: null,
+          stats: null,
+          openTrades: [],
+          transactionStats: null,
+          recentTrades: [],
+        };
+      }
+      
       const summary = await db.getAccountSummary(ctx.user.id);
       const stats = await db.getTradeStatistics(ctx.user.id);
       const openTrades = await db.getOpenTrades(ctx.user.id);
