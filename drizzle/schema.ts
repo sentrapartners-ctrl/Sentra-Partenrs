@@ -10,7 +10,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   walletAddress: varchar("walletAddress", { length: 128 }).unique(), // Web3 wallet address
   authMethod: mysqlEnum("authMethod", ["email", "wallet", "both"]).default("email").notNull(),
-  role: mysqlEnum("role", ["client", "manager", "admin"]).default("client").notNull(),
+  role: mysqlEnum("role", ["client", "vip", "manager", "admin"]).default("client").notNull(),
   managerId: int("managerId"), // ID do gerente responsável (null para admin e managers)
   isActive: boolean("isActive").default(true).notNull(),
   manual_permissions: json("manual_permissions"), // Permissões manuais concedidas pelo admin

@@ -21,7 +21,7 @@ export default function Home() {
   
   const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
   const hasDashboardPermission = subscriptionData?.manualPermissions?.dashboard || false;
-  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'vip';
   
   // Apenas carregar dados se tiver assinatura, permissão de Dashboard ou for admin/gerente
   const canAccessData = hasActiveSubscription || hasDashboardPermission || isAdminOrManager;

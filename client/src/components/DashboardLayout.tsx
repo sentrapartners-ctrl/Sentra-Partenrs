@@ -176,7 +176,7 @@ function DashboardLayoutContent({
   const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
   
   // Admin e gerentes não devem ver o banner
-  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'vip';
   const shouldShowBanner = !isAdminOrManager && !hasActiveSubscription && !hasManualPermissions;
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);

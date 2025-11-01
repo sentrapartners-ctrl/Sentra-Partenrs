@@ -24,7 +24,7 @@ export default function CopyTrading() {
   
   const hasActiveSubscription = subscriptionData?.hasActiveSubscription || false;
   const hasManualPermissions = subscriptionData?.hasActiveSubscription && !subscriptionData?.subscription;
-  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'vip';
   
   // Apenas carregar dados se tiver assinatura, permissões ou for admin/gerente
   const canAccessData = hasActiveSubscription || hasManualPermissions || isAdminOrManager;
