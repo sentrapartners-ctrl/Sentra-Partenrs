@@ -18,6 +18,15 @@ export default function Settings() {
   const [barkDailyTime, setBarkDailyTime] = useState("19:00");
   const [barkWeeklyTime, setBarkWeeklyTime] = useState("08:00");
 
+  // ntfy.sh states
+  const [ntfyEnabled, setNtfyEnabled] = useState(false);
+  const [ntfyTopic, setNtfyTopic] = useState("");
+  const [ntfyTradesEnabled, setNtfyTradesEnabled] = useState(true);
+  const [ntfyDrawdownEnabled, setNtfyDrawdownEnabled] = useState(true);
+  const [ntfyConnectionEnabled, setNtfyConnectionEnabled] = useState(true);
+  const [ntfyDailyEnabled, setNtfyDailyEnabled] = useState(true);
+  const [ntfyWeeklyEnabled, setNtfyWeeklyEnabled] = useState(true);
+
   const { data: settings } = trpc.settings.get.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -44,6 +53,37 @@ export default function Settings() {
       setBarkWeeklyTime(settings.barkWeeklyTime || "08:00");
     }
   }, [settings]);
+
+  // Carregar configurações ntfy
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    // Buscar configurações
+    fetch('/api/ntfy/settings', {
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(data => {
+        setNtfyEnabled(data.ntfyEnabled || false);
+        setNtfyTopic(data.ntfyTopic || "");
+        setNtfyTradesEnabled(data.ntfyTradesEnabled ?? true);
+        setNtfyDrawdownEnabled(data.ntfyDrawdownEnabled ?? true);
+        setNtfyConnectionEnabled(data.ntfyConnectionEnabled ?? true);
+        setNtfyDailyEnabled(data.ntfyDailyEnabled ?? true);
+        setNtfyWeeklyEnabled(data.ntfyWeeklyEnabled ?? true);
+      })
+      .catch(err => console.error('Erro ao carregar configurações ntfy:', err));
+
+    // Buscar tópico único
+    fetch('/api/ntfy/topic', {
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(data => {
+        setNtfyTopic(data.topic || "");
+      })
+      .catch(err => console.error('Erro ao carregar tópico ntfy:', err));
+  }, [isAuthenticated]);
 
   if (loading) {
     return (
@@ -260,6 +300,182 @@ export default function Settings() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Notificações ntfy.sh (Android + iPhone)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Receba notificações push instantâneas no seu celular (Android ou iPhone) usando o app gratuito ntfy.
+              </p>
+            </div>
+
+            {!ntfyTopic ? (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm">Carregando seu tópico único...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <p className="text-sm font-medium">Seu tópico único:</p>
+                  <code className="block p-2 bg-background rounded text-sm font-mono">
+                    {ntfyTopic}
+                  </code>
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Como configurar:</strong><br />
+                    1. Instale o app "ntfy" no seu celular<br />
+                    2. Abra o app e clique em "+"<br />
+                    3. Digite o tópico acima<br />
+                    4. Pronto! Você receberá notificações aqui
+                  </p>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open('https://play.google.com/store/apps/details?id=io.heckel.ntfy', '_blank')}
+                    >
+                      Google Play
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open('https://apps.apple.com/us/app/ntfy/id1625396347', '_blank')}
+                    >
+                      App Store
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div>
+                    <p className="font-medium">Ativar Notificações</p>
+                    <p className="text-sm text-muted-foreground">
+                      Habilitar todas as notificações ntfy
+                    </p>
+                  </div>
+                  <Button
+                    variant={ntfyEnabled ? "default" : "outline"}
+                    onClick={() => setNtfyEnabled(!ntfyEnabled)}
+                    size="sm"
+                  >
+                    {ntfyEnabled ? "Ativado" : "Desativado"}
+                  </Button>
+                </div>
+
+                {ntfyEnabled && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Notificações de Trades</p>
+                        <p className="text-sm text-muted-foreground">
+                          Abertura e fechamento de trades
+                        </p>
+                      </div>
+                      <Button
+                        variant={ntfyTradesEnabled ? "default" : "outline"}
+                        onClick={() => setNtfyTradesEnabled(!ntfyTradesEnabled)}
+                        size="sm"
+                      >
+                        {ntfyTradesEnabled ? "Ativado" : "Desativado"}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Alertas de Drawdown</p>
+                        <p className="text-sm text-muted-foreground">
+                          Quando drawdown atingir o limite
+                        </p>
+                      </div>
+                      <Button
+                        variant={ntfyDrawdownEnabled ? "default" : "outline"}
+                        onClick={() => setNtfyDrawdownEnabled(!ntfyDrawdownEnabled)}
+                        size="sm"
+                      >
+                        {ntfyDrawdownEnabled ? "Ativado" : "Desativado"}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Alertas de Conexão</p>
+                        <p className="text-sm text-muted-foreground">
+                          Quando perder conexão com MT4/MT5
+                        </p>
+                      </div>
+                      <Button
+                        variant={ntfyConnectionEnabled ? "default" : "outline"}
+                        onClick={() => setNtfyConnectionEnabled(!ntfyConnectionEnabled)}
+                        size="sm"
+                      >
+                        {ntfyConnectionEnabled ? "Ativado" : "Desativado"}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Resumo Diário</p>
+                        <p className="text-sm text-muted-foreground">
+                          Lucro, trades e win rate do dia
+                        </p>
+                      </div>
+                      <Button
+                        variant={ntfyDailyEnabled ? "default" : "outline"}
+                        onClick={() => setNtfyDailyEnabled(!ntfyDailyEnabled)}
+                        size="sm"
+                      >
+                        {ntfyDailyEnabled ? "Ativado" : "Desativado"}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Resumo Semanal</p>
+                        <p className="text-sm text-muted-foreground">
+                          Sábado: resumo domingo a sexta
+                        </p>
+                      </div>
+                      <Button
+                        variant={ntfyWeeklyEnabled ? "default" : "outline"}
+                        onClick={() => setNtfyWeeklyEnabled(!ntfyWeeklyEnabled)}
+                        size="sm"
+                      >
+                        {ntfyWeeklyEnabled ? "Ativado" : "Desativado"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/ntfy/test', {
+                        method: 'POST',
+                        credentials: 'include'
+                      });
+                      if (response.ok) {
+                        toast.success('🔔 Notificação de teste enviada! Verifique seu celular.');
+                      } else {
+                        toast.error('Erro ao enviar notificação de teste');
+                      }
+                    } catch (error) {
+                      toast.error('Erro ao enviar notificação');
+                    }
+                  }}
+                >
+                  Enviar Notificação de Teste
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Preferências Gerais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -314,7 +530,8 @@ export default function Settings() {
             Cancelar
           </Button>
           <Button
-            onClick={() => {
+            onClick={async () => {
+              // Salvar configurações Bark
               updateSettings.mutate({
                 barkKey: barkKey || undefined,
                 barkServerUrl: barkServerUrl || undefined,
@@ -323,6 +540,32 @@ export default function Settings() {
                 barkDailyTime: barkDailyTime || "19:00",
                 barkWeeklyTime: barkWeeklyTime || "08:00",
               });
+
+              // Salvar configurações ntfy
+              try {
+                const response = await fetch('/api/ntfy/settings', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    ntfyEnabled,
+                    ntfyTradesEnabled,
+                    ntfyDrawdownEnabled,
+                    ntfyConnectionEnabled,
+                    ntfyDailyEnabled,
+                    ntfyWeeklyEnabled,
+                  }),
+                });
+                if (response.ok) {
+                  toast.success('Configurações ntfy salvas!');
+                } else {
+                  toast.error('Erro ao salvar configurações ntfy');
+                }
+              } catch (error) {
+                toast.error('Erro ao salvar configurações ntfy');
+              }
             }}
           >
             Salvar Alterações
