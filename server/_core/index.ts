@@ -30,6 +30,7 @@ import landingPageRouter from "../routes/landing-page";
 import ensureTablesRouter from "../routes/ensure-tables";
 import executeSqlRouter from "../routes/execute-sql";
 import providerEarningsRouter from "../routes/provider-earnings";
+import ntfyRouter from "../routes/ntfy";
 import { setupCopyTradingWebSocket } from "../websocket/copyTradingWs";
 
 // import mt4ConnectorRouter from "../routes/mt4-connector";
@@ -107,6 +108,7 @@ async function startServer() {
   app.use("/api/ensure-tables", ensureTablesRouter);
   app.use("/api/execute-sql", executeSqlRouter);
   app.use("/api/provider-earnings", providerEarningsRouter);
+  app.use("/api/ntfy", ntfyRouter);
   // Wallet authentication endpoints
 
   // tRPC API

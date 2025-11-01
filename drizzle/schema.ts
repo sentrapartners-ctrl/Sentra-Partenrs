@@ -392,6 +392,14 @@ export const userSettings = mysqlTable("user_settings", {
   barkWeeklyEnabled: boolean("barkWeeklyEnabled").default(true),
   barkDailyTime: varchar("barkDailyTime", { length: 5 }).default("19:00"),
   barkWeeklyTime: varchar("barkWeeklyTime", { length: 5 }).default("08:00"),
+  // ntfy.sh notifications (Android + iPhone)
+  ntfyEnabled: boolean("ntfyEnabled").default(false),
+  ntfyTopic: varchar("ntfyTopic", { length: 128 }), // Tópico único do usuário
+  ntfyDailyEnabled: boolean("ntfyDailyEnabled").default(true),
+  ntfyWeeklyEnabled: boolean("ntfyWeeklyEnabled").default(true),
+  ntfyTradesEnabled: boolean("ntfyTradesEnabled").default(true),
+  ntfyDrawdownEnabled: boolean("ntfyDrawdownEnabled").default(true),
+  ntfyConnectionEnabled: boolean("ntfyConnectionEnabled").default(true),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -93,6 +93,14 @@ export async function getDb() {
           }).catch(err => {
             console.error('[Database] Failed to import landing page migration:', err);
           });
+          
+          import('./migrations/add-ntfy-fields').then(({ addNtfyFields }) => {
+            addNtfyFields().catch(err => {
+              console.error('[Database] ntfy fields migration failed:', err);
+            });
+          }).catch(err => {
+            console.error('[Database] Failed to import ntfy migration:', err);
+          });
         }
       } catch (error) {
         console.warn("[Database] Failed to connect:", error);
