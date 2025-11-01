@@ -361,7 +361,8 @@ function UsersTab() {
                 value={editForm.role}
                 onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
               >
-                <option value="user">Usuário</option>
+                <option value="client">Usuário</option>
+                <option value="vip">VIP</option>
                 <option value="manager">Gerente</option>
                 <option value="admin">Administrador</option>
               </select>
