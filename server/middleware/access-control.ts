@@ -12,7 +12,11 @@ import { eq, and, gt } from 'drizzle-orm';
  */
 export async function hasDataAccess(userId: number): Promise<boolean> {
   try {
-    const db = getDb();
+    const db = await getDb();
+    if (!db) {
+      console.log('[hasDataAccess] Database not available');
+      return false;
+    }
 
     // Buscar usuário
     const [user] = await db
