@@ -6,8 +6,8 @@ import { eq, and, gt } from 'drizzle-orm';
  * Verifica se usuário tem acesso aos dados da plataforma
  * Retorna true se:
  * - É admin
- * - É manager
- * - É VIP
+ * - É manager  
+ * - É VIP (cliente especial sem necessidade de assinatura)
  * - Tem assinatura ativa
  */
 export async function hasDataAccess(userId: number): Promise<boolean> {
