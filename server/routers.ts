@@ -763,8 +763,19 @@ export const appRouter = router({
         .where(eq(users.id, ctx.user.id))
         .limit(1);
       
-      const manualPermissions = user?.manual_permissions ? JSON.parse(user.manual_permissions) : null;
-      const hasManualPermissions = manualPermissions && Object.values(manualPermissions).some(v => v === true);
+      // Parse manual_permissions apenas se for string JSON válida
+      let manualPermissions = null;
+      try {
+        if (user?.manual_permissions && typeof user.manual_permissions === 'string') {
+          manualPermissions = JSON.parse(user.manual_permissions);
+        } else if (user?.manual_permissions && typeof user.manual_permissions === 'object') {
+          manualPermissions = user.manual_permissions;
+        }
+      } catch (e) {
+        console.error('[subscriptions.current] Erro ao parsear manual_permissions:', e);
+      }
+      
+      const hasManualPermissions = manualPermissions && typeof manualPermissions === 'object' && Object.values(manualPermissions).some(v => v === true);
       
       return {
         hasActiveSubscription: hasAccess,
