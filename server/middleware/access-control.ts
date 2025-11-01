@@ -21,12 +21,16 @@ export async function hasDataAccess(userId: number): Promise<boolean> {
       .where(eq(users.id, userId))
       .limit(1);
 
+    console.log('[hasDataAccess] User:', { id: userId, email: user?.email, role: user?.role });
+
     if (!user) {
+      console.log('[hasDataAccess] User not found');
       return false;
     }
 
     // Admin, Manager e VIP sempre têm acesso
     if (user.role === 'admin' || user.role === 'manager' || user.role === 'vip') {
+      console.log('[hasDataAccess] Access granted by role:', user.role);
       return true;
     }
 
@@ -43,7 +47,10 @@ export async function hasDataAccess(userId: number): Promise<boolean> {
       )
       .limit(1);
 
-    return !!activeSubscription;
+    const hasAccess = !!activeSubscription;
+    console.log('[hasDataAccess] Active subscription:', hasAccess);
+    console.log('[hasDataAccess] Final result:', hasAccess);
+    return hasAccess;
   } catch (error) {
     console.error('[hasDataAccess] Erro:', error);
     return false;
