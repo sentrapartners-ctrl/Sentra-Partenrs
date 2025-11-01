@@ -225,10 +225,16 @@ export const appRouter = router({
   // ===== ACCOUNTS =====
   accounts: router({
     list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return [];
       return await db.getUserAccounts(ctx.user.id);
     }),
 
     active: protectedProcedure.query(async ({ ctx }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return [];
       return await db.getActiveAccounts(ctx.user.id);
     }),
 
@@ -354,6 +360,10 @@ export const appRouter = router({
         endDate: z.date().optional(),
       }))
       .query(async ({ ctx, input }) => {
+        const { hasDataAccess } = await import('./middleware/access-control');
+        const canAccess = await hasDataAccess(ctx.user.id);
+        if (!canAccess) return [];
+        
         // Filtro por data + conta específica
         if (input.startDate && input.endDate && input.accountId) {
           const allTrades = await db.getTradesByDateRange(ctx.user.id, input.startDate, input.endDate);
@@ -372,6 +382,9 @@ export const appRouter = router({
       }),
 
     open: protectedProcedure.query(async ({ ctx }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return [];
       return await db.getOpenTrades(ctx.user.id);
     }),
 
@@ -440,6 +453,9 @@ export const appRouter = router({
   // ===== STRATEGIES =====
   strategies: router({
     list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return [];
       return await db.getUserStrategies(ctx.user.id);
     }),
 

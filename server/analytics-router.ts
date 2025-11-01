@@ -11,7 +11,10 @@ export const analyticsRouter = router({
       accountId: z.number(), 
       year: z.number() 
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return [];
       return await analyticsDb.getMonthlyGrowth(input.accountId, input.year);
     }),
 
@@ -22,7 +25,10 @@ export const analyticsRouter = router({
     .input(z.object({ 
       accountId: z.number() 
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return [];
       return await analyticsDb.getDrawdownHistory(input.accountId);
     }),
 
@@ -33,7 +39,10 @@ export const analyticsRouter = router({
     .input(z.object({ 
       accountId: z.number() 
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return null;
       return await analyticsDb.getRiskMetrics(input.accountId);
     }),
 
@@ -44,7 +53,10 @@ export const analyticsRouter = router({
     .input(z.object({ 
       accountId: z.number() 
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const { hasDataAccess } = await import('./middleware/access-control');
+      const canAccess = await hasDataAccess(ctx.user.id);
+      if (!canAccess) return null;
       return await analyticsDb.getConsecutiveStats(input.accountId);
     }),
 
