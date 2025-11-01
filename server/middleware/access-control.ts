@@ -21,7 +21,17 @@ export async function hasDataAccess(userId: number): Promise<boolean> {
       .where(eq(users.id, userId))
       .limit(1);
 
-    console.log('[hasDataAccess] User:', { id: userId, email: user?.email, role: user?.role });
+    console.log('[hasDataAccess] ========== INICIO ==========');
+    console.log('[hasDataAccess] User ID:', userId);
+    console.log('[hasDataAccess] User found:', !!user);
+    if (user) {
+      console.log('[hasDataAccess] User email:', user.email);
+      console.log('[hasDataAccess] User role:', user.role);
+      console.log('[hasDataAccess] User role type:', typeof user.role);
+      console.log('[hasDataAccess] Is admin?', user.role === 'admin');
+      console.log('[hasDataAccess] Is manager?', user.role === 'manager');
+      console.log('[hasDataAccess] Is VIP?', user.role === 'vip');
+    }
 
     if (!user) {
       console.log('[hasDataAccess] User not found');

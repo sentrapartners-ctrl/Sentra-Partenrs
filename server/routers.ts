@@ -14,6 +14,7 @@ import { eaLicenseRouter } from "./ea-license-router";
 import { mt4Router } from "./mt4-router";
 import { notificationsRouter } from "./notifications-router";
 import * as drawdown from "./drawdown-calculator";
+import { hasDataAccess } from "./middleware/access-control";
 
 // Função para gerar API Key única
 function generateApiKey(): string {
@@ -116,8 +117,8 @@ export const appRouter = router({
   dashboard: router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       // Verificar se usuário tem acesso aos dados
-      const { hasDataAccess } = await import('./middleware/access-control');
       const canAccess = await hasDataAccess(ctx.user.id);
+      console.log('[dashboard.summary] User ID:', ctx.user.id, 'Can access:', canAccess);
       
       // Se não tiver acesso, retornar dados vazios
       if (!canAccess) {
@@ -225,14 +226,14 @@ export const appRouter = router({
   // ===== ACCOUNTS =====
   accounts: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      const { hasDataAccess } = await import('./middleware/access-control');
+      // hasDataAccess já importado no topo
       const canAccess = await hasDataAccess(ctx.user.id);
       if (!canAccess) return [];
       return await db.getUserAccounts(ctx.user.id);
     }),
 
     active: protectedProcedure.query(async ({ ctx }) => {
-      const { hasDataAccess } = await import('./middleware/access-control');
+      // hasDataAccess já importado no topo
       const canAccess = await hasDataAccess(ctx.user.id);
       if (!canAccess) return [];
       return await db.getActiveAccounts(ctx.user.id);
@@ -360,7 +361,7 @@ export const appRouter = router({
         endDate: z.date().optional(),
       }))
       .query(async ({ ctx, input }) => {
-        const { hasDataAccess } = await import('./middleware/access-control');
+        // hasDataAccess já importado no topo
         const canAccess = await hasDataAccess(ctx.user.id);
         if (!canAccess) return [];
         
@@ -382,7 +383,7 @@ export const appRouter = router({
       }),
 
     open: protectedProcedure.query(async ({ ctx }) => {
-      const { hasDataAccess } = await import('./middleware/access-control');
+      // hasDataAccess já importado no topo
       const canAccess = await hasDataAccess(ctx.user.id);
       if (!canAccess) return [];
       return await db.getOpenTrades(ctx.user.id);
@@ -453,7 +454,7 @@ export const appRouter = router({
   // ===== STRATEGIES =====
   strategies: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      const { hasDataAccess } = await import('./middleware/access-control');
+      // hasDataAccess já importado no topo
       const canAccess = await hasDataAccess(ctx.user.id);
       if (!canAccess) return [];
       return await db.getUserStrategies(ctx.user.id);
